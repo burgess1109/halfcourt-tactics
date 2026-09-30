@@ -7,6 +7,8 @@ export const theme = {
   blue: { light: '#5b93ff', dark: '#1f56e0' },
   red: { light: '#e2555c', dark: '#b3232d' },
   ring: '#f4f4f4',
+  path: { blue: '#1a3ea8', red: '#9c1d27' },
+  selection: 'rgba(255,255,255,0.85)',
   label: '#ffffff',
   ball: { light: '#f0873a', dark: '#c85d17', seam: '#3b1d0b' },
   font: '-apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif',

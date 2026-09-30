@@ -1,3 +1,4 @@
+import { newId } from './id';
 import { BALL_ID, type Player, type Tactic } from './types';
 
 function defaultPlayers(): Player[] {
@@ -14,7 +15,7 @@ function defaultPlayers(): Player[] {
 export function createDefaultTactic(): Tactic {
   return {
     version: 1,
-    id: crypto.randomUUID(),
+    id: newId(),
     name: '',
     mode: 'free',
     players: defaultPlayers(),

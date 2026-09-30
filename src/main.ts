@@ -1,7 +1,9 @@
 import './style.css';
-import { attachDrag } from './input/drag';
+import { attachPointer } from './input/pointer';
 import { Store } from './model/store';
 import { Renderer } from './render/renderer';
+import { createToast } from './ui/toast';
+import { attachToolbar } from './ui/toolbar';
 
 const stage = document.querySelector<HTMLElement>('#stage')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#court')!;
@@ -41,4 +43,5 @@ function watchPixelRatio(): void {
 watchPixelRatio();
 
 store.subscribe(requestDraw);
-attachDrag(canvas, store, renderer);
+attachPointer(canvas, store, renderer, createToast(document.querySelector<HTMLElement>('#toast')!));
+attachToolbar(store);
