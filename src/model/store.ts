@@ -75,7 +75,7 @@ export class Store {
     const p = this.pending;
     this.pending = null;
     const removed = syncFrames(this.state.tactic, true);
-    if (removed > 0) this.notify(`球換人持有，移除了 ${removed} 條運球 / 傳球路線`);
+    if (removed > 0) this.notify(`球換人持有，移除了 ${removed} 條運球 / 傳球 / 投籃路線`);
     if (p && JSON.stringify(this.state.tactic) !== p.json) {
       this.state.tactic.updatedAt = Date.now();
       this.history.push(p.snapshot);

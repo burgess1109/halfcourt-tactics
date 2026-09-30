@@ -15,6 +15,8 @@ const ARROW_HALF_WIDTH = 0.22;
 const SCREEN_BAR_HALF = 0.42;
 const WAVE_AMPLITUDE = 0.13;
 const WAVE_LENGTH = 0.55;
+/** 投籃終點在籃框外面畫的圈 */
+const SHOT_RING_RADIUS = 0.5;
 
 export interface PathStyle {
   kind: PathKind;
@@ -30,14 +32,21 @@ export interface PathStyle {
 export function drawPath(ctx: CanvasRenderingContext2D, vp: Viewport, controls: readonly Vec2[], style: PathStyle): void {
   const sampled = sampleSpline(controls);
   // 傳球停在接球者邊緣；移動路線停在終點分身的邊緣，箭頭和 T 字才不會被蓋住
-  const endTrim = style.kind === 'pass' ? PLAYER_RADIUS + 0.05 : style.preview ? 0 : PLAYER_RADIUS * 0.86;
+  const endTrim =
+    style.kind === 'pass'
+      ? PLAYER_RADIUS + 0.05
+      : style.kind === 'shot'
+        ? SHOT_RING_RADIUS
+        : style.preview
+          ? 0
+          : PLAYER_RADIUS * 0.86;
   const body = trimPolyline(sampled, PLAYER_RADIUS, endTrim);
   if (body.length < 2) return;
 
   const tipIndex = body.length - 1;
   const tip = body[tipIndex]!;
   const dir = normalize(sub(tip, body[tipIndex - 1]!));
-  const hasArrow = style.kind !== 'screen';
+  const hasArrow = style.kind !== 'screen' && style.kind !== 'shot';
   // 線身停在箭頭底部，避免從箭頭尖端穿出去
   const line = hasArrow ? trimPolyline(body, 0, ARROW_LEN * 0.8) : body;
   const color = theme.path[style.team];
@@ -78,9 +87,27 @@ export function drawPath(ctx: CanvasRenderingContext2D, vp: Viewport, controls: 
     if (hasArrow) fillArrow(ctx, vp, tip, dir, theme.selection, 0.12);
   }
 
-  ctx.setLineDash(style.kind === 'pass' ? [9, 7] : []);
-  strokeLine(shape, LINE_PX, color);
+  ctx.setLineDash(style.kind === 'pass' ? [9, 7] : style.kind === 'shot' ? [1, 8] : []);
+  strokeLine(shape, style.kind === 'shot' ? LINE_PX + 1.5 : LINE_PX, color);
   ctx.setLineDash([]);
+  if (style.kind === 'shot') {
+    // 籃框外的目標圈
+    const rim = controls.at(-1)!;
+    const c = toScreen(vp, rim);
+    const r = SHOT_RING_RADIUS * vp.scale;
+    if (style.selected) {
+      ctx.lineWidth = LINE_PX + 6;
+      ctx.strokeStyle = theme.selection;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.lineWidth = LINE_PX;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   for (const d of decorations) strokeLine(d, LINE_PX + 1.5, color);
   if (hasArrow) fillArrow(ctx, vp, tip, dir, color, 0);
   ctx.restore();

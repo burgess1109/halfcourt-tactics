@@ -11,6 +11,7 @@ import {
   finalizeDraft,
   hitTestHandle,
   hitTestPath,
+  makeShot,
   pathHandles,
   putPath,
   type Handle,
@@ -98,9 +99,19 @@ export function attachPointer(
         notify('球沒有人持有');
         return null;
       }
-      const reason = cannotStart(kind, actorId, frame, players);
+      const isLastFrame = state.frameIndex === state.tactic.frames.length - 1;
+      const reason = cannotStart(kind, actorId, frame, players, isLastFrame);
       if (reason) {
         notify(reason);
+        return null;
+      }
+      if (kind === 'shot') {
+        // 投籃不用拖線，點一下就建立
+        store.commit((s) => {
+          const shot = makeShot(actorId, s.tactic.frames[s.frameIndex]!);
+          putPath(s.tactic.frames[s.frameIndex]!, shot);
+          s.selectedPathId = shot.id;
+        });
         return null;
       }
       store.update((s) => {

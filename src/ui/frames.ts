@@ -1,4 +1,4 @@
-import { MAX_FRAMES, insertFrameAfter, removeFrame } from '../model/frames';
+import { MAX_FRAMES, cannotInsertAfter, insertFrameAfter, removeFrame } from '../model/frames';
 import type { Store } from '../model/store';
 import { bindMenu } from './menu';
 
@@ -25,8 +25,10 @@ export function attachFrames(store: Store, notify: (message: string) => void): v
   prev.addEventListener('click', () => go(-1));
   next.addEventListener('click', () => go(1));
   add.addEventListener('click', () => {
-    if (store.get().tactic.frames.length >= MAX_FRAMES) {
-      notify(`最多 ${MAX_FRAMES} 個分鏡`);
+    const s = store.get();
+    const reason = cannotInsertAfter(s.tactic, s.frameIndex);
+    if (reason) {
+      notify(reason);
       return;
     }
     store.commit((s) => {

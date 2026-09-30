@@ -21,6 +21,10 @@ export const BASE_SPEED = 5.0;
 export const DRIBBLE_FACTOR = 0.85;
 /** 傳球速度（m/s），SPEC §5 */
 export const PASS_SPEED = 12;
+/** 投籃時球的水平速度（m/s）；三分球約 0.9 秒進框 */
+export const SHOT_SPEED = 8;
+/** 投籃最短飛行時間（秒），讓近距離上籃也看得到球飛 */
+export const MIN_SHOT_FLIGHT = 0.5;
 
 /** 實際使用的身高體重：未填時依位置套用預設值（SPEC §7.3） */
 export function physique(p: Player): { heightCm: number; weightKg: number } {

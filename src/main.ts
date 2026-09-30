@@ -8,7 +8,7 @@ import { attachHud } from './ui/hud';
 import { attachPlayerDialog } from './ui/playerDialog';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
-import { SHOT_CLOCK_SECONDS, buildTimeline } from './anim/timeline';
+import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds } from './anim/timeline';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -65,8 +65,12 @@ playback.onTick = hud.playing;
 const playBtn = $<HTMLButtonElement>('#play');
 const togglePlay = () => {
   if (!playback.active) {
-    const total = buildTimeline(store.get().tactic).total;
-    if (total > SHOT_CLOCK_SECONDS) notify(`整個戰術 ${total.toFixed(1)} 秒，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限`);
+    const tl = buildTimeline(store.get().tactic);
+    const t = possessionSeconds(tl);
+    if (t > SHOT_CLOCK_SECONDS) {
+      const what = tl.shotReleaseAt === null ? '整個戰術' : '出手時間';
+      notify(`${what} ${t.toFixed(1)} 秒，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限`);
+    }
   }
   playback.toggle();
 };

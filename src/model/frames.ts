@@ -1,5 +1,5 @@
 import { BALL_HOLD_OFFSET, ballPosition } from './entities';
-import { endPosition, pathOf, pruneInvalidPaths } from './paths';
+import { RIM, endPosition, hasShot, pathOf, pruneInvalidPaths } from './paths';
 import { BALL_ID, type Frame, type Tactic, type Vec2 } from './types';
 
 // 分鏡串接，對應 SPEC §5：下一個分鏡的起始狀態 = 上一個分鏡結束時的狀態。
@@ -15,6 +15,11 @@ export function endState(frame: Frame): { start: Record<string, Vec2>; ballHolde
   }
   const holder = frame.ballHolderId;
   const pass = holder ? pathOf(frame, holder) : undefined;
+  if (pass?.kind === 'shot') {
+    // 投籃後球在籃框，沒有人持球（只會出現在最後一個分鏡）
+    start[BALL_ID] = { ...RIM };
+    return { start, ballHolderId: null };
+  }
   const ballHolderId = pass?.kind === 'pass' && pass.targetId ? pass.targetId : holder;
   const holderPos = ballHolderId ? start[ballHolderId] : undefined;
   start[BALL_ID] = holderPos
@@ -41,9 +46,19 @@ export function syncFrames(tactic: Tactic, prune: boolean): number {
   return removed;
 }
 
-/** 在 index 後面插入新分鏡，回傳新分鏡的 index；已達上限則回傳 null */
+/** 為什麼不能在 index 後面新增分鏡；可以則回傳 null */
+export function cannotInsertAfter(tactic: Tactic, index: number): string | null {
+  if (tactic.frames.length >= MAX_FRAMES) return `最多 ${MAX_FRAMES} 個分鏡`;
+  // 投籃只能在最後一個分鏡，所以不能在投籃後面再加
+  if (index === tactic.frames.length - 1 && hasShot(tactic.frames[index]!)) {
+    return '已經投籃，回合結束；要新增分鏡請先刪除投籃';
+  }
+  return null;
+}
+
+/** 在 index 後面插入新分鏡，回傳新分鏡的 index；不能插入則回傳 null */
 export function insertFrameAfter(tactic: Tactic, index: number): number | null {
-  if (tactic.frames.length >= MAX_FRAMES) return null;
+  if (cannotInsertAfter(tactic, index)) return null;
   const { start, ballHolderId } = endState(tactic.frames[index]!);
   tactic.frames.splice(index + 1, 0, { start, ballHolderId, paths: [] });
   syncFrames(tactic, true);

@@ -19,7 +19,7 @@ export interface Player {
   weightKg?: number;
 }
 
-export type PathKind = 'cut' | 'dribble' | 'pass' | 'screen';
+export type PathKind = 'cut' | 'dribble' | 'pass' | 'screen' | 'shot';
 
 export interface TacticPath {
   id: string;

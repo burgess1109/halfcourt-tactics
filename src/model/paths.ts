@@ -1,14 +1,16 @@
 import { distToPolyline, polylineLength } from '../geom/polyline';
 import { simplify } from '../geom/simplify';
 import { sampleSpline, segmentMidpoint } from '../geom/spline';
-import { dist } from '../geom/vec';
+import { BASKET_Y } from '../court/fiba';
+import { dist, normalize, perp, sub } from '../geom/vec';
 import { newId } from './id';
 import type { Frame, PathKind, Player, TacticPath, Vec2 } from './types';
 
 // 路線規則，對應 SPEC §4：
 // - 每位球員每個分鏡最多一條路線
 // - 路線起點永遠是球員在分鏡開始時的位置（球員被拖走時，路線跟著走）
-// - 運球、傳球只有持球者可以畫；傳球終點必須是隊友，並指向隊友在本分鏡結束時的位置
+// - 運球、傳球、投籃只有持球者可以畫；傳球終點必須是隊友，並指向隊友在本分鏡結束時的位置
+// - 投籃只能在最後一個分鏡，終點固定是籃框，代表回合結束
 
 export const FREEHAND_TOLERANCE = 0.1;
 /** 短於這個長度的路線視為誤觸 */
@@ -21,10 +23,21 @@ export const PATH_KIND_LABEL: Record<PathKind, string> = {
   dribble: '運球',
   pass: '傳球',
   screen: '掩護',
+  shot: '投籃',
 };
 
+/** 籃框中心 */
+export const RIM: Vec2 = { x: 0, y: BASKET_Y };
+/** 投籃弧線往側邊鼓起的比例（相對於出手距離），讓它和傳球的直線分得開 */
+const SHOT_ARC_BULGE = 0.18;
+
+/** 需要持球才能畫的路線 */
+export function needsBall(kind: PathKind): boolean {
+  return kind === 'dribble' || kind === 'pass' || kind === 'shot';
+}
+
 export function isMovement(kind: PathKind): boolean {
-  return kind !== 'pass';
+  return kind === 'cut' || kind === 'dribble' || kind === 'screen';
 }
 
 export function pathOf(frame: Frame, actorId: string): TacticPath | undefined {
@@ -47,7 +60,21 @@ export function resolvePoints(frame: Frame, path: TacticPath): Vec2[] {
     const end = endPosition(frame, path.targetId);
     if (end) pts[pts.length - 1] = { ...end };
   }
+  if (path.kind === 'shot') return shotControls(pts[0]!);
   return pts;
+}
+
+/** 投籃弧線的控制點：出手點 → 側邊鼓起的中點 → 籃框 */
+export function shotControls(from: Vec2): Vec2[] {
+  const d = dist(from, RIM);
+  // 一律往中場那側鼓起，底角出手時弧線才不會跑出底線
+  let n = perp(normalize(sub(RIM, from)));
+  if (n.y < 0) n = { x: -n.x, y: -n.y };
+  const mid = {
+    x: (from.x + RIM.x) / 2 + n.x * d * SHOT_ARC_BULGE,
+    y: (from.y + RIM.y) / 2 + n.y * d * SHOT_ARC_BULGE,
+  };
+  return [{ ...from }, mid, { ...RIM }];
 }
 
 export function samplePath(frame: Frame, path: TacticPath): Vec2[] {
@@ -55,10 +82,17 @@ export function samplePath(frame: Frame, path: TacticPath): Vec2[] {
 }
 
 /** 不能開始畫這種路線時，回傳原因；可以則回傳 null */
-export function cannotStart(kind: PathKind, actorId: string, frame: Frame, players: readonly Player[]): string | null {
-  if ((kind === 'dribble' || kind === 'pass') && frame.ballHolderId !== actorId) {
+export function cannotStart(
+  kind: PathKind,
+  actorId: string,
+  frame: Frame,
+  players: readonly Player[],
+  isLastFrame: boolean,
+): string | null {
+  if (needsBall(kind) && frame.ballHolderId !== actorId) {
     return `只有持球者可以${PATH_KIND_LABEL[kind]}`;
   }
+  if (kind === 'shot' && !isLastFrame) return '投籃只能在最後一個分鏡';
   if (kind === 'pass') {
     const team = players.find((p) => p.id === actorId)?.team;
     if (!players.some((p) => p.team === team && p.id !== actorId)) return '沒有可以傳球的隊友';
@@ -87,6 +121,15 @@ export function findPassTarget(
     }
   }
   return best;
+}
+
+/** 投籃不用拖線：點持球者就建立 */
+export function makeShot(actorId: string, frame: Frame): TacticPath {
+  return { id: newId(), kind: 'shot', actorId, points: shotControls(frame.start[actorId]!), freehand: false };
+}
+
+export function hasShot(frame: Frame): boolean {
+  return frame.paths.some((p) => p.kind === 'shot');
 }
 
 export interface Draft {
@@ -142,7 +185,7 @@ export function pruneInvalidPaths(frame: Frame, players: readonly Player[]): num
   const before = frame.paths.length;
   const teamOf = (id: string | undefined) => players.find((p) => p.id === id)?.team;
   frame.paths = frame.paths.filter((p) => {
-    if ((p.kind === 'dribble' || p.kind === 'pass') && frame.ballHolderId !== p.actorId) return false;
+    if (needsBall(p.kind) && frame.ballHolderId !== p.actorId) return false;
     if (p.kind === 'pass' && (!p.targetId || teamOf(p.targetId) !== teamOf(p.actorId))) return false;
     return true;
   });
@@ -173,6 +216,7 @@ export type Handle =
 
 /** 選取中的路線有哪些把手。起點固定在球員身上；傳球的終點固定在隊友身上。 */
 export function pathHandles(frame: Frame, path: TacticPath): Handle[] {
+  if (path.kind === 'shot') return []; // 投籃弧線自動產生，不能編輯
   const pts = resolvePoints(frame, path);
   const lastEditable = path.kind === 'pass' ? pts.length - 2 : pts.length - 1;
   const handles: Handle[] = [];

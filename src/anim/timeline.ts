@@ -1,7 +1,8 @@
 import { add } from '../geom/vec';
 import { BALL_HOLD_OFFSET } from '../model/entities';
 import { isMovement, pathOf, samplePath } from '../model/paths';
-import { PASS_SPEED, speedOf } from '../model/physique';
+import { lerp } from '../geom/vec';
+import { PASS_SPEED, SHOT_SPEED, MIN_SHOT_FLIGHT, speedOf } from '../model/physique';
 import { BALL_ID, type Frame, type Tactic, type Vec2 } from '../model/types';
 
 // 播放用的時間軸，對應 SPEC §5：
@@ -21,9 +22,11 @@ interface Track {
   duration: number;
 }
 
-interface PassPlan {
+interface BallFlight {
+  kind: 'pass' | 'shot';
   from: string;
-  to: string;
+  /** 接球者；投籃時為 null（球飛向籃框） */
+  to: string | null;
   launch: number;
   flight: number;
   track: Track;
@@ -33,12 +36,19 @@ export interface FrameTiming {
   start: number;
   duration: number;
   tracks: Map<string, Track>;
-  pass: PassPlan | null;
+  flight: BallFlight | null;
 }
 
 export interface Timeline {
   frames: FrameTiming[];
   total: number;
+  /** 投籃出手的時間點；沒有投籃時為 null。進攻時限看的是出手時間。 */
+  shotReleaseAt: number | null;
+}
+
+/** 進攻時限要比較的時間：有投籃看出手時間，沒有則看總時間 */
+export function possessionSeconds(tl: Timeline): number {
+  return tl.shotReleaseAt ?? tl.total;
 }
 
 function makeTrack(samples: Vec2[], speed: number): Track {
@@ -82,29 +92,37 @@ function timeFrame(tactic: Tactic, frame: Frame, start: number): FrameTiming {
     duration = Math.max(duration, track.duration);
   }
 
-  let pass: PassPlan | null = null;
+  let flight: BallFlight | null = null;
   const holder = frame.ballHolderId;
-  const passPath = holder ? pathOf(frame, holder) : undefined;
-  if (holder && passPath?.kind === 'pass' && passPath.targetId) {
-    const track = makeTrack(samplePath(frame, passPath), PASS_SPEED);
-    const arrival = tracks.get(passPath.targetId)?.duration ?? 0;
+  const ballPath = holder ? pathOf(frame, holder) : undefined;
+  if (holder && ballPath?.kind === 'pass' && ballPath.targetId) {
+    const track = makeTrack(samplePath(frame, ballPath), PASS_SPEED);
+    const arrival = tracks.get(ballPath.targetId)?.duration ?? 0;
     const launch = Math.max(0, arrival - track.duration);
-    pass = { from: holder, to: passPath.targetId, launch, flight: track.duration, track };
+    flight = { kind: 'pass', from: holder, to: ballPath.targetId, launch, flight: track.duration, track };
     duration = Math.max(duration, launch + track.duration);
+  } else if (holder && ballPath?.kind === 'shot') {
+    // 投籃者在這個分鏡不移動，分鏡一開始就出手；很近的上籃也至少飛一段時間
+    const track = makeTrack(samplePath(frame, ballPath), SHOT_SPEED);
+    track.duration = Math.max(MIN_SHOT_FLIGHT, track.duration);
+    flight = { kind: 'shot', from: holder, to: null, launch: 0, flight: track.duration, track };
+    duration = Math.max(duration, track.duration);
   }
 
-  return { start, duration: duration > 0 ? duration : EMPTY_FRAME_SECONDS, tracks, pass };
+  return { start, duration: duration > 0 ? duration : EMPTY_FRAME_SECONDS, tracks, flight };
 }
 
 export function buildTimeline(tactic: Tactic): Timeline {
   const frames: FrameTiming[] = [];
   let t = 0;
+  let shotReleaseAt: number | null = null;
   for (const frame of tactic.frames) {
     const timing = timeFrame(tactic, frame, t);
+    if (timing.flight?.kind === 'shot') shotReleaseAt = t + timing.flight.launch;
     frames.push(timing);
     t += timing.duration;
   }
-  return { frames, total: t };
+  return { frames, total: t, shotReleaseAt };
 }
 
 export interface Pose {
@@ -129,13 +147,16 @@ export function poseAt(tactic: Tactic, timeline: Timeline, t: number): Pose {
   }
 
   let ball: Vec2;
-  const { pass } = timing;
-  if (pass && local >= pass.launch) {
-    const flown = local - pass.launch;
-    ball =
-      flown >= pass.flight
-        ? add(positions[pass.to]!, BALL_HOLD_OFFSET)
-        : add(pointAt(pass.track, (flown / pass.flight) * pass.track.length), BALL_HOLD_OFFSET);
+  const { flight } = timing;
+  if (flight && local >= flight.launch) {
+    const u = Math.min(1, (local - flight.launch) / flight.flight);
+    const along = pointAt(flight.track, u * flight.track.length);
+    if (flight.kind === 'pass') {
+      ball = add(u >= 1 ? positions[flight.to!]! : along, BALL_HOLD_OFFSET);
+    } else {
+      // 投籃：從手上的位置漸漸收斂到籃框中心
+      ball = add(along, lerp(BALL_HOLD_OFFSET, { x: 0, y: 0 }, u));
+    }
   } else if (frame.ballHolderId) {
     ball = add(positions[frame.ballHolderId]!, BALL_HOLD_OFFSET);
   } else {

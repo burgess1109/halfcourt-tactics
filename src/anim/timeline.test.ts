@@ -88,7 +88,7 @@ describe('時間軸', () => {
     putPath(f, { id: 'p', kind: 'pass', actorId: 'b1', targetId: 'b2', points: [f.start.b1!, { x: -5.4, y: 1 }], freehand: false });
     const tl = buildTimeline(t);
     const run = 5 / speedOf(b2, false);
-    expect(tl.frames[0]!.pass!.launch + tl.frames[0]!.pass!.flight).toBeCloseTo(run, 3);
+    expect(tl.frames[0]!.flight!.launch + tl.frames[0]!.flight!.flight).toBeCloseTo(run, 3);
     expect(tl.total).toBeCloseTo(run, 3);
     // 出手前球在 b1 手上；結束時在 b2 手上
     expect(poseAt(t, tl, 0).ball).toEqual({ x: f.start.b1!.x + BALL_HOLD_OFFSET.x, y: f.start.b1!.y + BALL_HOLD_OFFSET.y });
@@ -102,7 +102,7 @@ describe('時間軸', () => {
     const f = t.frames[0]!;
     putPath(f, { id: 'p', kind: 'pass', actorId: 'b1', targetId: 'b3', points: [f.start.b1!, f.start.b3!], freehand: false });
     const tl = buildTimeline(t);
-    expect(tl.frames[0]!.pass!.launch).toBe(0);
+    expect(tl.frames[0]!.flight!.launch).toBe(0);
     const d = Math.hypot(f.start.b3!.x - f.start.b1!.x, f.start.b3!.y - f.start.b1!.y);
     expect(tl.total).toBeCloseTo(d / PASS_SPEED, 2);
   });
@@ -117,5 +117,59 @@ describe('時間軸', () => {
     const pose = poseAt(t, tl, tl.frames[0]!.duration + 0.1);
     expect(pose.frameIndex).toBe(1);
     expect(pose.positions.b3).toEqual({ x: 5.4, y: 1 });
+  });
+});
+
+describe('投籃', () => {
+  it('只有持球者、只能在最後一個分鏡', async () => {
+    const { cannotStart } = await import('../model/paths');
+    const t = createDefaultTactic();
+    const f = t.frames[0]!;
+    expect(cannotStart('shot', 'b2', f, t.players, true)).toMatch('持球者');
+    expect(cannotStart('shot', 'b1', f, t.players, false)).toBe('投籃只能在最後一個分鏡');
+    expect(cannotStart('shot', 'b1', f, t.players, true)).toBeNull();
+  });
+
+  it('投籃後不能在後面新增分鏡，但可以在前面插入', async () => {
+    const { makeShot } = await import('../model/paths');
+    const { cannotInsertAfter } = await import('../model/frames');
+    const t = createDefaultTactic();
+    insertFrameAfter(t, 0);
+    const last = t.frames[1]!;
+    putPath(last, makeShot('b1', last));
+    expect(cannotInsertAfter(t, 1)).toMatch('已經投籃');
+    expect(insertFrameAfter(t, 1)).toBeNull();
+    expect(insertFrameAfter(t, 0)).toBe(1);
+    expect(t.frames).toHaveLength(3);
+  });
+
+  it('球沿弧線飛進籃框；出手時間用來比對進攻時限', async () => {
+    const { makeShot, RIM } = await import('../model/paths');
+    const { MIN_SHOT_FLIGHT } = await import('../model/physique');
+    const { possessionSeconds } = await import('./timeline');
+    const t = createDefaultTactic();
+    const f0 = t.frames[0]!;
+    putPath(f0, { id: 'c', kind: 'cut', actorId: 'b2', points: [f0.start.b2!, { x: -5.4, y: 1 }], freehand: false });
+    insertFrameAfter(t, 0);
+    const f1 = t.frames[1]!;
+    putPath(f1, makeShot('b1', f1));
+    const tl = buildTimeline(t);
+    expect(tl.shotReleaseAt).toBeCloseTo(tl.frames[0]!.duration);
+    expect(possessionSeconds(tl)).toBeCloseTo(tl.frames[0]!.duration);
+    expect(tl.frames[1]!.duration).toBeGreaterThanOrEqual(MIN_SHOT_FLIGHT);
+    const end = poseAt(t, tl, tl.total);
+    expect(end.ball.x).toBeCloseTo(RIM.x);
+    expect(end.ball.y).toBeCloseTo(RIM.y);
+  });
+
+  it('投籃者沒球了，投籃會被移除', async () => {
+    const { makeShot } = await import('../model/paths');
+    const t = createDefaultTactic();
+    insertFrameAfter(t, 0);
+    putPath(t.frames[1]!, makeShot('b1', t.frames[1]!));
+    const f0 = t.frames[0]!;
+    putPath(f0, { id: 'p', kind: 'pass', actorId: 'b1', targetId: 'b2', points: [f0.start.b1!, f0.start.b2!], freehand: false });
+    expect(syncFrames(t, true)).toBe(1);
+    expect(t.frames[1]!.paths).toHaveLength(0);
   });
 });

@@ -1,4 +1,4 @@
-import { SHOT_CLOCK_SECONDS, buildTimeline } from '../anim/timeline';
+import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds } from '../anim/timeline';
 import type { Store } from '../model/store';
 
 const fmt = (s: number) => s.toFixed(1);
@@ -15,9 +15,10 @@ export function attachHud(el: HTMLElement, store: Store) {
     if (s.playing) return; // 播放中由 playing() 更新
     const tl = buildTimeline(s.tactic);
     const frame = tl.frames[s.frameIndex]!;
-    const over = tl.total > SHOT_CLOCK_SECONDS;
+    const over = possessionSeconds(tl) > SHOT_CLOCK_SECONDS;
+    const shot = tl.shotReleaseAt === null ? '' : `（${fmt(tl.shotReleaseAt)} 秒出手）`;
     show(
-      `分鏡 ${s.frameIndex + 1}：${fmt(frame.duration)} 秒 ｜ 總計 ${fmt(tl.total)} 秒${over ? '，超過 12 秒進攻時限' : ''}`,
+      `分鏡 ${s.frameIndex + 1}：${fmt(frame.duration)} 秒 ｜ 總計 ${fmt(tl.total)} 秒${shot}${over ? '，超過 12 秒進攻時限' : ''}`,
       over,
     );
   };

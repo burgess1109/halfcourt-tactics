@@ -25,11 +25,11 @@ const ok = (r: ReturnType<typeof finalizeDraft>): TacticPath => {
 describe('路線規則', () => {
   it('只有持球者可以運球、傳球', () => {
     const { f, players } = setup();
-    expect(cannotStart('dribble', 'b2', f, players)).toMatch('持球者');
-    expect(cannotStart('pass', 'b2', f, players)).toMatch('持球者');
-    expect(cannotStart('dribble', 'b1', f, players)).toBeNull();
-    expect(cannotStart('cut', 'b2', f, players)).toBeNull();
-    expect(cannotStart('screen', 'r1', f, players)).toBeNull();
+    expect(cannotStart('dribble', 'b2', f, players, true)).toMatch('持球者');
+    expect(cannotStart('pass', 'b2', f, players, true)).toMatch('持球者');
+    expect(cannotStart('dribble', 'b1', f, players, true)).toBeNull();
+    expect(cannotStart('cut', 'b2', f, players, true)).toBeNull();
+    expect(cannotStart('screen', 'r1', f, players, true)).toBeNull();
   });
 
   it('平滑模式只保留起點與終點', () => {
@@ -107,5 +107,15 @@ describe('路線規則', () => {
     expect(h.filter((x) => x.type === 'insert')).toHaveLength(2);
     const pass: TacticPath = { id: 'p', kind: 'pass', actorId: 'b1', targetId: 'b3', points: [f.start.b1!, f.start.b3!], freehand: false };
     expect(pathHandles(f, pass).filter((x) => x.type === 'point')).toHaveLength(0);
+  });
+});
+
+describe('投籃弧線', () => {
+  it('左右兩個底角出手，弧線都往中場鼓起', async () => {
+    const { shotControls, RIM } = await import('./paths');
+    for (const x of [-6.6, 6.6]) {
+      const mid = shotControls({ x, y: 1 })[1]!;
+      expect(mid.y).toBeGreaterThan((1 + RIM.y) / 2);
+    }
   });
 });
