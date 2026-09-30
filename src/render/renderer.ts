@@ -1,3 +1,4 @@
+import type { Pose } from '../anim/timeline';
 import { ballPosition } from '../model/entities';
 import type { EditorState } from '../model/store';
 import { BALL_ID } from '../model/types';
@@ -31,22 +32,26 @@ export class Renderer {
     drawCourt(cctx, this.viewport, this.dpr);
   }
 
-  draw(state: EditorState): void {
+  /** pose 有值時為播放畫面：用時間軸算出的位置，路線淡化，不畫分身與把手 */
+  draw(state: EditorState, pose?: Pose): void {
     const { ctx } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.drawImage(this.courtCache, 0, 0);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    const frame = state.tactic.frames[state.frameIndex]!;
+    const frame = state.tactic.frames[pose ? pose.frameIndex : state.frameIndex]!;
+    const positionOf = (id: string) => (pose ? pose.positions[id] : frame.start[id]);
     const playerById = new Map(state.tactic.players.map((p) => [p.id, p]));
     const teamOf = (id: string) => playerById.get(id)?.team ?? 'blue';
 
     // 1. 移動路線終點的分身
-    for (const path of frame.paths) {
-      const player = playerById.get(path.actorId);
-      const end = path.points.at(-1);
-      if (player && end && isMovement(path.kind)) drawGhost(ctx, this.viewport, player, end);
+    if (!pose) {
+      for (const path of frame.paths) {
+        const player = playerById.get(path.actorId);
+        const end = path.points.at(-1);
+        if (player && end && isMovement(path.kind)) drawGhost(ctx, this.viewport, player, end);
+      }
     }
 
     // 2. 路線（選取中的最後畫）與畫線中的預覽
@@ -57,7 +62,8 @@ export class Renderer {
       drawPath(ctx, this.viewport, resolvePoints(frame, path), {
         kind: path.kind,
         team: teamOf(path.actorId),
-        selected: path.id === state.selectedPathId,
+        selected: !pose && path.id === state.selectedPathId,
+        faded: !!pose,
       });
     }
     if (state.draft) {
@@ -72,14 +78,15 @@ export class Renderer {
       (a, b) => Number(a.id === state.draggingId) - Number(b.id === state.draggingId),
     );
     for (const p of players) {
-      const pos = frame.start[p.id];
+      const pos = positionOf(p.id);
       if (pos) drawPlayer(ctx, this.viewport, p, pos, p.id === state.draggingId);
     }
     for (const p of players) {
-      const pos = frame.start[p.id];
+      const pos = positionOf(p.id);
       if (pos) drawPlayerLabel(ctx, this.viewport, p, pos, p.id === state.draggingId);
     }
-    drawBall(ctx, this.viewport, ballPosition(frame), state.draggingId === BALL_ID);
+    drawBall(ctx, this.viewport, pose ? pose.ball : ballPosition(frame), state.draggingId === BALL_ID);
+    if (pose) return;
 
     // 4. 選取路線的編輯把手
     const selected = frame.paths.find((p) => p.id === state.selectedPathId);

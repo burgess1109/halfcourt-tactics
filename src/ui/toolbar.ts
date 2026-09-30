@@ -1,5 +1,6 @@
 import type { Store, Tool } from '../model/store';
 import { PATH_KIND_LABEL } from '../model/paths';
+import { bindMenu } from './menu';
 
 const TOOL_LABEL: Record<Tool, string> = { move: '移動', ...PATH_KIND_LABEL };
 
@@ -32,25 +33,11 @@ export function attachToolbar(store: Store): void {
   del.addEventListener('click', deleteSelected);
 
   // ---- 工具選單 ----
-  const openMenu = () => {
-    menu.hidden = false;
-    toolBtn.setAttribute('aria-expanded', 'true');
-    const b = toolBtn.getBoundingClientRect();
-    const m = menu.getBoundingClientRect();
-    const landscape = matchMedia('(orientation: landscape)').matches;
-    // 直式開在按鈕上方，橫式開在按鈕左側；都不超出畫面
-    const left = landscape ? b.left - m.width - 8 : Math.min(b.right - m.width, innerWidth - m.width - 8);
-    const top = landscape ? Math.min(b.top, innerHeight - m.height - 8) : b.top - m.height - 8;
-    menu.style.left = `${Math.max(8, left)}px`;
-    menu.style.top = `${Math.max(8, top)}px`;
-    toolItems.find((i) => i.dataset.tool === store.get().tool)?.focus();
-  };
-  const closeMenu = () => {
-    menu.hidden = true;
-    toolBtn.setAttribute('aria-expanded', 'false');
-  };
+  const menuCtl = bindMenu(toolBtn, menu, () =>
+    toolItems.find((i) => i.dataset.tool === store.get().tool)?.focus(),
+  );
+  const closeMenu = menuCtl.close;
 
-  toolBtn.addEventListener('click', () => (menu.hidden ? openMenu() : closeMenu()));
   for (const item of toolItems) {
     item.addEventListener('click', () => {
       store.update((s) => {
@@ -65,14 +52,10 @@ export function attachToolbar(store: Store): void {
       s.freehand = !s.freehand;
     });
   });
-  document.addEventListener('pointerdown', (e) => {
-    if (!menu.hidden && !menu.contains(e.target as Node) && !toolBtn.contains(e.target as Node)) closeMenu();
-  });
-  addEventListener('resize', closeMenu);
-
   // ---- 鍵盤 ----
   const shortcuts: Record<string, Tool> = { v: 'move', '1': 'cut', '2': 'dribble', '3': 'pass', '4': 'screen' };
   document.addEventListener('keydown', (e) => {
+    if (document.querySelector('dialog[open]') || store.get().playing) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const mod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
@@ -111,9 +94,10 @@ export function attachToolbar(store: Store): void {
   // ---- 依狀態更新按鈕 ----
   const sync = () => {
     const s = store.get();
-    undo.disabled = !store.canUndo;
-    redo.disabled = !store.canRedo;
-    del.disabled = !s.selectedPathId;
+    undo.disabled = s.playing || !store.canUndo;
+    redo.disabled = s.playing || !store.canRedo;
+    del.disabled = s.playing || !s.selectedPathId;
+    toolBtn.disabled = s.playing;
     toolIcon.setAttribute('href', `#icon-${s.tool}`);
     toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);
     toolBtn.title = `工具：${TOOL_LABEL[s.tool]}`;

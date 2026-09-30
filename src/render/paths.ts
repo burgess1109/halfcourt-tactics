@@ -22,6 +22,8 @@ export interface PathStyle {
   selected?: boolean;
   /** 畫線中的預覽 */
   preview?: boolean;
+  /** 播放時淡化 */
+  faded?: boolean;
 }
 
 /** 把控制點畫成路線 */
@@ -41,7 +43,7 @@ export function drawPath(ctx: CanvasRenderingContext2D, vp: Viewport, controls: 
   const color = theme.path[style.team];
 
   ctx.save();
-  ctx.globalAlpha = style.preview ? 0.6 : 1;
+  ctx.globalAlpha = style.preview ? 0.6 : style.faded ? 0.3 : 1;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 

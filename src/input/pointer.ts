@@ -12,7 +12,6 @@ import {
   hitTestHandle,
   hitTestPath,
   pathHandles,
-  pruneInvalidPaths,
   putPath,
   type Handle,
 } from '../model/paths';
@@ -23,7 +22,7 @@ import type { Renderer } from '../render/renderer';
 import { toWorld } from '../render/viewport';
 
 type Gesture =
-  | { type: 'entity'; id: string; grabOffset: Vec2 }
+  | { type: 'entity'; id: string; grabOffset: Vec2; downAt: { x: number; y: number }; moved: boolean; locked: boolean }
   | { type: 'draw' }
   | { type: 'handle'; pathId: string; handle: Handle; downAt: { x: number; y: number }; moved: boolean };
 
@@ -37,6 +36,7 @@ export function attachPointer(
   store: Store,
   renderer: Renderer,
   notify: (message: string) => void,
+  onTapPlayer: (playerId: string) => void,
 ): void {
   let pointerId: number | null = null;
   let gesture: Gesture | null = null;
@@ -72,18 +72,23 @@ export function attachPointer(
     const id = hitTest(point, players, frame);
     if (id && state.tool === 'move') {
       const center = id === BALL_ID ? ballPosition(frame) : frame.start[id]!;
-      store.begin();
-      store.update((s) => {
-        s.draggingId = id;
-        s.selectedPathId = null;
-        if (id === BALL_ID) {
-          // 把球從持球者手上拿起來
-          const f = s.tactic.frames[s.frameIndex]!;
-          f.start[BALL_ID] = center;
-          f.ballHolderId = null;
-        }
-      });
-      return { type: 'entity', id, grabOffset: { x: center.x - point.x, y: center.y - point.y } };
+      // 第 2 個分鏡之後的站位由上一個分鏡推算，不能直接拖
+      const locked = state.frameIndex > 0;
+      if (!locked) {
+        store.begin();
+        store.update((s) => {
+          s.draggingId = id;
+          s.selectedPathId = null;
+        });
+      }
+      return {
+        type: 'entity',
+        id,
+        grabOffset: { x: center.x - point.x, y: center.y - point.y },
+        downAt: local(e),
+        moved: false,
+        locked,
+      };
     }
     if (id && state.tool !== 'move') {
       const kind = state.tool;
@@ -114,7 +119,7 @@ export function attachPointer(
   };
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (pointerId !== null) return; // 只處理單指
+    if (pointerId !== null || store.get().playing) return; // 只處理單指；播放中不能編輯
     gesture = startGesture(e);
     if (gesture) {
       pointerId = e.pointerId;
@@ -128,6 +133,24 @@ export function attachPointer(
     const g = gesture;
 
     if (g.type === 'entity') {
+      if (!g.moved) {
+        const at = local(e);
+        if (Math.hypot(at.x - g.downAt.x, at.y - g.downAt.y) < TAP_SLOP_PX) return;
+        g.moved = true;
+        if (g.locked) {
+          notify('只能在第 1 個分鏡調整站位；之後的站位由上一個分鏡的路線決定');
+          return;
+        }
+        if (g.id === BALL_ID) {
+          // 真的開始拖曳球時，才把球從持球者手上拿起來
+          store.update((s) => {
+            const f = s.tactic.frames[s.frameIndex]!;
+            f.start[BALL_ID] = ballPosition(f);
+            f.ballHolderId = null;
+          });
+        }
+      }
+      if (g.locked) return;
       const radius = g.id === BALL_ID ? BALL_RADIUS : PLAYER_RADIUS;
       const next = clampToView({ x: point.x + g.grabOffset.x, y: point.y + g.grabOffset.y }, radius);
       store.update((s) => {
@@ -169,17 +192,17 @@ export function attachPointer(
     gesture = null;
 
     if (g.type === 'entity') {
-      let removed = 0;
-      store.update((s) => {
-        const f = s.tactic.frames[s.frameIndex]!;
-        if (g.id === BALL_ID) f.ballHolderId = findSnapTarget(f.start[BALL_ID]!, s.tactic.players, f);
-        // 持球時也更新球的位置，讓存下來的資料和畫面一致
-        f.start[BALL_ID] = ballPosition(f);
-        removed = pruneInvalidPaths(f, s.tactic.players);
-        s.draggingId = null;
-      });
-      store.end();
-      if (removed > 0) notify(`球換人持有，移除了 ${removed} 條運球 / 傳球路線`);
+      if (!g.locked) {
+        store.update((s) => {
+          const f = s.tactic.frames[s.frameIndex]!;
+          if (g.id === BALL_ID && g.moved) f.ballHolderId = findSnapTarget(f.start[BALL_ID]!, s.tactic.players, f);
+          // 持球時也更新球的位置，讓存下來的資料和畫面一致
+          f.start[BALL_ID] = ballPosition(f);
+          s.draggingId = null;
+        });
+        store.end(); // 由 store 統一移除不成立的路線並提示
+      }
+      if (!g.moved && !cancelled && g.id !== BALL_ID) onTapPlayer(g.id);
     } else if (g.type === 'draw') {
       const state = store.get();
       const draft = state.draft!;

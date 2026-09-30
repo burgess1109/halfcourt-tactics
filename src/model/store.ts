@@ -1,4 +1,5 @@
 import { createDefaultTactic } from './defaults';
+import { syncFrames } from './frames';
 import { History } from './history';
 import type { Draft } from './paths';
 import type { Frame, PathKind, Tactic } from './types';
@@ -17,6 +18,8 @@ export interface EditorState {
   selectedPathId: string | null;
   /** 正在畫、還沒放開的路線 */
   draft: Draft | null;
+  /** 播放中：禁止編輯 */
+  playing: boolean;
 }
 
 type Listener = (state: EditorState) => void;
@@ -30,7 +33,10 @@ export class Store {
     draggingId: null,
     selectedPathId: null,
     draft: null,
+    playing: false,
   };
+  /** 顯示提示訊息（由 main 接上 toast） */
+  notify: (message: string) => void = () => {};
   private listeners = new Set<Listener>();
   private history = new History<Tactic>(5);
   /** 手勢開始時的快照；手勢結束時若有變更才寫入歷史 */
@@ -47,6 +53,7 @@ export class Store {
   /** 暫時性的變更（拖曳中、畫線中），不寫入歷史 */
   update(fn: (draft: EditorState) => void): void {
     fn(this.state);
+    syncFrames(this.state.tactic, false);
     this.emit();
   }
 
@@ -67,6 +74,8 @@ export class Store {
   end(): void {
     const p = this.pending;
     this.pending = null;
+    const removed = syncFrames(this.state.tactic, true);
+    if (removed > 0) this.notify(`球換人持有，移除了 ${removed} 條運球 / 傳球路線`);
     if (p && JSON.stringify(this.state.tactic) !== p.json) {
       this.state.tactic.updatedAt = Date.now();
       this.history.push(p.snapshot);
