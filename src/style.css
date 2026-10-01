@@ -417,10 +417,35 @@ body[data-screen='board'] .app {
 
 .setup__head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
   padding: 16px 16px 8px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 10px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #1f2126;
+}
+
+.tabs__tab {
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #c9ccd3;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.tabs__tab[aria-selected='true'] {
+  background: var(--accent);
+  color: #1b1b1f;
+  font-weight: 600;
 }
 
 .setup__progress {

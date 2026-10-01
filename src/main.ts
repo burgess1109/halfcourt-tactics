@@ -73,8 +73,7 @@ const hud = attachHud($('#hud'), store);
 playback.onTick = hud.playing;
 
 $<HTMLButtonElement>('#mode-offense').addEventListener('click', () => setup.open(1));
-$<HTMLButtonElement>('#players').addEventListener('click', () => setup.open(1));
-$<HTMLButtonElement>('#matchup').addEventListener('click', () => setup.open(3));
+$<HTMLButtonElement>('#team').addEventListener('click', () => setup.open(1));
 
 // ---- 播放 ----
 const playBtn = $<HTMLButtonElement>('#play');

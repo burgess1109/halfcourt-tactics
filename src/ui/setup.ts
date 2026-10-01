@@ -56,10 +56,14 @@ export function attachSetup(
   const back = $<HTMLButtonElement>('#setup-back');
   const skip = $<HTMLButtonElement>('#setup-skip');
   const next = $<HTMLButtonElement>('#setup-next');
-  const close = $<HTMLButtonElement>('#setup-close');
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('#setup-tabs [data-step]')];
+  const tabList = $<HTMLElement>('#setup-tabs');
 
   let step: Step = 1;
-  /** 已經進過戰術面板：顯示「回到戰術板」，最後一步改成「完成」 */
+  /**
+   * 已經進過戰術面板：改成「藍隊 / 紅隊 / 對位」分頁，底部只有「完成」，
+   * 沒有「略過」（資料已經設定好，略過會把它清回預設值）。
+   */
   let boardReady = false;
   /** 對位頁的暫存，按下一步才寫回 */
   let draftMatchups: Record<string, string> = {};
@@ -150,7 +154,7 @@ export function attachSetup(
       const fallback = heightOf({ ...draft, heightCm: undefined }, players);
       const blue = players.find((p) => p.id === counterpartId(v.id));
       heightInput.placeholder =
-        team === 'red' && blue?.heightCm !== undefined ? `${fallback}（同藍隊）` : `預設 ${fallback}`;
+        team === 'red' && blue?.heightCm !== undefined ? `同藍 ${fallback}` : `預設 ${fallback}`;
       const all = players.map((p) => (p.id === draft.id ? draft : p));
       card.querySelector('.pcard__speed')!.textContent =
         `跑動 ${speedOf(draft, all, false).toFixed(2)} m/s ・ 運球 ${speedOf(draft, all, true).toFixed(2)} m/s`;
@@ -231,13 +235,15 @@ export function attachSetup(
   const render = () => {
     clearError();
     progress.textContent = `${step} / 3`;
+    progress.hidden = boardReady;
+    tabList.hidden = !boardReady;
+    for (const tab of tabs) tab.setAttribute('aria-selected', String(Number(tab.dataset.step) === step));
     title.textContent = STEP_TEXT[step].title;
     hint.textContent = STEP_TEXT[step].hint;
-    back.hidden = step === 1 && boardReady;
+    back.hidden = boardReady;
     back.textContent = step === 1 ? '回首頁' : '上一步';
-    skip.hidden = step === 3;
-    next.textContent = step === 3 ? (boardReady ? '完成' : '開始') : '下一步';
-    close.hidden = !boardReady;
+    skip.hidden = boardReady || step === 3;
+    next.textContent = boardReady ? '完成' : step === 3 ? '開始' : '下一步';
 
     if (step === 3) {
       renderMatchups();
@@ -305,9 +311,16 @@ export function attachSetup(
 
   next.addEventListener('click', () => {
     if (!saveStep()) return;
-    if (step === 3) finish();
+    if (step === 3 || boardReady) finish();
     else goto((step + 1) as Step);
   });
+
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => {
+      const to = Number(tab.dataset.step) as Step;
+      if (to !== step && saveStep()) goto(to);
+    });
+  }
 
   back.addEventListener('click', () => {
     if (step === 1) {
@@ -328,10 +341,6 @@ export function attachSetup(
       refreshDefaultMatchups(s);
     });
     goto((step + 1) as Step);
-  });
-
-  close.addEventListener('click', () => {
-    if (saveStep()) finish();
   });
 
   form.addEventListener('input', () => {
