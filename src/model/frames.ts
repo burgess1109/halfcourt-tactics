@@ -1,5 +1,7 @@
 import { BALL_HOLD_OFFSET, ballPosition } from './entities';
+import { buildTimeline } from '../anim/timeline';
 import { guardPosition } from '../sim/defense';
+import { redAt, simulateDefense } from '../sim/defenseSim';
 import { RIM, endPosition, hasShot, pathOf, pruneInvalidPaths } from './paths';
 import { BALL_ID, type Frame, type Tactic, type Vec2 } from './types';
 
@@ -29,10 +31,7 @@ export function endState(frame: Frame): { start: Record<string, Vec2>; ballHolde
   return { start, ballHolderId };
 }
 
-/**
- * 紅隊站在各自對位者與籃框之間（SPEC §6.2）。
- * M5 之前紅隊不會動，所以每個分鏡都直接放在理想位置。
- */
+/** 紅隊站在各自對位者與籃框之間（SPEC §6.2）；用於第 1 個分鏡 */
 function placeDefenders(tactic: Tactic, frame: Frame): void {
   for (const [blueId, redId] of Object.entries(tactic.matchups)) {
     const man = frame.start[blueId];
@@ -56,6 +55,16 @@ export function syncFrames(tactic: Tactic, prune: boolean): number {
     placeDefenders(tactic, frame);
     if (prune) removed += pruneInvalidPaths(frame, tactic.players);
   });
+
+  // 之後的分鏡：紅隊在防守 AI 模擬中、該分鏡開始時的實際位置（可能被甩開或被掩護卡住）
+  if (tactic.frames.length > 1) {
+    const timeline = buildTimeline(tactic);
+    const red = simulateDefense(tactic, timeline);
+    tactic.frames.forEach((frame, i) => {
+      if (i === 0) return;
+      Object.assign(frame.start, redAt(red, timeline.frames[i]!.start).positions);
+    });
+  }
   return removed;
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { guardPosition } from '../sim/defense';
-import { OFF_BALL_GAP, ON_BALL_GAP } from '../sim/config';
+import { MIN_GAP, OFF_BALL_GAP, ON_BALL_GAP } from '../sim/config';
 import { createDefaultTactic } from './defaults';
 import { insertFrameAfter, syncFrames } from './frames';
 import { assignMatchup, defaultMatchups } from './matchups';
@@ -41,9 +41,9 @@ describe('紅隊站位', () => {
     expect(guardPosition(man, false).x).toBeCloseTo(0);
   });
 
-  it('對位者在籃下時，不會站到籃框後面', () => {
-    const p = guardPosition({ x: 0, y: RIM.y + 1 }, false);
-    expect(p.y).toBeCloseTo(RIM.y + 0.5);
+  it('對位者靠近籃框時退到兩人中間，但至少保持 MIN_GAP 避免圓標重疊', () => {
+    expect(guardPosition({ x: 0, y: RIM.y + 3.6 }, false).y).toBeCloseTo(RIM.y + 1.8);
+    expect(guardPosition({ x: 0, y: RIM.y + 1 }, false).y).toBeCloseTo(RIM.y + 1 - MIN_GAP);
   });
 
   it('每個分鏡都依對位放好紅隊，跟著對位者跑位後的位置', () => {
@@ -53,8 +53,14 @@ describe('紅隊站位', () => {
     insertFrameAfter(t, 0);
     syncFrames(t, true);
     expect(t.frames[0]!.start.r2).toEqual(guardPosition(f0.start.b2!, false));
-    expect(t.frames[1]!.start.r2).toEqual(guardPosition({ x: -6.6, y: 1 }, false));
     expect(t.frames[0]!.start.r1).toEqual(guardPosition(f0.start.b1!, true));
+    // 第 2 個分鏡：紅 2 追著跑，但有反應時間，還沒完全到位
+    const ideal = guardPosition({ x: -6.6, y: 1 }, false);
+    const r2 = t.frames[1]!.start.r2!;
+    const before = Math.hypot(f0.start.r2!.x - ideal.x, f0.start.r2!.y - ideal.y);
+    const after = Math.hypot(r2.x - ideal.x, r2.y - ideal.y);
+    expect(after).toBeGreaterThan(0.1);
+    expect(after).toBeLessThan(before / 2);
   });
 
   it('改對位後紅隊換人盯', () => {

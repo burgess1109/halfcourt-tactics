@@ -70,6 +70,21 @@ export function drawPlayerLabel(
   ctx.shadowColor = 'transparent';
 }
 
+/** 被掩護卡住的防守者：外圍一圈黃色光暈 */
+export function drawStuck(ctx: CanvasRenderingContext2D, vp: Viewport, pos: Vec2): void {
+  const c = toScreen(vp, pos);
+  const r = PLAYER_RADIUS * vp.scale;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 214, 0, 0.45)';
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, r * 1.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd600';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function drawBall(ctx: CanvasRenderingContext2D, vp: Viewport, pos: Vec2, active: boolean): void {
   const c = toScreen(vp, pos);
   const r = BALL_RADIUS * vp.scale * (active ? 1.1 : 1);

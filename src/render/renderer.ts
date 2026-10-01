@@ -1,9 +1,9 @@
-import type { Pose } from '../anim/timeline';
+import type { FullPose } from '../anim/simulation';
 import { ballPosition } from '../model/entities';
 import type { EditorState } from '../model/store';
 import { BALL_ID } from '../model/types';
 import { drawCourt } from './court';
-import { drawBall, drawPlayer, drawPlayerLabel } from './entities';
+import { drawBall, drawPlayer, drawPlayerLabel, drawStuck } from './entities';
 import { drawGhost, drawHandles, drawPath } from './paths';
 import { isMovement, pathHandles, resolvePoints } from '../model/paths';
 import { fitViewport, type Viewport } from './viewport';
@@ -34,7 +34,7 @@ export class Renderer {
   }
 
   /** pose 有值時為播放畫面：用時間軸算出的位置，路線淡化，不畫分身與把手 */
-  draw(state: EditorState, pose?: Pose): void {
+  draw(state: EditorState, pose?: FullPose): void {
     const { ctx } = this;
     if (this.viewport.scale === 0) return; // 還沒有尺寸（戰術面板隱藏中）
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -79,6 +79,10 @@ export class Renderer {
     const players = [...state.tactic.players].sort(
       (a, b) => Number(a.id === state.draggingId) - Number(b.id === state.draggingId),
     );
+    for (const p of players) {
+      const pos = positionOf(p.id);
+      if (pos && pose?.stuck.has(p.id)) drawStuck(ctx, this.viewport, pos);
+    }
     for (const p of players) {
       const pos = positionOf(p.id);
       if (pos) drawPlayer(ctx, this.viewport, p, pos, p.id === state.draggingId);

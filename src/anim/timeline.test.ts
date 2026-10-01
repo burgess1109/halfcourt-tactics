@@ -186,3 +186,22 @@ describe('投籃', () => {
     expect(t.frames[1]!.paths).toHaveLength(0);
   });
 });
+
+describe('掩護者先站住再移動', () => {
+  it('上一個分鏡掩護的人，下一個分鏡先等 0.5 秒才出發', async () => {
+    const { SCREEN_HOLD_SECONDS } = await import('./timeline');
+    const t = createDefaultTactic();
+    const f0 = t.frames[0]!;
+    putPath(f0, { id: 's', kind: 'screen', actorId: 'b3', points: [f0.start.b3!, { x: 1.1, y: 7.1 }], freehand: false });
+    insertFrameAfter(t, 0);
+    const f1 = t.frames[1]!;
+    putPath(f1, { id: 'r', kind: 'cut', actorId: 'b3', points: [f1.start.b3!, { x: 0.4, y: 2.8 }], freehand: false });
+    const tl = buildTimeline(t);
+    const s1 = tl.frames[1]!.start;
+    expect(poseAt(t, tl, s1 + SCREEN_HOLD_SECONDS - 0.01).positions.b3).toEqual({ x: 1.1, y: 7.1 });
+    expect(poseAt(t, tl, s1 + SCREEN_HOLD_SECONDS + 0.1).positions.b3!.y).toBeLessThan(7.1);
+    const b3 = t.players.find((p) => p.id === 'b3')!;
+    const run = Math.hypot(1.1 - 0.4, 7.1 - 2.8) / speedOf(b3, t.players, false);
+    expect(tl.frames[1]!.duration).toBeCloseTo(SCREEN_HOLD_SECONDS + run, 3);
+  });
+});
