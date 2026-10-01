@@ -497,17 +497,16 @@ export const PLAYS: readonly Play[] = [
       },
       { note: 'A 把球傳進低位的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       {
-        note: 'A 拉到弧頂左側、C 拉到左底角，清出空間；B 背框往籃下擠，轉身靠近籃框。',
+        note: 'A 拉到弧頂左側、C 拉到左底角，清出空間，讓 B 在低位一對一。',
         paths: [
           { kind: 'cut', actor: 'A', to: { x: -2.4, y: 8.4 } },
           { kind: 'cut', actor: 'C', to: LC },
-          { kind: 'dribble', actor: 'B', to: { x: 1.0, y: 2.3 } },
         ],
       },
-      { note: 'B 在籃下出手（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
+      { note: 'B 在低位轉身投籃（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
     ],
     finisher: 'B',
-    finish: 'B 低位單打',
+    finish: 'B 低位轉身投籃',
     weights: { A: { shooting: 1 }, B: { height: 3, finishing: 3, iso: 2 }, C: { shooting: 1 } },
   },
   {
@@ -521,10 +520,10 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 從 B 外側繞過掩護到右翼，逼對方換防；B 先站住擋人，再往弧頂左側拉開。',
+        note: 'A 從 B 外側繞過掩護到右翼，逼對方換防；B 先站住擋人，再往弧頂拉開。',
         paths: [
           { kind: 'dribble', actor: 'A', to: { x: 4.6, y: 6.6 }, via: [AROUND_SCREEN] },
-          { kind: 'cut', actor: 'B', to: { x: -2.4, y: 8.4 } },
+          { kind: 'cut', actor: 'B', to: { x: -1.2, y: 8.8 } },
         ],
       },
       {

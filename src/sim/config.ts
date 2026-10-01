@@ -47,9 +47,16 @@ export const DENY_TOWARD_BALL = 1.3;
 export const DENY_TOWARD_RIM = 0.5;
 /** 對位者離籃框超過這個距離（公尺）才阻絕；在籃下附近就站在人和籃框之間 */
 export const DENY_MIN_RIM_DISTANCE = 4.5;
+/** 對位者離持球者這麼近（公尺，例如正在幫持球者掩護）時不阻絕，站在人和籃框之間 */
+export const DENY_MIN_BALL_DISTANCE = 3.5;
 
 /**
  * 被甩開：防守者離籃框比對位者還遠超過這個距離（公尺），代表對位者已經切到他前面，
  * 防守者沒辦法穿過去，只能從後面追（SPEC §6.2）。
  */
 export const BEATEN_MARGIN = 0.3;
+/**
+ * 而且對位者要真的擋在防守者和籃框之間：從對位者看出去，防守者和籃框的夾角大於 120°。
+ * 只是往籃下走（例如要位）、防守者還在旁邊時，不算被甩開。
+ */
+export const BEATEN_COS = -0.5;
