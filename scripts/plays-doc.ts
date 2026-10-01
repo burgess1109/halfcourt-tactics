@@ -60,7 +60,9 @@ function arcPath(cx: number, cy: number, r: number, a0: number, a1: number, step
 }
 
 function court(): string {
-  const line = `fill="none" stroke="${C.line}" stroke-width="2"`;
+  // 注意：每個屬性只能出現一次，PhpStorm 等嚴格的 XML 解析器遇到重複屬性會無法載入
+  const stroke = `stroke="${C.line}" stroke-width="2"`;
+  const line = `fill="none" ${stroke}`;
   const corner = Math.atan2(THREE_POINT_CORNER_Y - BASKET_Y, THREE_POINT_CORNER_X);
   const three = [
     { x: THREE_POINT_CORNER_X, y: 0 },
@@ -69,7 +71,7 @@ function court(): string {
   ];
   return [
     `<rect width="${f(PANEL_W)}" height="${f(PANEL_H)}" rx="8" fill="${C.floor}"/>`,
-    `<rect x="${f(sx(-PAINT_HALF_WIDTH))}" y="${f(sy(PAINT_DEPTH))}" width="${f(PAINT_HALF_WIDTH * 2 * PX)}" height="${f(PAINT_DEPTH * PX)}" fill="${C.paint}" ${line}/>`,
+    `<rect x="${f(sx(-PAINT_HALF_WIDTH))}" y="${f(sy(PAINT_DEPTH))}" width="${f(PAINT_HALF_WIDTH * 2 * PX)}" height="${f(PAINT_DEPTH * PX)}" fill="${C.paint}" ${stroke}/>`,
     `<polyline points="${poly([{ x: -COURT_HALF_WIDTH, y: VIEW.maxY }, { x: -COURT_HALF_WIDTH, y: 0 }, { x: COURT_HALF_WIDTH, y: 0 }, { x: COURT_HALF_WIDTH, y: VIEW.maxY }])}" ${line}/>`,
     `<polyline points="${poly(arcPath(0, PAINT_DEPTH, FREE_THROW_RADIUS, 0, Math.PI))}" ${line}/>`,
     `<polyline points="${poly(arcPath(0, PAINT_DEPTH, FREE_THROW_RADIUS, Math.PI, 2 * Math.PI))}" ${line} stroke-dasharray="6 5"/>`,
@@ -95,10 +97,11 @@ function pathSvg(kind: string, controls: Vec2[]): string {
   if (body.length < 2) return '';
   const tip = body.at(-1)!;
   const dir = normalize(sub(tip, body.at(-2)!));
-  const stroke = `fill="none" stroke="${C.path.blue}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"`;
+  const width = kind === 'shot' ? 3.6 : 2.6;
+  const stroke = `fill="none" stroke="${C.path.blue}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"`;
   const lineBody = kind === 'screen' || kind === 'shot' ? body : trimPolyline(body, 0, 0.34);
   const shape = kind === 'dribble' ? wave(lineBody) : lineBody;
-  const dash = kind === 'pass' ? ' stroke-dasharray="7 6"' : kind === 'shot' ? ' stroke-dasharray="1 6" stroke-width="3.6"' : '';
+  const dash = kind === 'pass' ? ' stroke-dasharray="7 6"' : kind === 'shot' ? ' stroke-dasharray="1 6"' : '';
   let out = `<polyline points="${poly(shape)}" ${stroke}${dash}/>`;
   if (kind === 'screen') {
     const n = perp(dir);
@@ -120,7 +123,7 @@ function panel(tactic: Tactic, i: number, roleOf: Map<string, Role>, ox: number,
     if (path.kind !== 'cut' && path.kind !== 'dribble' && path.kind !== 'screen') continue;
     const end = path.points.at(-1)!;
     parts.push(
-      `<circle cx="${f(sx(end.x))}" cy="${f(sy(end.y))}" r="${f(0.62 * PX)}" fill="rgba(255,255,255,0.45)" stroke="${C.blue}" stroke-width="1.6" stroke-dasharray="4 3"/>`,
+      `<circle cx="${f(sx(end.x))}" cy="${f(sy(end.y))}" r="${f(0.62 * PX)}" fill="#ffffff" fill-opacity="0.45" stroke="${C.blue}" stroke-width="1.6" stroke-dasharray="4 3"/>`,
     );
   }
   for (const path of frame.paths) parts.push(pathSvg(path.kind, resolvePoints(frame, path)));
