@@ -55,6 +55,8 @@ const HIGH_PICK_SET: PlayFrame = {
 };
 const HIGH_PICK_START: Record<Role, Vec2> = { A: TOP, B: { x: 4.4, y: 6.8 }, C: LW };
 const HIGH_PICK_ROLES: Record<Role, string> = { A: '持球者', B: '掩護者', C: '拉開空間' };
+/** A 從掩護者外側（靠中場那側）繞過去，路線不會穿過 B */
+const AROUND_SCREEN: Vec2 = { x: 2.1, y: 8.5 };
 
 /** 手遞手的第 1 個分鏡：A 往右運球，B 從底角上來接 */
 const DHO_START: Record<Role, Vec2> = { A: TOP, B: RC, C: LW };
@@ -72,9 +74,9 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 利用掩護往右運球，在罰球線延伸處急停；B 先站住擋人，再下順把防守者帶離。',
+        note: 'A 從 B 外側繞過掩護往右運球，在罰球線延伸處急停；B 先站住擋人，再下順把防守者帶離。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 3.0, y: 5.4 } },
+          { kind: 'dribble', actor: 'A', to: { x: 3.2, y: 5.4 }, via: [AROUND_SCREEN] },
           { kind: 'cut', actor: 'B', to: { x: 1.0, y: 2.8 } },
         ],
       },
@@ -95,10 +97,10 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 繞過掩護往禁區運球；B 外彈到右翼，把禁區讓出來。',
+        note: 'A 從 B 外側繞過掩護，再往禁區運球；B 先站住擋人，再往 A 的右後方（弧頂左側）拉開，不擋切入路線。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 1.4, y: 3.6 }, via: [{ x: 2.6, y: 5.8 }] },
-          { kind: 'cut', actor: 'B', to: { x: 4.4, y: 7.0 } },
+          { kind: 'dribble', actor: 'A', to: { x: 1.4, y: 3.6 }, via: [AROUND_SCREEN, { x: 3.0, y: 6.4 }] },
+          { kind: 'cut', actor: 'B', to: { x: -2.4, y: 8.4 } },
         ],
       },
       { note: 'A 在禁區拋投（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
@@ -118,10 +120,10 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 繞過掩護一路運球切到籃下；B 外彈到右翼，清空切入路線。',
+        note: 'A 從 B 外側繞過掩護，一路運球切到籃下；B 先站住擋人，再往 A 的右後方（弧頂左側）拉開，清空切入路線。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 0.9, y: 2.4 }, via: [{ x: 2.6, y: 5.4 }] },
-          { kind: 'cut', actor: 'B', to: { x: 4.6, y: 6.8 } },
+          { kind: 'dribble', actor: 'A', to: { x: 0.9, y: 2.4 }, via: [AROUND_SCREEN, { x: 3.0, y: 5.8 }] },
+          { kind: 'cut', actor: 'B', to: { x: -2.4, y: 8.4 } },
         ],
       },
       { note: 'A 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
@@ -141,9 +143,9 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 往右運球吸引防守；B 先站住擋人，再往左外彈到三分線外。',
+        note: 'A 從 B 外側繞過掩護往右運球，吸引防守；B 先站住擋人，再往左外彈到三分線外。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 3.4, y: 5.6 } },
+          { kind: 'dribble', actor: 'A', to: { x: 3.4, y: 5.6 }, via: [AROUND_SCREEN] },
           { kind: 'cut', actor: 'B', to: { x: -1.6, y: 8.6 } },
         ],
       },
@@ -165,9 +167,9 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 往右運球；B 先站住擋人，再轉身下順到籃下。',
+        note: 'A 從 B 外側繞過掩護往右運球；B 先站住擋人，再轉身下順到籃下。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 3.6, y: 5.6 } },
+          { kind: 'dribble', actor: 'A', to: { x: 3.6, y: 5.6 }, via: [AROUND_SCREEN] },
           { kind: 'cut', actor: 'B', to: { x: 0.8, y: 2.6 } },
         ],
       },
@@ -182,56 +184,55 @@ export const PLAYS: readonly Play[] = [
     id: 'low-pnr-split',
     category: '低位擋拆',
     name: 'Split Cut',
-    summary: '球傳進低位後，傳球者幫隊友掩護，隊友繞掩護切向籃下接低位的傳球。',
-    roles: { A: '傳入低位後掩護', B: '低位', C: '繞掩護切入' },
-    start: { A: { x: 5.0, y: 6.6 }, B: { x: 2.9, y: 2.6 }, C: { x: -1.6, y: 8.4 } },
+    summary: '球傳進低位後，傳球者下來幫低位的人掩護，低位持球者趁防守者被擋住時切入終結。',
+    roles: { A: '傳入低位後掩護', B: '低位持球切入', C: '拉開空間' },
+    start: { A: { x: 5.0, y: 6.6 }, B: { x: 4.6, y: 2.2 }, C: LW },
     ball: 'A',
     frames: [
-      { note: 'A 把球傳進右側低位的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
+      { note: 'A 把球傳進右側低位的 B，B 成為持球者。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       {
-        note: 'A 傳完往弧頂走，到 C 的防守者右側設掩護。',
-        paths: [{ kind: 'screen', actor: 'A', to: { x: 0.1, y: 6.7 } }],
+        note: 'A 傳完往下走，到 B 的防守者靠中路那側設掩護。',
+        paths: [{ kind: 'screen', actor: 'A', to: { x: 2.6, y: 3.0 } }],
       },
       {
-        note: 'C 繞過掩護往籃下切；A 先站住擋人，再外彈到弧頂拉開。',
+        note: 'B 從 A 外側繞過掩護往中路切，再轉向籃下；A 留在原地繼續擋住防守者。',
         paths: [
-          { kind: 'cut', actor: 'C', to: { x: -0.6, y: 2.6 }, via: [{ x: 0.6, y: 5.2 }] },
-          { kind: 'cut', actor: 'A', to: { x: 2.4, y: 8.4 } },
+          { kind: 'dribble', actor: 'B', to: { x: 0.6, y: 2.8 }, via: [{ x: 3.8, y: 4.3 }, { x: 1.8, y: 4.5 }] },
         ],
       },
-      { note: 'B 從低位傳給切入的 C。', paths: [{ kind: 'pass', actor: 'B', target: 'C' }] },
-      { note: 'C 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
+      { note: 'B 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
     ],
-    finisher: 'C',
-    finish: 'C 繞掩護切入上籃',
-    weights: { A: { shooting: 1 }, B: { height: 2 }, C: { finishing: 3, speed: 2 } },
+    finisher: 'B',
+    finish: 'B 利用 A 的掩護切入上籃',
+    weights: { A: { height: 1 }, B: { finishing: 3, iso: 2, height: 1 }, C: { shooting: 1 } },
   },
   {
     id: 'low-pnr-roll',
     category: '低位擋拆',
     name: 'Pick and Roll',
-    summary: '在側翼做擋拆：低位的人上來掩護，持球者往中路切，掩護者轉身下順。',
-    roles: { A: '持球者', B: '低位掩護者', C: '拉開空間' },
-    start: { A: { x: 5.4, y: 5.6 }, B: { x: 3.0, y: 2.4 }, C: LW },
+    summary: '球傳到底角附近後，傳球者下來幫持球者掩護再順下，持球者切向中路後回傳給順下的人。',
+    roles: { A: '傳球後掩護、順下', B: '低位持球者', C: '拉開空間' },
+    start: { A: { x: 4.6, y: 7.0 }, B: { x: 5.6, y: 2.4 }, C: LW },
     ball: 'A',
     frames: [
+      { note: 'A 把球傳給右側低位（底角附近）的 B，B 成為持球者。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       {
-        note: 'B 從低位上提，到 A 的防守者靠中路那側設掩護。',
-        paths: [{ kind: 'screen', actor: 'B', to: { x: 3.4, y: 5.7 } }],
+        note: 'A 傳完往下走，到 B 的防守者靠中路那側設掩護。',
+        paths: [{ kind: 'screen', actor: 'A', to: { x: 3.4, y: 3.2 } }],
       },
       {
-        note: 'A 繞過掩護往中路運球；B 先站住擋人，再轉身下順到籃下。',
+        note: 'B 繞過掩護往中路運球；A 先站住擋人，再轉身順下到籃下。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 1.4, y: 5.0 } },
-          { kind: 'cut', actor: 'B', to: { x: 1.4, y: 2.4 } },
+          { kind: 'dribble', actor: 'B', to: { x: 2.6, y: 4.8 }, via: [{ x: 4.8, y: 4.4 }] },
+          { kind: 'cut', actor: 'A', to: { x: 0.8, y: 2.2 } },
         ],
       },
-      { note: 'A 傳給下順的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
-      { note: 'B 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
+      { note: 'B 傳給順下的 A。', paths: [{ kind: 'pass', actor: 'B', target: 'A' }] },
+      { note: 'A 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
     ],
-    finisher: 'B',
-    finish: 'B 低位掩護後轉身接球上籃',
-    weights: { A: { iso: 2 }, B: { finishing: 3, height: 2 }, C: { shooting: 1 } },
+    finisher: 'A',
+    finish: 'A 掩護後順下接球上籃',
+    weights: { A: { finishing: 3, height: 2 }, B: { iso: 2 }, C: { shooting: 1 } },
   },
   {
     id: 'cut-give-go',
@@ -398,31 +399,30 @@ export const PLAYS: readonly Play[] = [
     id: 'dho-shoot',
     category: '手遞手',
     name: 'DHO to Shoot',
-    summary: '手遞手後交球者擋住防守者，接球者往外橫移一步投兩分球。',
+    summary: '手遞手後，接球者從交球者外側繞到弧頂，交球者擋住追上來的防守者，接球者投兩分球。',
     roles: DHO_ROLES,
     start: DHO_START,
     ball: 'A',
     frames: [
       {
-        note: 'A 往右運球；B 從右底角往上跑到三分線外，迎向 A。',
+        note: 'A 往右運球；B 從右底角往上跑，迎向 A。',
         paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 3.2, y: 7.6 } },
-          { kind: 'cut', actor: 'B', to: { x: 4.9, y: 6.6 } },
+          { kind: 'dribble', actor: 'A', to: { x: 3.2, y: 7.4 } },
+          { kind: 'cut', actor: 'B', to: { x: 4.6, y: 6.4 } },
         ],
       },
       { note: 'A 把球遞給 B（手遞手）。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       {
-        note: 'A 交球後擋在 B 的防守者右下方。',
-        paths: [{ kind: 'screen', actor: 'A', to: { x: 4.6, y: 4.6 } }],
+        note: 'B 從 A 的外側（靠中場那側）繞過去，運球到弧頂；A 擋住追過來的防守者。',
+        paths: [
+          { kind: 'dribble', actor: 'B', to: { x: 0.6, y: 8.8 }, via: [{ x: 3.8, y: 8.6 }] },
+          { kind: 'screen', actor: 'A', to: { x: 2.6, y: 6.1 } },
+        ],
       },
-      {
-        note: 'B 往右運一步拉開距離，防守者被 A 擋住。',
-        paths: [{ kind: 'dribble', actor: 'B', to: { x: 5.9, y: 5.4 } }],
-      },
-      { note: 'B 弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
+      { note: 'B 在弧頂投籃（2 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
     ],
     finisher: 'B',
-    finish: 'B 接手遞手投籃',
+    finish: 'B 繞過 A 到弧頂投籃',
     weights: { A: { height: 1 }, B: { shooting: 3, iso: 1 }, C: { shooting: 1 } },
   },
   {
