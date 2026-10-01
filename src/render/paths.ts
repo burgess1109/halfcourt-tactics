@@ -133,7 +133,7 @@ function fillArrow(ctx: CanvasRenderingContext2D, vp: Viewport, tip: Vec2, dir: 
 }
 
 /** 運球的波浪線：沿著折線的法向量做正弦位移，頭尾漸弱，讓箭頭和起點乾淨 */
-function wave(pts: readonly Vec2[]): Vec2[] {
+export function wave(pts: readonly Vec2[]): Vec2[] {
   const total = polylineLength(pts);
   if (total === 0) return [...pts];
   // 重新取樣成等距的點，波形才會均勻
