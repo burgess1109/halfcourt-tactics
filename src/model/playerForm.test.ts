@@ -53,4 +53,16 @@ describe('設定頁表單', () => {
     expect(isBlueComplete(t.players, false)).toBe(true);
     expect(isBlueComplete(t.players, true)).toBe(false);
   });
+
+  it('紅隊速度：普通不另外存，其他等級寫回；藍隊不寫入紅隊速度', () => {
+    const t = createDefaultTactic();
+    const r1 = t.players.find((p) => p.id === 'r1')!;
+    applyPatch(r1, { id: 'r1', number: 1, name: '對手 1', heightCm: undefined, speedRating: 0 });
+    expect(r1.speedRating).toBe(0);
+    applyPatch(r1, { id: 'r1', number: 1, name: '對手 1', heightCm: undefined, speedRating: 2 });
+    expect(r1).not.toHaveProperty('speedRating');
+    const b1 = t.players.find((p) => p.id === 'b1')!;
+    applyPatch(b1, { id: 'b1', number: 1, name: '球員 1', heightCm: undefined, skills: { ...DEFAULT_SKILLS }, speedRating: 4 });
+    expect(b1).not.toHaveProperty('speedRating');
+  });
 });

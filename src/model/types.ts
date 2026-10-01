@@ -3,7 +3,11 @@
 export type Team = 'blue' | 'red'; // blue = 使用者，red = 系統
 export type Mode = 'offense' | 'defense';
 
-/** 能力等級：0 差勁、1 不佳、2 普通、3 不錯、4 優秀（SPEC §3.1） */
+/**
+ * 等級 0–4（SPEC §3.1、§3.2）。
+ * 藍隊能力：0 大幅劣勢 … 2 持平 … 4 大幅優勢（跟這場對手的平均水準比）。
+ * 紅隊速度：0 慢很多 … 2 普通 … 4 快很多（跟他隊友的平均比）。
+ */
 export type Rating = 0 | 1 | 2 | 3 | 4;
 
 export interface Skills {
@@ -27,6 +31,8 @@ export interface Player {
   heightCm?: number;
   /** 只有藍隊 */
   skills?: Skills;
+  /** 只有紅隊：速度（跟隊友平均比），未填 = 普通 */
+  speedRating?: Rating;
 }
 
 export type PathKind = 'cut' | 'dribble' | 'pass' | 'screen' | 'shot';

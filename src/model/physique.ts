@@ -3,7 +3,10 @@ import type { Player, Rating, Skills } from './types';
 // 球員能力模型，對應 SPEC §7。
 
 export const RATINGS: readonly Rating[] = [4, 3, 2, 1, 0];
-export const RATING_LABEL: Record<Rating, string> = { 4: '優秀', 3: '不錯', 2: '普通', 1: '不佳', 0: '差勁' };
+/** 藍隊能力的等級（跟這場對手的平均水準比） */
+export const RATING_LABEL: Record<Rating, string> = { 4: '大幅優勢', 3: '小幅優勢', 2: '持平', 1: '小幅劣勢', 0: '大幅劣勢' };
+/** 紅隊速度的等級（跟他隊友的平均比） */
+export const RED_SPEED_LABEL: Record<Rating, string> = { 4: '快很多', 3: '稍快', 2: '普通', 1: '稍慢', 0: '慢很多' };
 
 export const SKILL_LABEL: Record<keyof Skills, string> = {
   shooting: '外線投射',
@@ -22,7 +25,7 @@ export const DEFAULT_HEIGHT = 175;
 /** 無球跑動的基準速度（m/s） */
 export const BASE_SPEED = 5.0;
 export const DRIBBLE_FACTOR = 0.85;
-/** 速度能力的倍率：差勁 → 優秀 */
+/** 速度等級的倍率：0 → 4（藍隊能力與紅隊速度共用） */
 const SPEED_RATING_FACTOR: Record<Rating, number> = { 0: 0.9, 1: 0.95, 2: 1, 3: 1.05, 4: 1.1 };
 /** 傳球速度（m/s），SPEC §5 */
 export const PASS_SPEED = 12;
@@ -53,9 +56,9 @@ export function skillsOf(p: Player): Skills {
   return p.skills ?? DEFAULT_SKILLS;
 }
 
-/** speed = base × 身高係數 × 速度能力（紅隊沒有能力，視為普通） */
+/** speed = base × 身高係數 × 速度等級（藍隊看能力的速度，紅隊看自己的速度設定） */
 export function speedOf(p: Player, players: readonly Player[], dribbling: boolean): number {
   const height = Math.min(1.08, Math.max(0.92, 1 - 0.003 * (heightOf(p, players) - DEFAULT_HEIGHT)));
-  const rating = SPEED_RATING_FACTOR[skillsOf(p).speed];
+  const rating = SPEED_RATING_FACTOR[p.team === 'blue' ? skillsOf(p).speed : (p.speedRating ?? 2)];
   return BASE_SPEED * height * rating * (dribbling ? DRIBBLE_FACTOR : 1);
 }

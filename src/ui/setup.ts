@@ -4,6 +4,7 @@ import {
   DEFAULT_SKILLS,
   RATINGS,
   RATING_LABEL,
+  RED_SPEED_LABEL,
   SKILL_KEYS,
   SKILL_LABEL,
   counterpartId,
@@ -21,8 +22,8 @@ export type Step = 1 | 2 | 3;
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 const STEP_TEXT: Record<Step, { title: string; hint: string }> = {
-  1: { title: '你的球隊（藍隊）', hint: '都是選填。能力預設普通；有填身高才會推薦內建戰術。' },
-  2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時，跟藍隊同順序的球員一樣高。' },
+  1: { title: '你的球隊（藍隊）', hint: '都是選填。能力是跟這場對手的平均水準比，預設持平；有填身高才會推薦內建戰術。' },
+  2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時跟藍隊同順序的球員一樣高；速度是跟他隊友的平均比，預設普通。' },
   3: { title: '對位設定', hint: '系統的紅隊會盯住對位的藍隊球員。' },
 };
 
@@ -101,22 +102,26 @@ export function attachSetup(
       ),
     );
 
+    /** 五段按鈕：藍隊四項能力、紅隊速度共用 */
+    const ratingRow = (name: string, legend: string, labels: Record<Rating, string>, value: Rating) => {
+      const seg = el('div', { class: 'seg' });
+      for (const r of RATINGS) {
+        seg.append(
+          el(
+            'label',
+            {},
+            el('input', { type: 'radio', name, value: String(r), checked: value === r }),
+            el('span', {}, labels[r]),
+          ),
+        );
+      }
+      return el('fieldset', { class: 'skill' }, el('legend', {}, legend), seg);
+    };
     if (blue) {
       const skills = p.skills ?? DEFAULT_SKILLS;
-      for (const key of SKILL_KEYS) {
-        const seg = el('div', { class: 'seg' });
-        for (const r of RATINGS) {
-          seg.append(
-            el(
-              'label',
-              {},
-              el('input', { type: 'radio', name: `${p.id}-${key}`, value: String(r), checked: skills[key] === r }),
-              el('span', {}, RATING_LABEL[r]),
-            ),
-          );
-        }
-        card.append(el('fieldset', { class: 'skill' }, el('legend', {}, SKILL_LABEL[key]), seg));
-      }
+      for (const key of SKILL_KEYS) card.append(ratingRow(`${p.id}-${key}`, SKILL_LABEL[key], RATING_LABEL, skills[key]));
+    } else {
+      card.append(ratingRow(`${p.id}-speed`, '速度（跟隊友比）', RED_SPEED_LABEL, p.speedRating ?? 2));
     }
     card.append(el('p', { class: 'pcard__speed', 'aria-live': 'polite' }));
     return card;
@@ -127,13 +132,14 @@ export function attachSetup(
     teamPlayers(tactic(), team).map((p) => {
       const card = form.querySelector<HTMLElement>(`[data-id="${p.id}"]`)!;
       const value = (name: string) => card.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value;
-      let skills: Skills | undefined;
-      if (team === 'blue') {
-        const pick = (key: keyof Skills) =>
-          Number(card.querySelector<HTMLInputElement>(`input[name="${p.id}-${key}"]:checked`)!.value) as Rating;
-        skills = { shooting: pick('shooting'), speed: pick('speed'), finishing: pick('finishing'), iso: pick('iso') };
-      }
-      return { id: p.id, number: value('number'), name: value('name'), height: value('height'), skills };
+      const pick = (key: string) =>
+        Number(card.querySelector<HTMLInputElement>(`input[name="${p.id}-${key}"]:checked`)!.value) as Rating;
+      const skills: Skills | undefined =
+        team === 'blue'
+          ? { shooting: pick('shooting'), speed: pick('speed'), finishing: pick('finishing'), iso: pick('iso') }
+          : undefined;
+      const speedRating = team === 'red' ? pick('speed') : undefined;
+      return { id: p.id, number: value('number'), name: value('name'), height: value('height'), skills, speedRating };
     });
 
   /** 依目前輸入更新身高預設提示與速度 */
@@ -149,6 +155,7 @@ export function attachSetup(
         ...base,
         heightCm: v.height.trim() && Number.isFinite(h) ? h : undefined,
         skills: v.skills ?? base.skills,
+        speedRating: v.speedRating ?? base.speedRating,
       };
       const heightInput = card.querySelector<HTMLInputElement>('input[name="height"]')!;
       const fallback = heightOf({ ...draft, heightCm: undefined }, players);

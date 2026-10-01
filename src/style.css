@@ -608,9 +608,12 @@ body[data-screen='board'] .app {
   display: grid;
   place-items: center;
   height: 36px;
+  padding: 0 2px;
   border-left: 1px solid #3a3d45;
   color: #c9ccd3;
-  font-size: 14px;
+  /* 「大幅優勢」四個字在小手機上也要放得下 */
+  font-size: clamp(11px, 3.3vw, 14px);
+  white-space: nowrap;
 }
 
 .seg label:first-child span {

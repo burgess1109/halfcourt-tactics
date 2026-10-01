@@ -1,5 +1,5 @@
 import { HEIGHT_RANGE } from './physique';
-import type { Player, Skills } from './types';
+import type { Player, Rating, Skills } from './types';
 
 // 設定頁的表單驗證（SPEC §3.1、§3.2），純函式方便測試。
 
@@ -12,9 +12,11 @@ export interface PlayerFormValues {
   height: string;
   /** 只有藍隊 */
   skills?: Skills;
+  /** 只有紅隊 */
+  speedRating?: Rating;
 }
 
-export type PlayerPatch = Pick<Player, 'id' | 'number' | 'name' | 'heightCm' | 'skills'>;
+export type PlayerPatch = Pick<Player, 'id' | 'number' | 'name' | 'heightCm' | 'skills' | 'speedRating'>;
 
 export type FormField = 'number' | 'name' | 'height';
 
@@ -45,7 +47,7 @@ export function parseTeamForm(values: readonly PlayerFormValues[]): TeamFormResu
       }
       heightCm = h;
     }
-    out.push({ id: v.id, number: num, name, heightCm, skills: v.skills });
+    out.push({ id: v.id, number: num, name, heightCm, skills: v.skills, speedRating: v.speedRating });
   }
   return { ok: out };
 }
@@ -57,6 +59,11 @@ export function applyPatch(player: Player, patch: PlayerPatch): void {
   if (patch.heightCm === undefined) delete player.heightCm;
   else player.heightCm = patch.heightCm;
   if (player.team === 'blue' && patch.skills) player.skills = { ...patch.skills };
+  if (player.team === 'red') {
+    // 普通是預設值，不另外存
+    if (patch.speedRating === undefined || patch.speedRating === 2) delete player.speedRating;
+    else player.speedRating = patch.speedRating;
+  }
 }
 
 /** 資料完整（SPEC §3.1）：藍隊沒有略過，而且三人都填了身高 */

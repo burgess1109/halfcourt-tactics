@@ -7,7 +7,7 @@ import { BASE_SPEED, DEFAULT_HEIGHT, DRIBBLE_FACTOR, PASS_SPEED, heightOf, speed
 import { EMPTY_FRAME_SECONDS, buildTimeline, poseAt } from './timeline';
 
 describe('速度模型', () => {
-  it('預設身高（175）、速度普通 = 基準速度；運球打折', () => {
+  it('預設身高（175）、速度持平 = 基準速度；運球打折', () => {
     const t = createDefaultTactic();
     const b1 = t.players.find((p) => p.id === 'b1')!;
     expect(speedOf(b1, t.players, false)).toBeCloseTo(BASE_SPEED);
@@ -23,6 +23,16 @@ describe('速度模型', () => {
     expect(speedOf(slow, t.players, false)).toBeCloseTo(BASE_SPEED * 0.9);
     expect(speedOf({ ...b1, heightCm: 230 }, t.players, false)).toBeCloseTo(BASE_SPEED * 0.92);
     expect(speedOf({ ...b1, heightCm: 145 }, t.players, false)).toBeCloseTo(BASE_SPEED * 1.08);
+  });
+
+  it('紅隊速度：跟隊友比的五個等級，未填 = 普通', () => {
+    const t = createDefaultTactic();
+    const r1 = t.players.find((p) => p.id === 'r1')!;
+    expect(speedOf(r1, t.players, false)).toBeCloseTo(BASE_SPEED);
+    expect(speedOf({ ...r1, speedRating: 4 }, t.players, false)).toBeCloseTo(BASE_SPEED * 1.1);
+    expect(speedOf({ ...r1, speedRating: 0 }, t.players, false)).toBeCloseTo(BASE_SPEED * 0.9);
+    // 紅隊不受藍隊能力欄位影響
+    expect(speedOf({ ...r1, skills: { shooting: 2, speed: 4, finishing: 2, iso: 2 } }, t.players, false)).toBeCloseTo(BASE_SPEED);
   });
 
   it('紅隊沒填身高時跟藍隊同順序球員一樣', () => {
