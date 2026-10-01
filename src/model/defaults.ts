@@ -1,34 +1,37 @@
+import { DEFAULT_SKILLS } from './physique';
+import { defaultMatchups } from './matchups';
 import { newId } from './id';
 import { BALL_ID, type Player, type Tactic } from './types';
 
-function defaultPlayers(): Player[] {
-  const make = (team: Player['team'], i: number): Player => ({
-    id: `${team === 'blue' ? 'b' : 'r'}${i}`,
-    team,
-    number: i,
-    name: `球員 ${i}`,
-  });
-  return [1, 2, 3].flatMap((i) => [make('blue', i), make('red', i)]);
+/** 藍隊、紅隊的預設球員（SPEC §3.1、§3.2） */
+export function defaultPlayer(team: Player['team'], i: number): Player {
+  return team === 'blue'
+    ? { id: `b${i}`, team, number: i, name: `球員 ${i}`, skills: { ...DEFAULT_SKILLS } }
+    : { id: `r${i}`, team, number: i, name: `對手 ${i}` };
 }
 
-/** 新戰術：藍隊站弧頂與兩翼，紅隊站在各自對位者與籃框之間 */
+/** 新的進攻戰術：藍隊站弧頂與兩翼；紅隊站位由 syncFrames 依對位推算 */
 export function createDefaultTactic(): Tactic {
-  return {
+  const players = [1, 2, 3].flatMap((i) => [defaultPlayer('blue', i), defaultPlayer('red', i)]);
+  const tactic: Tactic = {
     version: 1,
     id: newId(),
     name: '',
-    mode: 'free',
-    players: defaultPlayers(),
+    mode: 'offense',
+    setup: { blueSkipped: false, redSkipped: false, matchupsCustomized: false },
+    matchups: defaultMatchups(players),
+    screenDefense: 'switch',
+    players,
     frames: [
       {
         start: {
           b1: { x: 0, y: 8.6 },
           b2: { x: -5.4, y: 6.0 },
           b3: { x: 5.4, y: 6.0 },
-          r1: { x: 0, y: 6.3 },
-          r2: { x: -3.6, y: 4.5 },
-          r3: { x: 3.6, y: 4.5 },
-          [BALL_ID]: { x: 0.8, y: 9.15 },
+          r1: { x: 0, y: 7.6 },
+          r2: { x: -4.4, y: 5.1 },
+          r3: { x: 4.4, y: 5.1 },
+          [BALL_ID]: { x: 0.85, y: 8.7 },
         },
         ballHolderId: 'b1',
         paths: [],
@@ -36,4 +39,5 @@ export function createDefaultTactic(): Tactic {
     ],
     updatedAt: Date.now(),
   };
+  return tactic;
 }

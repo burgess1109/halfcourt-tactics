@@ -1,14 +1,14 @@
 import './style.css';
 import { Playback } from './anim/playback';
+import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds } from './anim/timeline';
 import { attachPointer } from './input/pointer';
 import { Store } from './model/store';
 import { Renderer } from './render/renderer';
 import { attachFrames } from './ui/frames';
 import { attachHud } from './ui/hud';
-import { attachPlayerDialog } from './ui/playerDialog';
+import { attachSetup } from './ui/setup';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
-import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds } from './anim/timeline';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -20,6 +20,14 @@ const renderer = new Renderer(canvas);
 const playback = new Playback(store, renderer);
 const notify = createToast($('#toast'));
 store.notify = notify;
+
+// ---- 畫面切換：首頁 → 設定 → 戰術面板（SPEC §1.1） ----
+type Screen = 'home' | 'setup' | 'board';
+function show(screen: Screen): void {
+  if (screen !== 'board') playback.stop();
+  document.body.dataset.screen = screen;
+  if (screen === 'board') resize();
+}
 
 // 狀態變動時，下一個畫格再重畫（合併同一格內的多次變動）。播放中由 Playback 負責畫。
 let scheduled = false;
@@ -54,12 +62,19 @@ function watchPixelRatio(): void {
 watchPixelRatio();
 
 store.subscribe(requestDraw);
-const openPlayer = attachPlayerDialog(store);
-attachPointer(canvas, store, renderer, notify, openPlayer);
+const setup = attachSetup(store, show);
+attachPointer(canvas, store, renderer, notify, (playerId) => {
+  const team = store.get().tactic.players.find((p) => p.id === playerId)?.team;
+  setup.open(team === 'red' ? 2 : 1, playerId);
+});
 attachToolbar(store);
 attachFrames(store, notify);
 const hud = attachHud($('#hud'), store);
 playback.onTick = hud.playing;
+
+$<HTMLButtonElement>('#mode-offense').addEventListener('click', () => setup.open(1));
+$<HTMLButtonElement>('#players').addEventListener('click', () => setup.open(1));
+$<HTMLButtonElement>('#matchup').addEventListener('click', () => setup.open(3));
 
 // ---- 播放 ----
 const playBtn = $<HTMLButtonElement>('#play');
@@ -81,13 +96,8 @@ store.subscribe((s) => {
   playBtn.title = s.playing ? '停止' : '播放';
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key !== ' ' || document.querySelector('dialog[open]')) return;
+  if (e.key !== ' ' || document.body.dataset.screen !== 'board') return;
   if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement) return;
   e.preventDefault();
   togglePlay();
-});
-
-$<HTMLButtonElement>('#players').addEventListener('click', () => {
-  const s = store.get();
-  openPlayer(s.tactic.players.find((p) => p.team === 'blue')!.id);
 });

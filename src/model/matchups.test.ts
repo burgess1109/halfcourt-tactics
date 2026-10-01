@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest';
+import { guardPosition } from '../sim/defense';
+import { OFF_BALL_GAP, ON_BALL_GAP } from '../sim/config';
+import { createDefaultTactic } from './defaults';
+import { insertFrameAfter, syncFrames } from './frames';
+import { assignMatchup, defaultMatchups } from './matchups';
+import { RIM, putPath } from './paths';
+
+describe('預設對位', () => {
+  it('藍隊沒有全填身高 → 依順序', () => {
+    const t = createDefaultTactic();
+    t.players.find((p) => p.id === 'b1')!.heightCm = 210;
+    expect(defaultMatchups(t.players)).toEqual({ b1: 'r1', b2: 'r2', b3: 'r3' });
+  });
+
+  it('藍隊都有身高 → 最高對最高', () => {
+    const t = createDefaultTactic();
+    const h = { b1: 185, b2: 205, b3: 195, r1: 200, r2: 190, r3: 210 };
+    for (const p of t.players) p.heightCm = h[p.id as keyof typeof h];
+    expect(defaultMatchups(t.players)).toEqual({ b2: 'r3', b3: 'r1', b1: 'r2' });
+  });
+
+  it('紅隊沒填身高時，用跟藍隊一樣的身高排序', () => {
+    const t = createDefaultTactic();
+    const h = { b1: 185, b2: 205, b3: 195 };
+    for (const p of t.players) if (p.team === 'blue') p.heightCm = h[p.id as keyof typeof h];
+    expect(defaultMatchups(t.players)).toEqual({ b1: 'r1', b2: 'r2', b3: 'r3' });
+  });
+
+  it('改對位時，兩組交換', () => {
+    expect(assignMatchup({ b1: 'r1', b2: 'r2', b3: 'r3' }, 'b1', 'r3')).toEqual({ b1: 'r3', b2: 'r2', b3: 'r1' });
+    expect(assignMatchup({ b1: 'r1', b2: 'r2', b3: 'r3' }, 'b2', 'r2')).toEqual({ b1: 'r1', b2: 'r2', b3: 'r3' });
+  });
+});
+
+describe('紅隊站位', () => {
+  it('站在對位者與籃框的連線上；持球者貼得比較近', () => {
+    const man = { x: 0, y: 8.575 }; // 正對籃框，距離 7 m
+    expect(guardPosition(man, true).y).toBeCloseTo(man.y - ON_BALL_GAP);
+    expect(guardPosition(man, false).y).toBeCloseTo(man.y - OFF_BALL_GAP);
+    expect(guardPosition(man, false).x).toBeCloseTo(0);
+  });
+
+  it('對位者在籃下時，不會站到籃框後面', () => {
+    const p = guardPosition({ x: 0, y: RIM.y + 1 }, false);
+    expect(p.y).toBeCloseTo(RIM.y + 0.5);
+  });
+
+  it('每個分鏡都依對位放好紅隊，跟著對位者跑位後的位置', () => {
+    const t = createDefaultTactic();
+    const f0 = t.frames[0]!;
+    putPath(f0, { id: 'c', kind: 'cut', actorId: 'b2', points: [f0.start.b2!, { x: -6.6, y: 1 }], freehand: false });
+    insertFrameAfter(t, 0);
+    syncFrames(t, true);
+    expect(t.frames[0]!.start.r2).toEqual(guardPosition(f0.start.b2!, false));
+    expect(t.frames[1]!.start.r2).toEqual(guardPosition({ x: -6.6, y: 1 }, false));
+    expect(t.frames[0]!.start.r1).toEqual(guardPosition(f0.start.b1!, true));
+  });
+
+  it('改對位後紅隊換人盯', () => {
+    const t = createDefaultTactic();
+    t.matchups = assignMatchup(t.matchups, 'b1', 'r3');
+    syncFrames(t, false);
+    const f = t.frames[0]!;
+    expect(f.start.r3).toEqual(guardPosition(f.start.b1!, true));
+    expect(f.start.r1).toEqual(guardPosition(f.start.b3!, false));
+  });
+});

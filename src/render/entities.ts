@@ -45,7 +45,10 @@ export function drawPlayer(
   ctx.fillText(String(player.number), c.x, c.y + r * 0.04);
 }
 
-/** 名字另外畫：所有圓標畫完後才畫，避免被相鄰的球員蓋住 */
+/**
+ * 名字另外畫：所有圓標畫完後才畫，避免被相鄰的球員蓋住。
+ * 防守者通常站在對位者靠籃框那一側（畫面下方），所以藍隊的名字畫在圓標上方、紅隊畫在下方。
+ */
 export function drawPlayerLabel(
   ctx: CanvasRenderingContext2D,
   vp: Viewport,
@@ -58,11 +61,12 @@ export function drawPlayerLabel(
   const labelSize = Math.max(10, Math.round(PLAYER_RADIUS * vp.scale * 0.55));
   ctx.font = `600 ${labelSize}px ${theme.font}`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
+  const above = player.team === 'blue';
+  ctx.textBaseline = above ? 'bottom' : 'top';
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 3;
   ctx.fillStyle = theme.label;
-  ctx.fillText(player.name, c.x, c.y + r + labelSize * 0.2);
+  ctx.fillText(player.name, c.x, above ? c.y - r - labelSize * 0.15 : c.y + r + labelSize * 0.2);
   ctx.shadowColor = 'transparent';
 }
 

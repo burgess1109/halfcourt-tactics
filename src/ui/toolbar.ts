@@ -55,7 +55,7 @@ export function attachToolbar(store: Store): void {
   // ---- 鍵盤 ----
   const shortcuts: Record<string, Tool> = { v: 'move', '1': 'cut', '2': 'dribble', '3': 'pass', '4': 'screen', '5': 'shot' };
   document.addEventListener('keydown', (e) => {
-    if (document.querySelector('dialog[open]') || store.get().playing) return;
+    if (document.body.dataset.screen !== 'board' || store.get().playing) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const mod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();

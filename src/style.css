@@ -336,80 +336,146 @@ body {
   background: #c62828;
 }
 
-/* 球員編輯面板 */
-.sheet {
-  width: min(420px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 0;
-  border: 0;
-  border-radius: 18px;
-  background: #1f2126;
-  color: var(--fg);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+/* ---- 畫面切換：body[data-screen] 決定顯示哪一個 ---- */
+.screen {
+  display: none !important;
 }
 
-.sheet::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+body[data-screen='home'] .home,
+body[data-screen='setup'] .setup,
+body[data-screen='board'] .app {
+  display: flex !important;
 }
 
-.sheet__body {
+body[data-screen='board'] .app {
+  display: grid !important;
+}
+
+/* ---- 首頁 ---- */
+.home {
+  height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px max(16px, env(safe-area-inset-left));
+  background: radial-gradient(circle at 50% 30%, #3a2208, #000 70%);
+}
+
+.home__inner {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px;
+  width: min(420px, 100%);
 }
 
-.sheet__title {
+.home__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 32px;
+  text-align: center;
 }
 
-.chips {
+.home__sub {
+  margin: 0 0 12px;
+  color: #c9ccd3;
+  text-align: center;
+}
+
+.mode-card {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  color: #fff;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--accent);
+  color: #1b1b1f;
   font: inherit;
-  font-weight: 700;
+  text-align: left;
   cursor: pointer;
 }
 
-.chip--blue {
-  background: #1f56e0;
+.mode-card:disabled {
+  background: #2a2d33;
+  color: #8b8f99;
+  cursor: default;
 }
 
-.chip--red {
-  background: #b3232d;
+.mode-card__title {
+  font-size: 22px;
+  font-weight: 700;
 }
 
-.chip[aria-selected='true'] {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px var(--accent);
+.mode-card__desc {
+  font-size: 14px;
 }
 
-.chips__gap {
-  width: 8px;
+/* ---- 設定流程 ---- */
+.setup {
+  flex-direction: column;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-.fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+.setup__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  padding: 16px 16px 8px;
 }
 
+.setup__progress {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.setup__title {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+
+.setup__hint {
+  margin: 4px 0 0;
+  color: #c9ccd3;
+  font-size: 14px;
+}
+
+.setup__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  align-content: start;
+  gap: 14px;
+  padding: 8px 16px 16px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.setup__foot {
+  padding: 10px 16px 14px;
+  border-top: 1px solid #22252b;
+}
+
+.setup__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.setup__error {
+  margin: 0 0 8px;
+  color: #ff8a80;
+  font-size: 14px;
+}
+
+/* 表單欄位 */
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
   font-size: 13px;
   color: #c9ccd3;
 }
@@ -435,22 +501,203 @@ body {
   border-color: #ef5350;
 }
 
-.sheet__note {
+/* 球員卡 */
+.pcard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #2c2f36;
+  border-left: 6px solid var(--team);
+  border-radius: 14px;
+  background: #17191d;
+}
+
+.pcard--blue {
+  --team: #1f56e0;
+}
+
+.pcard--red {
+  --team: #b3232d;
+}
+
+.pcard legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-weight: 600;
+}
+
+.pcard__row {
+  display: grid;
+  grid-template-columns: 5.5em 1fr 6.5em;
+  gap: 10px;
+}
+
+.pcard__speed {
+  margin: 0;
+  color: #9da2ad;
+  font-size: 13px;
+}
+
+.skill {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.skill legend {
+  float: none;
+  padding: 0;
+  color: #c9ccd3;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid #3a3d45;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seg label {
+  position: relative;
+}
+
+.seg input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.seg span {
+  display: grid;
+  place-items: center;
+  height: 36px;
+  border-left: 1px solid #3a3d45;
+  color: #c9ccd3;
+  font-size: 14px;
+}
+
+.seg label:first-child span {
+  border-left: 0;
+}
+
+.seg input:checked + span {
+  background: var(--accent);
+  color: #1b1b1f;
+  font-weight: 600;
+}
+
+.seg input:focus-visible + span {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+}
+
+/* 對位列 */
+.mrow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #17191d;
+}
+
+.mrow__blue {
+  grid-column: 1 / -1;
+  padding: 10px;
+  border-radius: 10px;
+  background: #1f56e0;
+  font-weight: 600;
+}
+
+.mrow__vs {
+  color: #8b8f99;
+}
+
+.mrow select {
+  width: 100%;
+  height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: #b3232d;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+}
+
+.mrow__diff {
+  grid-column: 1 / -1;
   margin: 0;
   color: #c9ccd3;
   font-size: 13px;
 }
 
-.sheet__error {
-  margin: 0;
-  color: #ff8a80;
-  font-size: 14px;
+.adv {
+  color: #7ee787;
 }
 
-.sheet__actions {
+.disadv {
+  color: #ff8a80;
+}
+
+.choice {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: #17191d;
+}
+
+.choice legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-weight: 600;
+}
+
+.choice label {
+  display: flex;
   gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.choice input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.choice small {
+  display: block;
+  color: #9da2ad;
+}
+
+.link-btn {
+  justify-self: start;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
 }
 
 .btn {

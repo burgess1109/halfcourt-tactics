@@ -1,8 +1,17 @@
 // 資料模型，對應 docs/SPEC.md §11。座標單位為公尺，原點在底線中點，y 朝中場。
 
 export type Team = 'blue' | 'red'; // blue = 使用者，red = 系統
-export type Mode = 'offense-design' | 'defense-design' | 'free';
-export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
+export type Mode = 'offense' | 'defense';
+
+/** 能力等級：0 差勁、1 不佳、2 普通、3 不錯、4 優秀（SPEC §3.1） */
+export type Rating = 0 | 1 | 2 | 3 | 4;
+
+export interface Skills {
+  shooting: Rating; // 外線投射
+  speed: Rating; // 速度
+  finishing: Rating; // 禁區終結
+  iso: Rating; // 單打
+}
 
 export interface Vec2 {
   x: number;
@@ -13,10 +22,11 @@ export interface Player {
   id: string; // 'b1'..'b3', 'r1'..'r3'
   team: Team;
   number: number;
+  /** 暱稱 */
   name: string;
-  position?: Position;
   heightCm?: number;
-  weightKg?: number;
+  /** 只有藍隊 */
+  skills?: Skills;
 }
 
 export type PathKind = 'cut' | 'dribble' | 'pass' | 'screen' | 'shot';
@@ -47,9 +57,17 @@ export interface Tactic {
   id: string;
   name: string;
   mode: Mode;
-  screenDefense?: 'fight-over' | 'switch';
-  matchups?: Record<string, string>; // 藍隊 id → 紅隊 id
-  offensePlayId?: string;
+  setup: {
+    /** 藍隊、紅隊設定頁是否按了「略過」 */
+    blueSkipped: boolean;
+    redSkipped: boolean;
+    /** 使用者改過對位後，就不再自動套用預設對位 */
+    matchupsCustomized: boolean;
+  };
+  /** 藍隊 id → 紅隊 id */
+  matchups: Record<string, string>;
+  screenDefense: 'switch' | 'fight-over';
+  basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];
   lastResult?: { grade: Grade; expectedPoints: number };

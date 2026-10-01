@@ -1,4 +1,5 @@
 import { BALL_HOLD_OFFSET, ballPosition } from './entities';
+import { guardPosition } from '../sim/defense';
 import { RIM, endPosition, hasShot, pathOf, pruneInvalidPaths } from './paths';
 import { BALL_ID, type Frame, type Tactic, type Vec2 } from './types';
 
@@ -29,7 +30,18 @@ export function endState(frame: Frame): { start: Record<string, Vec2>; ballHolde
 }
 
 /**
- * 依第 1 個分鏡重新推算後面所有分鏡的起始狀態。
+ * 紅隊站在各自對位者與籃框之間（SPEC §6.2）。
+ * M5 之前紅隊不會動，所以每個分鏡都直接放在理想位置。
+ */
+function placeDefenders(tactic: Tactic, frame: Frame): void {
+  for (const [blueId, redId] of Object.entries(tactic.matchups)) {
+    const man = frame.start[blueId];
+    if (man) frame.start[redId] = guardPosition(man, frame.ballHolderId === blueId);
+  }
+}
+
+/**
+ * 依第 1 個分鏡重新推算後面所有分鏡的起始狀態，並放好紅隊。
  * prune = true 時，一併移除不再成立的路線（例如球換人之後的運球），回傳移除數量。
  * 拖曳中不要 prune：球暫時離手時，不應該把後面的傳球刪掉。
  */
@@ -41,6 +53,7 @@ export function syncFrames(tactic: Tactic, prune: boolean): number {
       frame.start = prev.start;
       frame.ballHolderId = prev.ballHolderId;
     }
+    placeDefenders(tactic, frame);
     if (prune) removed += pruneInvalidPaths(frame, tactic.players);
   });
   return removed;

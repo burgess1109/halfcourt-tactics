@@ -21,6 +21,7 @@ export class Renderer {
 
   /** 以 CSS px 設定大小；會重畫球場快取 */
   resize(width: number, height: number): void {
+    if (width === 0 || height === 0) return; // 戰術面板隱藏中
     this.dpr = window.devicePixelRatio || 1;
     for (const c of [this.canvas, this.courtCache]) {
       c.width = Math.round(width * this.dpr);
@@ -35,6 +36,7 @@ export class Renderer {
   /** pose 有值時為播放畫面：用時間軸算出的位置，路線淡化，不畫分身與把手 */
   draw(state: EditorState, pose?: Pose): void {
     const { ctx } = this;
+    if (this.viewport.scale === 0) return; // 還沒有尺寸（戰術面板隱藏中）
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.drawImage(this.courtCache, 0, 0);

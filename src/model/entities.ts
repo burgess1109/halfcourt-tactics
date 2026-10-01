@@ -7,7 +7,7 @@ export const BALL_RADIUS = 0.5;
 /** 球放開時，與球員邊緣距離在這個範圍內就吸附（SPEC §3.2） */
 export const BALL_SNAP_DISTANCE = 0.6;
 /** 持球時，球相對持球者中心的位置 */
-export const BALL_HOLD_OFFSET: Vec2 = { x: 0.8, y: 0.55 };
+export const BALL_HOLD_OFFSET: Vec2 = { x: 0.85, y: 0.1 };
 /** 觸控時的額外點擊容差 */
 const HIT_SLOP = 0.2;
 
@@ -22,11 +22,12 @@ export function ballPosition(frame: Frame): Vec2 {
   return frame.start[BALL_ID] ?? { x: 0, y: 0 };
 }
 
-/** 找出球放開時要吸附的球員：範圍內最近的一位，沒有則回傳 null */
+/** 找出球放開時要吸附的藍隊球員：範圍內最近的一位，沒有則回傳 null */
 export function findSnapTarget(ball: Vec2, players: readonly Player[], frame: Frame): string | null {
   let best: string | null = null;
   let bestDist = PLAYER_RADIUS + BALL_SNAP_DISTANCE;
   for (const p of players) {
+    if (p.team !== 'blue') continue; // 進攻模式只有藍隊能持球
     const pos = frame.start[p.id];
     if (!pos) continue;
     const d = distance(ball, pos);

@@ -3,24 +3,36 @@ import { createDefaultTactic } from '../model/defaults';
 import { BALL_HOLD_OFFSET } from '../model/entities';
 import { insertFrameAfter, removeFrame, syncFrames, MAX_FRAMES } from '../model/frames';
 import { putPath } from '../model/paths';
-import { BASE_SPEED, DRIBBLE_FACTOR, PASS_SPEED, speedOf } from '../model/physique';
+import { BASE_SPEED, DRIBBLE_FACTOR, PASS_SPEED, heightOf, speedOf } from '../model/physique';
 import { EMPTY_FRAME_SECONDS, buildTimeline, poseAt } from './timeline';
 
 describe('速度模型', () => {
-  it('未填身高體重時，依位置套用預設值', () => {
+  it('身高 195、速度普通 = 基準速度；運球打折', () => {
     const t = createDefaultTactic();
-    const p = { ...t.players[0]! };
-    const none = speedOf(p, false); // 198 cm / 95 kg
-    expect(none).toBeCloseTo(BASE_SPEED * (1 - 0.004 * 3 - 0.003 * 5));
-    expect(speedOf({ ...p, position: 'PG' }, false)).toBeGreaterThan(speedOf({ ...p, position: 'C' }, false));
-    expect(speedOf(p, true)).toBeCloseTo(none * DRIBBLE_FACTOR);
+    const b1 = t.players.find((p) => p.id === 'b1')!;
+    expect(speedOf(b1, t.players, false)).toBeCloseTo(BASE_SPEED);
+    expect(speedOf(b1, t.players, true)).toBeCloseTo(BASE_SPEED * DRIBBLE_FACTOR);
   });
 
-  it('速度係數限制在 0.85–1.15', () => {
+  it('速度能力與身高都有影響，身高影響有上下限', () => {
     const t = createDefaultTactic();
-    const p = t.players[0]!;
-    expect(speedOf({ ...p, heightCm: 230, weightKg: 150 }, false)).toBeCloseTo(BASE_SPEED * 0.85);
-    expect(speedOf({ ...p, heightCm: 150, weightKg: 50 }, false)).toBeCloseTo(BASE_SPEED * 1.15);
+    const b1 = t.players.find((p) => p.id === 'b1')!;
+    const fast = { ...b1, skills: { ...b1.skills!, speed: 4 as const } };
+    const slow = { ...b1, skills: { ...b1.skills!, speed: 0 as const } };
+    expect(speedOf(fast, t.players, false)).toBeCloseTo(BASE_SPEED * 1.1);
+    expect(speedOf(slow, t.players, false)).toBeCloseTo(BASE_SPEED * 0.9);
+    expect(speedOf({ ...b1, heightCm: 230 }, t.players, false)).toBeCloseTo(BASE_SPEED * 0.92);
+    expect(speedOf({ ...b1, heightCm: 150 }, t.players, false)).toBeCloseTo(BASE_SPEED * 1.08);
+  });
+
+  it('紅隊沒填身高時跟藍隊同順序球員一樣', () => {
+    const t = createDefaultTactic();
+    t.players.find((p) => p.id === 'b2')!.heightCm = 210;
+    const r2 = t.players.find((p) => p.id === 'r2')!;
+    expect(heightOf(r2, t.players)).toBe(210);
+    r2.heightCm = 180;
+    expect(heightOf(r2, t.players)).toBe(180);
+    expect(heightOf(t.players.find((p) => p.id === 'r1')!, t.players)).toBe(195);
   });
 });
 
@@ -73,7 +85,7 @@ describe('時間軸', () => {
     const b1 = t.players.find((p) => p.id === 'b1')!;
     putPath(f, { id: 'd', kind: 'dribble', actorId: 'b1', points: [{ x: 0, y: 8.6 }, { x: 0, y: 3.6 }], freehand: false });
     const tl = buildTimeline(t);
-    const expected = 5 / speedOf(b1, true);
+    const expected = 5 / speedOf(b1, t.players, true);
     expect(tl.total).toBeCloseTo(expected, 3);
     const mid = poseAt(t, tl, expected / 2);
     expect(mid.positions.b1!.y).toBeCloseTo(6.1, 1);
@@ -87,7 +99,7 @@ describe('時間軸', () => {
     putPath(f, { id: 'c', kind: 'cut', actorId: 'b2', points: [f.start.b2!, { x: -5.4, y: 1.0 }], freehand: false });
     putPath(f, { id: 'p', kind: 'pass', actorId: 'b1', targetId: 'b2', points: [f.start.b1!, { x: -5.4, y: 1 }], freehand: false });
     const tl = buildTimeline(t);
-    const run = 5 / speedOf(b2, false);
+    const run = 5 / speedOf(b2, t.players, false);
     expect(tl.frames[0]!.flight!.launch + tl.frames[0]!.flight!.flight).toBeCloseTo(run, 3);
     expect(tl.total).toBeCloseTo(run, 3);
     // 出手前球在 b1 手上；結束時在 b2 手上

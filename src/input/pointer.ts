@@ -23,7 +23,15 @@ import type { Renderer } from '../render/renderer';
 import { toWorld } from '../render/viewport';
 
 type Gesture =
-  | { type: 'entity'; id: string; grabOffset: Vec2; downAt: { x: number; y: number }; moved: boolean; locked: boolean }
+  | {
+      type: 'entity';
+      id: string;
+      grabOffset: Vec2;
+      downAt: { x: number; y: number };
+      moved: boolean;
+      /** 不能拖曳時的原因 */
+      locked: string | null;
+    }
   | { type: 'draw' }
   | { type: 'handle'; pathId: string; handle: Handle; downAt: { x: number; y: number }; moved: boolean };
 
@@ -71,10 +79,19 @@ export function attachPointer(
 
     // 2. 球員或球
     const id = hitTest(point, players, frame);
+    const isRed = players.find((p) => p.id === id)?.team === 'red';
+    if (id && isRed && state.tool !== 'move') {
+      notify('紅隊由系統防守，只能畫藍隊的路線');
+      return null;
+    }
     if (id && state.tool === 'move') {
       const center = id === BALL_ID ? ballPosition(frame) : frame.start[id]!;
-      // 第 2 個分鏡之後的站位由上一個分鏡推算，不能直接拖
-      const locked = state.frameIndex > 0;
+      // 紅隊站位由防守 AI 決定；第 2 個分鏡之後的站位由上一個分鏡推算
+      const locked = isRed
+        ? '紅隊由系統防守，會自動站在對位球員與籃框之間'
+        : state.frameIndex > 0
+          ? '只能在第 1 個分鏡調整站位；之後的站位由上一個分鏡的路線決定'
+          : null;
       if (!locked) {
         store.begin();
         store.update((s) => {
@@ -149,7 +166,7 @@ export function attachPointer(
         if (Math.hypot(at.x - g.downAt.x, at.y - g.downAt.y) < TAP_SLOP_PX) return;
         g.moved = true;
         if (g.locked) {
-          notify('只能在第 1 個分鏡調整站位；之後的站位由上一個分鏡的路線決定');
+          notify(g.locked);
           return;
         }
         if (g.id === BALL_ID) {

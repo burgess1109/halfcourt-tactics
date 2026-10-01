@@ -87,7 +87,7 @@ function timeFrame(tactic: Tactic, frame: Frame, start: number): FrameTiming {
   for (const player of tactic.players) {
     const path = pathOf(frame, player.id);
     if (!path || !isMovement(path.kind)) continue;
-    const track = makeTrack(samplePath(frame, path), speedOf(player, path.kind === 'dribble'));
+    const track = makeTrack(samplePath(frame, path), speedOf(player, tactic.players, path.kind === 'dribble'));
     tracks.set(player.id, track);
     duration = Math.max(duration, track.duration);
   }

@@ -1,0 +1,354 @@
+import { defaultPlayer } from '../model/defaults';
+import { assignMatchup, defaultMatchups } from '../model/matchups';
+import {
+  DEFAULT_SKILLS,
+  RATINGS,
+  RATING_LABEL,
+  SKILL_KEYS,
+  SKILL_LABEL,
+  counterpartId,
+  heightOf,
+  speedOf,
+} from '../model/physique';
+import { applyPatch, parseTeamForm, type PlayerFormValues } from '../model/playerForm';
+import type { EditorState, Store } from '../model/store';
+import type { Player, Rating, Skills, Tactic, Team } from '../model/types';
+
+// 進攻模式的設定流程（SPEC §1.1）：① 藍隊 → ② 紅隊 → ③ 對位 → 戰術面板。
+
+export type Step = 1 | 2 | 3;
+
+const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+
+const STEP_TEXT: Record<Step, { title: string; hint: string }> = {
+  1: { title: '你的球隊（藍隊）', hint: '都是選填。能力預設普通；有填身高才會推薦內建戰術。' },
+  2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時，跟藍隊同順序的球員一樣高。' },
+  3: { title: '對位設定', hint: '系統的紅隊會盯住對位的藍隊球員。' },
+};
+
+const teamPlayers = (t: Tactic, team: Team) => t.players.filter((p) => p.team === team);
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  props: Partial<HTMLElementTagNameMap[K]> & Record<string, unknown> = {},
+  ...children: (Node | string)[]
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') node.className = String(v);
+    else if (k.startsWith('data-') || k.startsWith('aria-') || k === 'role' || k === 'for') node.setAttribute(k, String(v));
+    else (node as unknown as Record<string, unknown>)[k] = v;
+  }
+  node.append(...children);
+  return node;
+}
+
+/** 依步驟切換、驗證並寫回戰術。回傳 open(step, focusPlayerId?)。 */
+export function attachSetup(
+  store: Store,
+  show: (screen: 'home' | 'setup' | 'board') => void,
+): { open: (step: Step, focusPlayerId?: string) => void } {
+  const form = $<HTMLFormElement>('#setup-form');
+  const progress = $<HTMLElement>('#setup-progress');
+  const title = $<HTMLElement>('#setup-title');
+  const hint = $<HTMLElement>('#setup-hint');
+  const errorEl = $<HTMLElement>('#setup-error');
+  const back = $<HTMLButtonElement>('#setup-back');
+  const skip = $<HTMLButtonElement>('#setup-skip');
+  const next = $<HTMLButtonElement>('#setup-next');
+  const close = $<HTMLButtonElement>('#setup-close');
+
+  let step: Step = 1;
+  /** 已經進過戰術面板：顯示「回到戰術板」，最後一步改成「完成」 */
+  let boardReady = false;
+  /** 對位頁的暫存，按下一步才寫回 */
+  let draftMatchups: Record<string, string> = {};
+  let draftCustomized = false;
+  let draftScreen: Tactic['screenDefense'] = 'switch';
+
+  const tactic = () => store.get().tactic;
+
+  // ---------- ① ② 球員卡 ----------
+
+  const playerCard = (p: Player, index: number) => {
+    const blue = p.team === 'blue';
+    const card = el('fieldset', { class: `pcard pcard--${p.team}`, 'data-id': p.id });
+    card.append(el('legend', {}, `${blue ? '藍隊' : '紅隊'}第 ${index + 1} 位`));
+
+    const input = (name: string, label: string, attrs: Record<string, unknown>, optional = false) =>
+      el(
+        'label',
+        { class: 'field' },
+        el('span', {}, label, ...(optional ? [' ', el('small', {}, '選填')] : [])),
+        el('input', { name, ...attrs }),
+      );
+    card.append(
+      el(
+        'div',
+        { class: 'pcard__row' },
+        input('number', '號碼', { type: 'number', inputMode: 'numeric', min: '0', max: '99', step: '1', value: String(p.number) }),
+        input('name', '暱稱', { type: 'text', maxLength: 12, autocomplete: 'off', value: p.name }),
+        input(
+          'height',
+          '身高 cm',
+          { type: 'number', inputMode: 'numeric', min: '150', max: '230', step: '1', value: p.heightCm?.toString() ?? '' },
+          true,
+        ),
+      ),
+    );
+
+    if (blue) {
+      const skills = p.skills ?? DEFAULT_SKILLS;
+      for (const key of SKILL_KEYS) {
+        const seg = el('div', { class: 'seg' });
+        for (const r of RATINGS) {
+          seg.append(
+            el(
+              'label',
+              {},
+              el('input', { type: 'radio', name: `${p.id}-${key}`, value: String(r), checked: skills[key] === r }),
+              el('span', {}, RATING_LABEL[r]),
+            ),
+          );
+        }
+        card.append(el('fieldset', { class: 'skill' }, el('legend', {}, SKILL_LABEL[key]), seg));
+      }
+    }
+    card.append(el('p', { class: 'pcard__speed', 'aria-live': 'polite' }));
+    return card;
+  };
+
+  /** 從畫面讀出一隊的表單值 */
+  const readTeam = (team: Team): PlayerFormValues[] =>
+    teamPlayers(tactic(), team).map((p) => {
+      const card = form.querySelector<HTMLElement>(`[data-id="${p.id}"]`)!;
+      const value = (name: string) => card.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value;
+      let skills: Skills | undefined;
+      if (team === 'blue') {
+        const pick = (key: keyof Skills) =>
+          Number(card.querySelector<HTMLInputElement>(`input[name="${p.id}-${key}"]:checked`)!.value) as Rating;
+        skills = { shooting: pick('shooting'), speed: pick('speed'), finishing: pick('finishing'), iso: pick('iso') };
+      }
+      return { id: p.id, number: value('number'), name: value('name'), height: value('height'), skills };
+    });
+
+  /** 依目前輸入更新身高預設提示與速度 */
+  const refreshCards = () => {
+    const team: Team = step === 1 ? 'blue' : 'red';
+    const values = readTeam(team);
+    const players = tactic().players;
+    for (const v of values) {
+      const card = form.querySelector<HTMLElement>(`[data-id="${v.id}"]`)!;
+      const base = players.find((p) => p.id === v.id)!;
+      const h = Number(v.height);
+      const draft: Player = {
+        ...base,
+        heightCm: v.height.trim() && Number.isFinite(h) ? h : undefined,
+        skills: v.skills ?? base.skills,
+      };
+      const heightInput = card.querySelector<HTMLInputElement>('input[name="height"]')!;
+      const fallback = heightOf({ ...draft, heightCm: undefined }, players);
+      const blue = players.find((p) => p.id === counterpartId(v.id));
+      heightInput.placeholder =
+        team === 'red' && blue?.heightCm !== undefined ? `${fallback}（同藍隊）` : `預設 ${fallback}`;
+      const all = players.map((p) => (p.id === draft.id ? draft : p));
+      card.querySelector('.pcard__speed')!.textContent =
+        `跑動 ${speedOf(draft, all, false).toFixed(2)} m/s ・ 運球 ${speedOf(draft, all, true).toFixed(2)} m/s`;
+    }
+  };
+
+  // ---------- ③ 對位 ----------
+
+  const renderMatchups = () => {
+    const t = tactic();
+    const players = t.players;
+    const red = teamPlayers(t, 'red');
+    const label = (p: Player) => `${p.number} 號 ${p.name}（${heightOf(p, players)} cm）`;
+    form.replaceChildren();
+
+    for (const b of teamPlayers(t, 'blue')) {
+      const r = players.find((p) => p.id === draftMatchups[b.id])!;
+      const select = el('select', { 'aria-label': `${b.name} 的對位` });
+      for (const opt of red) select.append(el('option', { value: opt.id, selected: opt.id === r.id }, label(opt)));
+      select.addEventListener('change', () => {
+        draftMatchups = assignMatchup(draftMatchups, b.id, select.value);
+        draftCustomized = true;
+        renderMatchups();
+      });
+
+      const dh = heightOf(b, players) - heightOf(r, players);
+      const dv = speedOf(b, players, false) / speedOf(r, players, false) - 1;
+      const diff = (text: string, v: number) => el('span', { class: v > 0 ? 'adv' : v < 0 ? 'disadv' : '' }, text);
+      form.append(
+        el(
+          'div',
+          { class: 'mrow' },
+          el('div', { class: 'mrow__blue' }, label(b)),
+          el('span', { class: 'mrow__vs' }, '對'),
+          select,
+          el(
+            'p',
+            { class: 'mrow__diff' },
+            '藍隊的優勢：',
+            diff(`身高 ${dh >= 0 ? '+' : ''}${dh} cm`, dh),
+            ' ・ ',
+            diff(`速度 ${dv >= 0 ? '+' : ''}${Math.round(dv * 100)}%`, Math.round(dv * 100)),
+          ),
+        ),
+      );
+    }
+
+    if (draftCustomized) {
+      const reset = el('button', { type: 'button', class: 'link-btn' }, '恢復預設對位');
+      reset.addEventListener('click', () => {
+        draftMatchups = defaultMatchups(players);
+        draftCustomized = false;
+        renderMatchups();
+      });
+      form.append(reset);
+    }
+
+    const choice = el('fieldset', { class: 'choice' }, el('legend', {}, '遇到掩護時，紅隊要'));
+    const option = (value: Tactic['screenDefense'], text: string, desc: string) => {
+      const radio = el('input', { type: 'radio', name: 'screen', value, checked: draftScreen === value });
+      radio.addEventListener('change', () => (draftScreen = value));
+      return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
+    };
+    choice.append(
+      option('switch', '換防（預設）', '兩位防守者交換對位，可能形成身高錯位'),
+      option('fight-over', '擠過', '被掩護的人繞過掩護繼續盯原本的人，會慢一步'),
+    );
+    form.append(choice);
+  };
+
+  // ---------- 切換步驟 ----------
+
+  const clearError = () => {
+    errorEl.hidden = true;
+    for (const x of form.querySelectorAll('[aria-invalid]')) x.removeAttribute('aria-invalid');
+  };
+
+  const render = () => {
+    clearError();
+    progress.textContent = `${step} / 3`;
+    title.textContent = STEP_TEXT[step].title;
+    hint.textContent = STEP_TEXT[step].hint;
+    back.hidden = step === 1 && boardReady;
+    back.textContent = step === 1 ? '回首頁' : '上一步';
+    skip.hidden = step === 3;
+    next.textContent = step === 3 ? (boardReady ? '完成' : '開始') : '下一步';
+    close.hidden = !boardReady;
+
+    if (step === 3) {
+      renderMatchups();
+    } else {
+      const team: Team = step === 1 ? 'blue' : 'red';
+      form.replaceChildren(...teamPlayers(tactic(), team).map((p, i) => playerCard(p, i)));
+      refreshCards();
+    }
+    form.scrollTop = 0;
+  };
+
+  /** 進入對位頁前：沒改過對位就重新套用預設 */
+  const loadMatchupDraft = () => {
+    const t = tactic();
+    draftCustomized = t.setup.matchupsCustomized;
+    draftMatchups = draftCustomized ? { ...t.matchups } : defaultMatchups(t.players);
+    draftScreen = t.screenDefense;
+  };
+
+  /** 寫回球員後，若沒改過對位就跟著更新預設對位 */
+  const refreshDefaultMatchups = (s: EditorState) => {
+    if (!s.tactic.setup.matchupsCustomized) s.tactic.matchups = defaultMatchups(s.tactic.players);
+  };
+
+  /** 驗證並寫回目前這一步；失敗時顯示錯誤並回傳 false */
+  const saveStep = (): boolean => {
+    if (step === 3) {
+      store.commit((s) => {
+        s.tactic.matchups = { ...draftMatchups };
+        s.tactic.setup.matchupsCustomized = draftCustomized;
+        s.tactic.screenDefense = draftScreen;
+      });
+      return true;
+    }
+    const team: Team = step === 1 ? 'blue' : 'red';
+    const result = parseTeamForm(readTeam(team));
+    if ('error' in result) {
+      clearError();
+      errorEl.textContent = result.error;
+      errorEl.hidden = false;
+      const input = form.querySelector<HTMLInputElement>(`[data-id="${result.id}"] input[name="${result.field}"]`)!;
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+      return false;
+    }
+    store.commit((s) => {
+      for (const patch of result.ok) applyPatch(s.tactic.players.find((p) => p.id === patch.id)!, patch);
+      if (team === 'blue') s.tactic.setup.blueSkipped = false;
+      else s.tactic.setup.redSkipped = false;
+      refreshDefaultMatchups(s);
+    });
+    return true;
+  };
+
+  const goto = (to: Step) => {
+    step = to;
+    if (to === 3) loadMatchupDraft();
+    render();
+  };
+
+  const finish = () => {
+    boardReady = true;
+    show('board');
+  };
+
+  next.addEventListener('click', () => {
+    if (!saveStep()) return;
+    if (step === 3) finish();
+    else goto((step + 1) as Step);
+  });
+
+  back.addEventListener('click', () => {
+    if (step === 1) {
+      show('home');
+      return;
+    }
+    if (!saveStep()) return;
+    goto((step - 1) as Step);
+  });
+
+  skip.addEventListener('click', () => {
+    const team: Team = step === 1 ? 'blue' : 'red';
+    store.commit((s) => {
+      const members = s.tactic.players.filter((p) => p.team === team);
+      s.tactic.players = s.tactic.players.map((p) => (p.team === team ? defaultPlayer(team, members.indexOf(p) + 1) : p));
+      if (team === 'blue') s.tactic.setup.blueSkipped = true;
+      else s.tactic.setup.redSkipped = true;
+      refreshDefaultMatchups(s);
+    });
+    goto((step + 1) as Step);
+  });
+
+  close.addEventListener('click', () => {
+    if (saveStep()) finish();
+  });
+
+  form.addEventListener('input', () => {
+    clearError();
+    if (step !== 3) refreshCards();
+  });
+  form.addEventListener('submit', (e) => e.preventDefault());
+
+  return {
+    open(to: Step, focusPlayerId?: string) {
+      goto(to);
+      show('setup');
+      if (focusPlayerId) {
+        const card = form.querySelector<HTMLElement>(`[data-id="${focusPlayerId}"]`);
+        card?.scrollIntoView({ block: 'center' });
+        card?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+      }
+    },
+  };
+}
