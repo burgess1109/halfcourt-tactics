@@ -174,7 +174,7 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
   const out: string[] = [
     '# 內建戰術說明（草稿，待確認）',
     '',
-    '> 15 套內建進攻戰術的跑位，確認後就是 M6 戰術庫的資料（`src/plays/library.ts`）。',
+    `> ${PLAYS.length} 套內建進攻戰術的跑位，確認後就是 M6 戰術庫的資料（\`src/plays/library.ts\`）。`,
     '> 圖是用遊戲本身的路線與防守 AI 畫的：藍隊標角色字母 A / B / C，紅點是防守 AI 在該分鏡**開始時**的位置（預設身高 175 cm、換防），虛線圓是跑位終點，橘色小球是球。',
     '> 線條：實線箭頭＝跑位、波浪線＝運球、虛線＝傳球、T 字＝掩護、點狀弧線＋圈＝投籃。',
     '',

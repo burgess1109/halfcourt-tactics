@@ -38,3 +38,18 @@ export const FIGHT_OVER_RANGE = { min: 0.25, max: 0.9 } as const;
 
 /** 換防：兩位防守者交換對位前的反應時間（秒） */
 export const SWITCH_DELAY = 0.3;
+
+/**
+ * 阻絕（SPEC §6.2）：防外圍無球的人時，站到傳球路線上。
+ * 位置 = 對位者 + 往持球者方向 DENY_TOWARD_BALL + 往籃框方向 DENY_TOWARD_RIM。
+ */
+export const DENY_TOWARD_BALL = 1.3;
+export const DENY_TOWARD_RIM = 0.5;
+/** 對位者離籃框超過這個距離（公尺）才阻絕；在籃下附近就站在人和籃框之間 */
+export const DENY_MIN_RIM_DISTANCE = 4.5;
+
+/**
+ * 被甩開：防守者離籃框比對位者還遠超過這個距離（公尺），代表對位者已經切到他前面，
+ * 防守者沒辦法穿過去，只能從後面追（SPEC §6.2）。
+ */
+export const BEATEN_MARGIN = 0.3;

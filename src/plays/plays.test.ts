@@ -9,9 +9,9 @@ import { loadPlay } from './instantiate';
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
 
 describe('內建戰術庫', () => {
-  it('共 15 套，id 不重複', () => {
-    expect(PLAYS).toHaveLength(15);
-    expect(new Set(PLAYS.map((p) => p.id)).size).toBe(15);
+  it('共 18 套，id 不重複', () => {
+    expect(PLAYS).toHaveLength(18);
+    expect(new Set(PLAYS.map((p) => p.id)).size).toBe(18);
   });
 
   for (const play of PLAYS) {

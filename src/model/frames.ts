@@ -1,6 +1,6 @@
 import { BALL_HOLD_OFFSET, ballPosition } from './entities';
 import { buildTimeline } from '../anim/timeline';
-import { guardPosition } from '../sim/defense';
+import { defendPosition } from '../sim/defense';
 import { redAt, simulateDefense } from '../sim/defenseSim';
 import { RIM, endPosition, hasShot, pathOf, pruneInvalidPaths } from './paths';
 import { BALL_ID, type Frame, type Tactic, type Vec2 } from './types';
@@ -31,11 +31,12 @@ export function endState(frame: Frame): { start: Record<string, Vec2>; ballHolde
   return { start, ballHolderId };
 }
 
-/** 紅隊站在各自對位者與籃框之間（SPEC §6.2）；用於第 1 個分鏡 */
+/** 紅隊站到各自的防守位置（SPEC §6.2，含阻絕）；用於第 1 個分鏡 */
 function placeDefenders(tactic: Tactic, frame: Frame): void {
   for (const [blueId, redId] of Object.entries(tactic.matchups)) {
     const man = frame.start[blueId];
-    if (man) frame.start[redId] = guardPosition(man, frame.ballHolderId === blueId);
+    const ball = frame.ballHolderId ? (frame.start[frame.ballHolderId] ?? null) : null;
+    if (man) frame.start[redId] = defendPosition(man, ball, frame.ballHolderId === blueId);
   }
 }
 

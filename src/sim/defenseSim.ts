@@ -14,9 +14,9 @@ import {
   SCREEN_HOLD_RADIUS,
   SWITCH_DELAY,
 } from './config';
-import { guardPosition } from './defense';
+import { chaseTarget, defendPosition } from './defense';
 
-// 防守 AI（SPEC §6.2）：人盯人，追不上就是追不上；遇到掩護時依設定換防或擠過。
+// 防守 AI（SPEC §6.2）：人盯人＋阻絕外圍傳球路線，追不上就是追不上；遇到掩護時依設定換防或擠過。
 // 藍隊的移動不受紅隊影響，所以先用時間軸算出藍隊位置，再一格一格推進紅隊。完全決定性。
 
 export interface DefenseEvent {
@@ -69,7 +69,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   const start = poseAt(tactic, timeline, 0).positions;
   const holder0 = ballHolderAt(tactic, timeline, 0);
   const cur: Record<string, Vec2> = {};
-  for (const r of reds) cur[r.id] = guardPosition(start[assign[r.id]!]!, holder0 === assign[r.id]);
+  const ball0 = holder0 ? start[holder0]! : null;
+  for (const r of reds) cur[r.id] = defendPosition(start[assign[r.id]!]!, ball0, holder0 === assign[r.id]);
 
   for (let i = 0; i < ticks; i++) {
     const t = i * DT;
@@ -92,7 +93,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
       for (const r of reds) {
         if (t < (frozenUntil[r.id] ?? 0)) continue;
         const man = assign[r.id]!;
-        const target = guardPosition(seenPos[man]!, seenHolder === man);
+        const seenBall = seenHolder ? seenPos[seenHolder]! : null;
+        const target = chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man);
         const p = cur[r.id]!;
         const dx = target.x - p.x;
         const dy = target.y - p.y;

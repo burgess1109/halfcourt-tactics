@@ -5,7 +5,7 @@ import { insertFrameAfter } from '../model/frames';
 import { putPath } from '../model/paths';
 import type { Tactic } from '../model/types';
 import { SWITCH_DELAY } from './config';
-import { guardPosition } from './defense';
+import { defendPosition, guardPosition } from './defense';
 import { fightOverDelay, redAt, simulateDefense } from './defenseSim';
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -39,7 +39,7 @@ describe('防守 AI', () => {
     const res = simulateDefense(t, tl);
     const f = t.frames[0]!;
     for (const tt of [0, tl.total / 2, tl.total]) {
-      expect(dist(redAt(res, tt).positions.r2!, guardPosition(f.start.b2!, false))).toBeLessThan(1e-9);
+      expect(dist(redAt(res, tt).positions.r2!, defendPosition(f.start.b2!, f.start.b1!, false))).toBeLessThan(1e-9);
     }
   });
 
@@ -116,5 +116,66 @@ describe('擋拆後下順', () => {
       const res = simulateDefense(t, buildTimeline(t));
       expect(res.events.map((e) => e.type)).toEqual([scheme]);
     }
+  });
+});
+
+describe('阻絕', () => {
+  const ball = { x: 0, y: 8.6 };
+
+  it('防外圍無球的人時，站到傳球路線上（比站在人和籃框之間更靠近持球者）', () => {
+    const wing = { x: 5.4, y: 6.0 };
+    const deny = defendPosition(wing, ball, false);
+    const sag = guardPosition(wing, false);
+    expect(dist(deny, ball)).toBeLessThan(dist(sag, ball));
+    expect(dist(deny, wing)).toBeLessThan(dist(sag, wing));
+  });
+
+  it('對位者在籃下附近、或球在空中時，不阻絕', () => {
+    const post = { x: 2.4, y: 3.0 };
+    expect(defendPosition(post, ball, false)).toEqual(guardPosition(post, false));
+    expect(defendPosition({ x: 5.4, y: 6 }, null, false)).toEqual(guardPosition({ x: 5.4, y: 6 }, false));
+  });
+
+  it('防持球者時照舊站在人和籃框之間', () => {
+    expect(defendPosition(ball, ball, true)).toEqual(guardPosition(ball, true));
+  });
+});
+
+describe('被甩開只能從後面追', () => {
+  it('對位者切到防守者前面（更靠近籃框）時，目標改成對位者身後', async () => {
+    const { chaseTarget } = await import('./defense');
+    const { BODY_DISTANCE } = await import('./config');
+    const man = { x: 1.0, y: 2.6 };
+    const defender = { x: 3.0, y: 5.0 };
+    const target = chaseTarget(defender, man, { x: 0, y: 8.6 }, false);
+    expect(dist(target, man)).toBeCloseTo(BODY_DISTANCE);
+    // 在對位者和防守者之間，不會跑到對位者和籃框之間
+    expect(dist(target, defender)).toBeLessThan(dist(man, defender));
+  });
+
+  it('還沒被甩開時，照常站防守位置', async () => {
+    const { chaseTarget } = await import('./defense');
+    const man = { x: 5.4, y: 6.0 };
+    const ball = { x: 0, y: 8.6 };
+    const defender = defendPosition(man, ball, false);
+    expect(chaseTarget(defender, man, ball, false)).toEqual(defendPosition(man, ball, false));
+  });
+
+  it('背切：有阻絕時，防守者在出手那一刻被甩在身後', () => {
+    const t = createDefaultTactic();
+    const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
+    return import('../plays/library').then(async ({ PLAYS }) => {
+      const { loadPlay } = await import('../plays/instantiate');
+      const play = PLAYS.find((p) => p.id === 'cut-backdoor')!;
+      const tactic = loadPlay(t, play, roles);
+      const tl = buildTimeline(tactic);
+      const res = simulateDefense(tactic, tl);
+      const { poseAt } = await import('../anim/timeline');
+      const at = tl.shotReleaseAt!;
+      const shooter = poseAt(tactic, tl, at).positions.b2!;
+      const defender = redAt(res, at).positions.r2!;
+      const rim = { x: 0, y: 1.575 };
+      expect(dist(defender, rim)).toBeGreaterThan(dist(shooter, rim));
+    });
   });
 });

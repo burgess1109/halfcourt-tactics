@@ -245,13 +245,13 @@ export const PLAYS: readonly Play[] = [
     frames: [
       { note: 'A 傳給右翼的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       {
-        note: 'A 傳完立刻往籃下切；C 補到弧頂，保持空間。',
+        note: 'A 傳完立刻往籃下切，B 抓準時機回傳，球和 A 同時到籃下；C 補到弧頂，保持空間。',
         paths: [
           { kind: 'cut', actor: 'A', to: { x: 0.8, y: 2.4 }, via: [{ x: 1.6, y: 5.6 }] },
           { kind: 'cut', actor: 'C', to: { x: -1.2, y: 8.6 } },
+          { kind: 'pass', actor: 'B', target: 'A' },
         ],
       },
-      { note: 'B 回傳給切入的 A。', paths: [{ kind: 'pass', actor: 'B', target: 'A' }] },
       { note: 'A 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
     ],
     finisher: 'A',
@@ -272,10 +272,12 @@ export const PLAYS: readonly Play[] = [
         paths: [{ kind: 'cut', actor: 'B', to: { x: 5.8, y: 7.8 } }],
       },
       {
-        note: 'B 突然轉身，從防守者背後往籃下切。',
-        paths: [{ kind: 'cut', actor: 'B', to: { x: 1.0, y: 2.2 }, via: [{ x: 3.6, y: 3.8 }] }],
+        note: 'B 突然轉身，從防守者背後往籃下切；A 抓準時機傳球，球和 B 同時到籃下。',
+        paths: [
+          { kind: 'cut', actor: 'B', to: { x: 1.0, y: 2.2 }, via: [{ x: 3.6, y: 3.8 }] },
+          { kind: 'pass', actor: 'A', target: 'B' },
+        ],
       },
-      { note: 'A 傳給背切的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       { note: 'B 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
     ],
     finisher: 'B',
@@ -296,13 +298,13 @@ export const PLAYS: readonly Play[] = [
         paths: [{ kind: 'screen', actor: 'B', to: { x: -2.0, y: 3.2 } }],
       },
       {
-        note: 'C 繞過掩護往左翼跑到三分線外；B 先站住擋人，再往禁區卡位。',
+        note: 'C 繞過掩護往左翼跑到三分線外，A 配合時機傳球；B 先站住擋人，再往禁區卡位。',
         paths: [
           { kind: 'cut', actor: 'C', to: { x: -5.4, y: 6.2 }, via: [{ x: -3.8, y: 4.4 }] },
           { kind: 'cut', actor: 'B', to: { x: -0.6, y: 3.4 } },
+          { kind: 'pass', actor: 'A', target: 'C' },
         ],
       },
-      { note: 'A 傳給 C。', paths: [{ kind: 'pass', actor: 'A', target: 'C' }] },
       { note: 'C 弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
     ],
     finisher: 'C',
@@ -323,13 +325,13 @@ export const PLAYS: readonly Play[] = [
         paths: [{ kind: 'screen', actor: 'B', to: { x: -2.4, y: 5.1 } }],
       },
       {
-        note: 'C 繞過掩護往籃下切；B 先站住擋人，再外彈到弧頂左側。',
+        note: 'C 繞過掩護往籃下切，A 配合時機傳球；B 先站住擋人，再外彈到弧頂左側。',
         paths: [
           { kind: 'cut', actor: 'C', to: { x: -0.4, y: 2.4 }, via: [{ x: -3.3, y: 4.5 }] },
           { kind: 'cut', actor: 'B', to: { x: -2.6, y: 8.2 } },
+          { kind: 'pass', actor: 'A', target: 'C' },
         ],
       },
-      { note: 'A 傳給空切的 C。', paths: [{ kind: 'pass', actor: 'A', target: 'C' }] },
       { note: 'C 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
     ],
     finisher: 'C',
@@ -351,13 +353,13 @@ export const PLAYS: readonly Play[] = [
         paths: [{ kind: 'screen', actor: 'A', to: { x: -2.6, y: 5.9 } }],
       },
       {
-        note: 'C 繞過掩護跑到右側三分線外；A 先站住擋人，再往籃下切，製造第二個選擇。',
+        note: 'C 繞過掩護跑到右側三分線外，B 從低位配合時機傳給 C；A 先站住擋人，再往籃下切，製造第二個選擇。',
         paths: [
           { kind: 'cut', actor: 'C', to: { x: 3.2, y: 7.8 }, via: [{ x: -1.4, y: 7.2 }] },
           { kind: 'cut', actor: 'A', to: { x: -1.0, y: 3.2 } },
+          { kind: 'pass', actor: 'B', target: 'C' },
         ],
       },
-      { note: 'B 從低位傳給 C。', paths: [{ kind: 'pass', actor: 'B', target: 'C' }] },
       { note: 'C 弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
     ],
     finisher: 'C',
@@ -453,5 +455,86 @@ export const PLAYS: readonly Play[] = [
     finisher: 'A',
     finish: 'A 假遞後自己切入上籃',
     weights: { A: { iso: 3, finishing: 2, speed: 1 }, B: { speed: 1 }, C: { shooting: 1 } },
+  },
+  {
+    id: 'iso-top',
+    category: '單打',
+    name: 'Top Isolation',
+    summary: '兩個隊友拉到兩側底角清出空間，持球者在弧頂一對一切入。',
+    roles: { A: '單打持球者', B: '拉開空間', C: '拉開空間' },
+    start: { A: TOP, B: { x: 4.4, y: 6.8 }, C: LW },
+    ball: 'A',
+    frames: [
+      {
+        note: 'B、C 拉到兩側底角，把中間清空給 A。',
+        paths: [
+          { kind: 'cut', actor: 'B', to: RC },
+          { kind: 'cut', actor: 'C', to: LC },
+        ],
+      },
+      {
+        note: 'A 一對一，往左運球後切向籃下。',
+        paths: [{ kind: 'dribble', actor: 'A', to: { x: -0.6, y: 2.4 }, via: [{ x: -1.2, y: 6.0 }] }],
+      },
+      { note: 'A 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
+    ],
+    finisher: 'A',
+    finish: 'A 弧頂一對一切入上籃',
+    weights: { A: { iso: 3, finishing: 2, speed: 1 }, B: { shooting: 1 }, C: { shooting: 1 } },
+  },
+  {
+    id: 'iso-post',
+    category: '單打',
+    name: 'Post Isolation',
+    summary: '高個子到低位要位接球，隊友拉開到外圍，讓他在低位一對一。',
+    roles: { A: '傳入低位', B: '低位單打', C: '拉開空間' },
+    start: { A: { x: 2.4, y: 8.2 }, B: { x: 3.4, y: 5.2 }, C: LW },
+    ball: 'A',
+    frames: [
+      {
+        note: 'B 從罰球線右側往下，到右側低位要位。',
+        paths: [{ kind: 'cut', actor: 'B', to: { x: 2.7, y: 2.6 } }],
+      },
+      { note: 'A 把球傳進低位的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
+      {
+        note: 'A 拉到弧頂左側、C 拉到左底角，清出空間；B 背框往籃下擠，轉身靠近籃框。',
+        paths: [
+          { kind: 'cut', actor: 'A', to: { x: -2.4, y: 8.4 } },
+          { kind: 'cut', actor: 'C', to: LC },
+          { kind: 'dribble', actor: 'B', to: { x: 1.0, y: 2.3 } },
+        ],
+      },
+      { note: 'B 在籃下出手（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
+    ],
+    finisher: 'B',
+    finish: 'B 低位單打',
+    weights: { A: { shooting: 1 }, B: { height: 3, finishing: 3, iso: 2 }, C: { shooting: 1 } },
+  },
+  {
+    id: 'iso-mismatch',
+    category: '單打',
+    name: 'Hunting the Mismatch',
+    summary: '先用擋拆逼對方換防，讓持球者換到比較慢或比較矮的防守者，再一對一切入。對方選擇擠過時，就變成一般的擋拆切入。',
+    roles: { A: '單打持球者', B: '掩護者（引出錯位）', C: '拉開空間' },
+    start: HIGH_PICK_START,
+    ball: 'A',
+    frames: [
+      HIGH_PICK_SET,
+      {
+        note: 'A 從 B 外側繞過掩護到右翼，逼對方換防；B 先站住擋人，再往弧頂左側拉開。',
+        paths: [
+          { kind: 'dribble', actor: 'A', to: { x: 4.6, y: 6.6 }, via: [AROUND_SCREEN] },
+          { kind: 'cut', actor: 'B', to: { x: -2.4, y: 8.4 } },
+        ],
+      },
+      {
+        note: 'A 對換過來的防守者一對一，切向籃下。',
+        paths: [{ kind: 'dribble', actor: 'A', to: { x: 1.0, y: 2.4 }, via: [{ x: 3.6, y: 4.0 }] }],
+      },
+      { note: 'A 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
+    ],
+    finisher: 'A',
+    finish: 'A 換防後對錯位的防守者切入',
+    weights: { A: { iso: 3, speed: 2, finishing: 1 }, B: { height: 1 }, C: { shooting: 1 } },
   },
 ];

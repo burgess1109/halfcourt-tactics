@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { guardPosition } from '../sim/defense';
+import { defendPosition, guardPosition } from '../sim/defense';
 import { MIN_GAP, OFF_BALL_GAP, ON_BALL_GAP } from '../sim/config';
 import { createDefaultTactic } from './defaults';
 import { insertFrameAfter, syncFrames } from './frames';
@@ -52,7 +52,7 @@ describe('紅隊站位', () => {
     putPath(f0, { id: 'c', kind: 'cut', actorId: 'b2', points: [f0.start.b2!, { x: -6.6, y: 1 }], freehand: false });
     insertFrameAfter(t, 0);
     syncFrames(t, true);
-    expect(t.frames[0]!.start.r2).toEqual(guardPosition(f0.start.b2!, false));
+    expect(t.frames[0]!.start.r2).toEqual(defendPosition(f0.start.b2!, f0.start.b1!, false));
     expect(t.frames[0]!.start.r1).toEqual(guardPosition(f0.start.b1!, true));
     // 第 2 個分鏡：紅 2 追著跑，但有反應時間，還沒完全到位
     const ideal = guardPosition({ x: -6.6, y: 1 }, false);
@@ -69,6 +69,6 @@ describe('紅隊站位', () => {
     syncFrames(t, false);
     const f = t.frames[0]!;
     expect(f.start.r3).toEqual(guardPosition(f.start.b1!, true));
-    expect(f.start.r1).toEqual(guardPosition(f.start.b3!, false));
+    expect(f.start.r1).toEqual(defendPosition(f.start.b3!, f.start.b1!, false));
   });
 });
