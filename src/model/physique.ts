@@ -16,7 +16,8 @@ export const SKILL_KEYS = Object.keys(SKILL_LABEL) as (keyof Skills)[];
 export const DEFAULT_SKILLS: Skills = { shooting: 2, speed: 2, finishing: 2, iso: 2 };
 
 export const HEIGHT_RANGE = { min: 150, max: 230 } as const;
-export const DEFAULT_HEIGHT = 195;
+/** 沒填身高時使用的值；也是速度公式的身高基準（這個身高 = 基準速度） */
+export const DEFAULT_HEIGHT = 175;
 
 /** 無球跑動的基準速度（m/s） */
 export const BASE_SPEED = 5.0;
@@ -37,7 +38,7 @@ export function counterpartId(id: string): string {
 
 /**
  * 模型使用的身高（SPEC §7.4）：
- * 藍隊沒填用 195；紅隊沒填則跟藍隊同順序球員一樣（藍隊也沒填則 195）。
+ * 藍隊沒填用 175；紅隊沒填則跟藍隊同順序球員一樣（藍隊也沒填則 175）。
  */
 export function heightOf(p: Player, players: readonly Player[]): number {
   if (p.heightCm !== undefined) return p.heightCm;
@@ -54,7 +55,7 @@ export function skillsOf(p: Player): Skills {
 
 /** speed = base × 身高係數 × 速度能力（紅隊沒有能力，視為普通） */
 export function speedOf(p: Player, players: readonly Player[], dribbling: boolean): number {
-  const height = Math.min(1.08, Math.max(0.92, 1 - 0.003 * (heightOf(p, players) - 195)));
+  const height = Math.min(1.08, Math.max(0.92, 1 - 0.003 * (heightOf(p, players) - DEFAULT_HEIGHT)));
   const rating = SPEED_RATING_FACTOR[skillsOf(p).speed];
   return BASE_SPEED * height * rating * (dribbling ? DRIBBLE_FACTOR : 1);
 }

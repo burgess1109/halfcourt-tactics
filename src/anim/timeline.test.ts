@@ -3,11 +3,11 @@ import { createDefaultTactic } from '../model/defaults';
 import { BALL_HOLD_OFFSET } from '../model/entities';
 import { insertFrameAfter, removeFrame, syncFrames, MAX_FRAMES } from '../model/frames';
 import { putPath } from '../model/paths';
-import { BASE_SPEED, DRIBBLE_FACTOR, PASS_SPEED, heightOf, speedOf } from '../model/physique';
+import { BASE_SPEED, DEFAULT_HEIGHT, DRIBBLE_FACTOR, PASS_SPEED, heightOf, speedOf } from '../model/physique';
 import { EMPTY_FRAME_SECONDS, buildTimeline, poseAt } from './timeline';
 
 describe('速度模型', () => {
-  it('身高 195、速度普通 = 基準速度；運球打折', () => {
+  it('預設身高（175）、速度普通 = 基準速度；運球打折', () => {
     const t = createDefaultTactic();
     const b1 = t.players.find((p) => p.id === 'b1')!;
     expect(speedOf(b1, t.players, false)).toBeCloseTo(BASE_SPEED);
@@ -22,7 +22,7 @@ describe('速度模型', () => {
     expect(speedOf(fast, t.players, false)).toBeCloseTo(BASE_SPEED * 1.1);
     expect(speedOf(slow, t.players, false)).toBeCloseTo(BASE_SPEED * 0.9);
     expect(speedOf({ ...b1, heightCm: 230 }, t.players, false)).toBeCloseTo(BASE_SPEED * 0.92);
-    expect(speedOf({ ...b1, heightCm: 150 }, t.players, false)).toBeCloseTo(BASE_SPEED * 1.08);
+    expect(speedOf({ ...b1, heightCm: 145 }, t.players, false)).toBeCloseTo(BASE_SPEED * 1.08);
   });
 
   it('紅隊沒填身高時跟藍隊同順序球員一樣', () => {
@@ -32,7 +32,8 @@ describe('速度模型', () => {
     expect(heightOf(r2, t.players)).toBe(210);
     r2.heightCm = 180;
     expect(heightOf(r2, t.players)).toBe(180);
-    expect(heightOf(t.players.find((p) => p.id === 'r1')!, t.players)).toBe(195);
+    expect(heightOf(t.players.find((p) => p.id === 'r1')!, t.players)).toBe(DEFAULT_HEIGHT);
+    expect(DEFAULT_HEIGHT).toBe(175);
   });
 });
 
