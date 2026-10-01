@@ -442,10 +442,10 @@ export const PLAYS: readonly Play[] = [
         ],
       },
       {
-        note: 'A 假裝交球，突然轉身往籃下切；B 繼續往外跑，把防守者帶走。',
+        note: 'A 假裝交球，突然轉身往籃下切；B 從 A 的外側（靠中場那側）繞過去跑向弧頂，把防守者帶離切入路線。',
         paths: [
           { kind: 'dribble', actor: 'A', to: { x: 1.0, y: 2.6 }, via: [{ x: 2.4, y: 5.0 }] },
-          { kind: 'cut', actor: 'B', to: { x: 5.6, y: 8.0 } },
+          { kind: 'cut', actor: 'B', to: { x: 0.6, y: 8.8 }, via: [{ x: 3.8, y: 8.6 }] },
         ],
       },
       { note: 'A 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
