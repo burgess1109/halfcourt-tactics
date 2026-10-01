@@ -181,11 +181,11 @@ export const PLAYS: readonly Play[] = [
     weights: { A: { iso: 1 }, B: { finishing: 3, height: 2 }, C: { shooting: 1 } },
   },
   {
-    id: 'low-pnr-drive',
+    id: 'low-pnr-paint',
     category: '低位擋拆',
-    name: 'Drive to Rim',
-    summary: '球傳進低位後，傳球者下來幫低位的人掩護，低位持球者趁防守者被擋住時切入終結。',
-    roles: { A: '傳入低位後掩護', B: '低位持球切入', C: '拉開空間' },
+    name: 'Paint Shot',
+    summary: '球傳進低位後，傳球者下來幫低位的人掩護，低位持球者趁防守者被擋住，運到禁區中路出手。',
+    roles: { A: '傳入低位後掩護', B: '低位持球、禁區中路出手', C: '拉開空間' },
     start: { A: { x: 5.0, y: 6.6 }, B: { x: 4.6, y: 2.2 }, C: LW },
     ball: 'A',
     frames: [
@@ -195,15 +195,13 @@ export const PLAYS: readonly Play[] = [
         paths: [{ kind: 'screen', actor: 'A', to: { x: 2.6, y: 3.0 } }],
       },
       {
-        note: 'B 從 A 外側繞過掩護往中路切，再轉向籃下；A 留在原地繼續擋住防守者。',
-        paths: [
-          { kind: 'dribble', actor: 'B', to: { x: 0.6, y: 2.8 }, via: [{ x: 3.8, y: 4.3 }, { x: 1.8, y: 4.5 }] },
-        ],
+        note: 'B 從 A 外側繞過掩護，運到禁區中路停下；A 留在原地繼續擋住防守者。',
+        paths: [{ kind: 'dribble', actor: 'B', to: { x: 0.6, y: 4.6 }, via: [{ x: 3.8, y: 4.3 }] }],
       },
-      { note: 'B 上籃（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
+      { note: 'B 在禁區中路出手（1 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
     ],
     finisher: 'B',
-    finish: 'B 利用 A 的掩護切入上籃',
+    finish: 'B 利用 A 的掩護到禁區中路出手',
     weights: { A: { height: 1 }, B: { finishing: 3, iso: 2, height: 1 }, C: { shooting: 1 } },
   },
   {
