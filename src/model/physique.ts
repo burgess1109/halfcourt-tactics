@@ -3,10 +3,8 @@ import type { Player, Rating, Skills } from './types';
 // 球員能力模型，對應 SPEC §7。
 
 export const RATINGS: readonly Rating[] = [4, 3, 2, 1, 0];
-/** 藍隊能力的等級（跟這場對手的平均水準比） */
-export const RATING_LABEL: Record<Rating, string> = { 4: '大幅優勢', 3: '小幅優勢', 2: '持平', 1: '小幅劣勢', 0: '大幅劣勢' };
-/** 紅隊速度的等級（跟他隊友的平均比） */
-export const RED_SPEED_LABEL: Record<Rating, string> = { 4: '快很多', 3: '稍快', 2: '普通', 1: '稍慢', 0: '慢很多' };
+/** 等級名稱：藍隊四項能力與紅隊速度共用，以場上六個人的平均為基準 */
+export const RATING_LABEL: Record<Rating, string> = { 4: '優勢', 3: '稍強', 2: '平均', 1: '稍弱', 0: '劣勢' };
 
 export const SKILL_LABEL: Record<keyof Skills, string> = {
   shooting: '外線投射',

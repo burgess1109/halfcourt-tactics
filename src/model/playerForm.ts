@@ -60,7 +60,7 @@ export function applyPatch(player: Player, patch: PlayerPatch): void {
   else player.heightCm = patch.heightCm;
   if (player.team === 'blue' && patch.skills) player.skills = { ...patch.skills };
   if (player.team === 'red') {
-    // 普通是預設值，不另外存
+    // 平均是預設值，不另外存
     if (patch.speedRating === undefined || patch.speedRating === 2) delete player.speedRating;
     else player.speedRating = patch.speedRating;
   }

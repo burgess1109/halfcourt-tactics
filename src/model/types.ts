@@ -5,8 +5,8 @@ export type Mode = 'offense' | 'defense';
 
 /**
  * 等級 0–4（SPEC §3.1、§3.2）。
- * 藍隊能力：0 大幅劣勢 … 2 持平 … 4 大幅優勢（跟這場對手的平均水準比）。
- * 紅隊速度：0 慢很多 … 2 普通 … 4 快很多（跟他隊友的平均比）。
+ * 0 劣勢、1 稍弱、2 平均、3 稍強、4 優勢，以場上六個人的平均為基準。
+ * 藍隊有四項能力，紅隊只有速度。
  */
 export type Rating = 0 | 1 | 2 | 3 | 4;
 
@@ -31,7 +31,7 @@ export interface Player {
   heightCm?: number;
   /** 只有藍隊 */
   skills?: Skills;
-  /** 只有紅隊：速度（跟隊友平均比），未填 = 普通 */
+  /** 只有紅隊：速度等級，未填 = 平均 */
   speedRating?: Rating;
 }
 

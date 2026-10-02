@@ -54,7 +54,7 @@ describe('設定頁表單', () => {
     expect(isBlueComplete(t.players, true)).toBe(false);
   });
 
-  it('紅隊速度：普通不另外存，其他等級寫回；藍隊不寫入紅隊速度', () => {
+  it('紅隊速度：平均不另外存，其他等級寫回；藍隊不寫入紅隊速度', () => {
     const t = createDefaultTactic();
     const r1 = t.players.find((p) => p.id === 'r1')!;
     applyPatch(r1, { id: 'r1', number: 1, name: '對手 1', heightCm: undefined, speedRating: 0 });

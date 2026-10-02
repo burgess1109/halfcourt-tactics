@@ -4,7 +4,6 @@ import {
   DEFAULT_SKILLS,
   RATINGS,
   RATING_LABEL,
-  RED_SPEED_LABEL,
   SKILL_KEYS,
   SKILL_LABEL,
   counterpartId,
@@ -22,8 +21,8 @@ export type Step = 1 | 2 | 3;
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 const STEP_TEXT: Record<Step, { title: string; hint: string }> = {
-  1: { title: '你的球隊（藍隊）', hint: '都是選填。能力是跟這場對手的平均水準比，預設持平；有填身高才會推薦內建戰術。' },
-  2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時跟藍隊同順序的球員一樣高；速度是跟他隊友的平均比，預設普通。' },
+  1: { title: '你的球隊（藍隊）', hint: '都是選填。能力以場上六個人的平均為基準，預設平均；有填身高才會推薦內建戰術。' },
+  2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時跟藍隊同順序的球員一樣高；速度以場上六個人的平均為基準，預設平均。' },
   3: { title: '對位設定', hint: '系統的紅隊會盯住對位的藍隊球員。' },
 };
 
@@ -121,7 +120,7 @@ export function attachSetup(
       const skills = p.skills ?? DEFAULT_SKILLS;
       for (const key of SKILL_KEYS) card.append(ratingRow(`${p.id}-${key}`, SKILL_LABEL[key], RATING_LABEL, skills[key]));
     } else {
-      card.append(ratingRow(`${p.id}-speed`, '速度（跟隊友比）', RED_SPEED_LABEL, p.speedRating ?? 2));
+      card.append(ratingRow(`${p.id}-speed`, '速度', RATING_LABEL, p.speedRating ?? 2));
     }
     card.append(el('p', { class: 'pcard__speed', 'aria-live': 'polite' }));
     return card;
