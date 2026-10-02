@@ -65,12 +65,12 @@ function watchPixelRatio(): void {
 watchPixelRatio();
 
 store.subscribe(requestDraw);
-const setup = attachSetup(store, show);
+const setup = attachSetup(store, show, notify);
 attachPointer(canvas, store, renderer, notify, (playerId) => {
   const team = store.get().tactic.players.find((p) => p.id === playerId)?.team;
   setup.open(team === 'red' ? 2 : 1, playerId);
 });
-attachToolbar(store);
+attachToolbar(store, notify);
 attachFrames(store, notify);
 const hud = attachHud($('#hud'), store);
 playback.onTick = hud.playing;

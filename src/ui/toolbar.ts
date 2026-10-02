@@ -1,5 +1,7 @@
 import type { Store, Tool } from '../model/store';
 import { PATH_KIND_LABEL } from '../model/paths';
+import { createBlankTactic } from '../model/defaults';
+import { authoredSignature } from '../model/store';
 import { bindMenu } from './menu';
 import { setTip } from './tooltip';
 
@@ -8,10 +10,11 @@ const TOOL_LABEL: Record<Tool, string> = { move: '移動', ...PATH_KIND_LABEL };
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 /** 接上下方編輯工具列：復原、重做、工具選單（含手繪切換）、刪除，以及鍵盤快捷鍵 */
-export function attachToolbar(store: Store): void {
+export function attachToolbar(store: Store, notify: (message: string) => void): void {
   const undo = $<HTMLButtonElement>('#undo');
   const redo = $<HTMLButtonElement>('#redo');
   const del = $<HTMLButtonElement>('#delete');
+  const clear = $<HTMLButtonElement>('#clear');
   const toolBtn = $<HTMLButtonElement>('#tool');
   const toolIcon = toolBtn.querySelector('use')!;
   const badge = toolBtn.querySelector<HTMLElement>('.tool__badge')!;
@@ -28,6 +31,12 @@ export function attachToolbar(store: Store): void {
       s.selectedPathId = null;
     });
   };
+
+  // 清空戰術：跟戰術庫的「空白戰術」相同，回到開局站位，球員資料與對位保留
+  clear.addEventListener('click', () => {
+    store.load(createBlankTactic(store.get().tactic));
+    notify('已清空戰術，按復原可以回到剛才的戰術');
+  });
 
   undo.addEventListener('click', () => store.undo());
   redo.addEventListener('click', () => store.redo());
@@ -98,6 +107,9 @@ export function attachToolbar(store: Store): void {
     undo.disabled = s.playing || !store.canUndo;
     redo.disabled = s.playing || !store.canRedo;
     del.disabled = s.playing || !s.selectedPathId;
+    // 已經是空白戰術（開局站位、沒有路線、不是內建戰術）時不需要清空
+    const blank = !s.tactic.basedOn && authoredSignature(s.tactic) === authoredSignature(createBlankTactic(s.tactic));
+    clear.disabled = s.playing || blank;
     toolBtn.disabled = s.playing;
     toolIcon.setAttribute('href', `#icon-${s.tool}`);
     toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);

@@ -32,7 +32,7 @@
         <div id="setup-tabs" class="tabs" role="tablist" aria-label="球隊設定">
           <button class="tabs__tab" type="button" role="tab" data-step="1">藍隊</button>
           <button class="tabs__tab" type="button" role="tab" data-step="2">紅隊</button>
-          <button class="tabs__tab" type="button" role="tab" data-step="3">對位</button>
+          <button class="tabs__tab" type="button" role="tab" data-step="3">站位與對位</button>
         </div>
         <h2 id="setup-title" class="setup__title"></h2>
         <p id="setup-hint" class="setup__hint"></p>
@@ -89,6 +89,9 @@
         </button>
         <button id="redo" class="tool tool--boxed" type="button" data-tip="重做（⇧⌘Z / Ctrl+Y）" aria-label="重做" disabled>
           <svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+        </button>
+        <button id="clear" class="tool tool--boxed" type="button" data-tip="清空戰術：回到開局站位（保留球員與對位，可以復原）" aria-label="清空戰術">
+          <svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
         </button>
         <span class="toolbar__spacer"></span>
         <div class="frames" role="group" aria-label="分鏡">

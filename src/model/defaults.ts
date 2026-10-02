@@ -2,7 +2,8 @@ import { DEFAULT_SKILLS } from './physique';
 import { defaultMatchups } from './matchups';
 import { syncFrames } from './frames';
 import { newId } from './id';
-import { BALL_ID, type Player, type Tactic } from './types';
+import { DEFAULT_LINEUP, applyLineup, lineupOf } from './lineup';
+import type { Frame, Player, Tactic } from './types';
 
 /** 藍隊、紅隊的預設球員（SPEC §3.1、§3.2） */
 export function defaultPlayer(team: Player['team'], i: number): Player {
@@ -11,9 +12,11 @@ export function defaultPlayer(team: Player['team'], i: number): Player {
     : { id: `r${i}`, team, number: i, name: `對手 ${i}` };
 }
 
-/** 新的進攻戰術：藍隊站弧頂與兩翼；紅隊站位由 syncFrames 依對位推算 */
+/** 新的進攻戰術：藍隊依開局站位站弧頂與兩翼；紅隊站位由 syncFrames 依對位推算 */
 export function createDefaultTactic(): Tactic {
   const players = [1, 2, 3].flatMap((i) => [defaultPlayer('blue', i), defaultPlayer('red', i)]);
+  const frame: Frame = { start: {}, ballHolderId: null, paths: [] };
+  applyLineup(frame, DEFAULT_LINEUP);
   const tactic: Tactic = {
     version: 1,
     id: newId(),
@@ -23,36 +26,24 @@ export function createDefaultTactic(): Tactic {
     matchups: defaultMatchups(players),
     screenDefense: 'switch',
     players,
-    frames: [
-      {
-        start: {
-          b1: { x: 0, y: 8.6 },
-          b2: { x: -5.4, y: 6.0 },
-          b3: { x: 5.4, y: 6.0 },
-          r1: { x: 0, y: 7.6 },
-          r2: { x: -4.4, y: 5.1 },
-          r3: { x: 4.4, y: 5.1 },
-          [BALL_ID]: { x: 0.85, y: 8.7 },
-        },
-        ballHolderId: 'b1',
-        paths: [],
-      },
-    ],
+    frames: [frame],
     updatedAt: Date.now(),
   };
+  syncFrames(tactic, false); // 放好紅隊
   return tactic;
 }
 
 /**
- * 空白戰術：保留球員資料、對位與掩護應對，跑位回到預設站位、只有一個分鏡（SPEC §6.3）。
+ * 空白戰術：保留球員資料、對位、掩護應對與開局站位，跑位清空、只有一個分鏡（SPEC §6.3）。
  */
 export function createBlankTactic(base: Tactic): Tactic {
-  const fresh = createDefaultTactic();
+  const frame: Frame = { start: {}, ballHolderId: null, paths: [] };
+  applyLineup(frame, lineupOf(base));
   const tactic: Tactic = {
     ...structuredClone(base),
-    id: fresh.id,
+    id: newId(),
     name: '',
-    frames: fresh.frames,
+    frames: [frame],
     updatedAt: Date.now(),
   };
   delete tactic.basedOn;

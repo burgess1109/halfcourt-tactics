@@ -69,6 +69,8 @@ export interface Tactic {
     redSkipped: boolean;
     /** 使用者改過對位後，就不再自動套用預設對位 */
     matchupsCustomized: boolean;
+    /** 開局站位（藍隊 id）；未設定時為 1 號弧頂、2 號左翼、3 號右翼 */
+    lineup?: Record<'top' | 'left' | 'right', string>;
   };
   /** 藍隊 id → 紅隊 id */
   matchups: Record<string, string>;

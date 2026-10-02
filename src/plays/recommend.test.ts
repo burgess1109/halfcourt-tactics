@@ -177,3 +177,29 @@ describe('空白戰術', () => {
     expect(blank.screenDefense).toBe('fight-over');
   });
 });
+
+describe('開局站位', () => {
+  it('換站位後，目前的戰術仍然算空白戰術（比對不受欄位順序影響）', async () => {
+    const { createBlankTactic } = await import('../model/defaults');
+    const { applyLineup, assignSlot, DEFAULT_LINEUP } = await import('../model/lineup');
+    const { authoredSignature } = await import('../model/store');
+    const t = createDefaultTactic();
+    t.setup.lineup = assignSlot(DEFAULT_LINEUP, 'top', 'b3');
+    expect(t.setup.lineup).toEqual({ top: 'b3', left: 'b2', right: 'b1' });
+    applyLineup(t.frames[0]!, t.setup.lineup);
+    expect(t.frames[0]!.ballHolderId).toBe('b3');
+    expect(authoredSignature(t)).toBe(authoredSignature(createBlankTactic(t)));
+  });
+
+  it('空白戰術依開局站位擺人，弧頂的人持球', async () => {
+    const { createBlankTactic } = await import('../model/defaults');
+    const { SLOT_POSITION } = await import('../model/lineup');
+    const t = createDefaultTactic();
+    t.setup.lineup = { top: 'b2', left: 'b3', right: 'b1' };
+    const f = createBlankTactic(t).frames[0]!;
+    expect(f.start.b2).toEqual(SLOT_POSITION.top);
+    expect(f.start.b3).toEqual(SLOT_POSITION.left);
+    expect(f.start.b1).toEqual(SLOT_POSITION.right);
+    expect(f.ballHolderId).toBe('b2');
+  });
+});
