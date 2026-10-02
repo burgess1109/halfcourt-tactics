@@ -102,7 +102,8 @@ export interface Recommendation {
 export function withSimulation(tactic: Tactic, rec: Recommendation): Recommendation {
   const loaded = loadPlay(tactic, rec.play, rec.roles, { defense: false });
   const e = evaluate(loaded, simulate(loaded));
-  return { ...rec, expectedPoints: e.expectedPoints, grade: e.grade };
+  // 內建戰術一定有投籃，所以一定有分數
+  return { ...rec, expectedPoints: e.expectedPoints ?? 0, grade: e.grade ?? 'D' };
 }
 
 /** 依預期得分排序；同分時看適合度，再維持戰術庫順序 */

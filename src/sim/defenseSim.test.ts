@@ -122,12 +122,28 @@ describe('擋拆後下順', () => {
 describe('阻絕', () => {
   const ball = { x: 0, y: 8.6 };
 
-  it('防外圍無球的人時，站到傳球路線上（比站在人和籃框之間更靠近持球者）', () => {
+  it('平常（包含開局）：防外圍無球的人時站在他和籃框之間，稍微偏向持球者，守住內切', () => {
     const wing = { x: 5.4, y: 6.0 };
-    const deny = defendPosition(wing, ball, false);
-    const sag = guardPosition(wing, false);
-    expect(dist(deny, ball)).toBeLessThan(dist(sag, ball));
-    expect(dist(deny, wing)).toBeLessThan(dist(sag, wing));
+    const help = defendPosition(wing, ball, false);
+    const rim = { x: 0, y: 1.575 };
+    expect(dist(help, rim)).toBeLessThan(dist(wing, rim) - 1.5); // 明顯在內側
+    expect(dist(help, ball)).toBeLessThan(dist(guardPosition(wing, false), ball)); // 偏向持球者
+  });
+
+  it('對位者往外跑想接球時才阻絕：站到傳球路線上', () => {
+    const wing = { x: 5.4, y: 6.0 };
+    const deny = defendPosition(wing, ball, false, true);
+    const help = defendPosition(wing, ball, false, false);
+    expect(dist(deny, ball)).toBeLessThan(dist(help, ball));
+    expect(dist(deny, wing)).toBeLessThan(dist(help, wing));
+  });
+
+  it('阻絕有記憶：往外跑開始阻絕，停下來繼續阻絕，往內切才回到協防', async () => {
+    const { nextDenyState } = await import('./defense');
+    expect(nextDenyState(false, 0)).toBe(false); // 開局不動：協防
+    expect(nextDenyState(false, 3)).toBe(true); // 往外跑：阻絕
+    expect(nextDenyState(true, 0)).toBe(true); // 停在外圍等球：繼續阻絕
+    expect(nextDenyState(true, -3)).toBe(false); // 往籃框切：回到協防
   });
 
   it('對位者在籃下附近、或球在空中時，不阻絕', () => {

@@ -64,15 +64,18 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
   return {
     show(sim: Simulation) {
       const e = evaluate(store.get().tactic, sim);
+      // 沒有投籃就不評分，也不記錄評分
+      const scored = e.grade !== null && e.expectedPoints !== null;
       store.update((s) => {
-        s.tactic.lastResult = { grade: e.grade, expectedPoints: e.expectedPoints };
+        if (scored) s.tactic.lastResult = { grade: e.grade!, expectedPoints: e.expectedPoints! };
+        else delete s.tactic.lastResult;
       });
       shownFor = store.get().tactic.updatedAt;
 
-      grade.textContent = e.grade;
-      grade.dataset.grade = e.grade;
-      grade.setAttribute('aria-label', `評等 ${e.grade}`);
-      points.textContent = e.violation ? '預期得分 0（違例）' : `預期得分 ${e.expectedPoints.toFixed(2)} 分`;
+      grade.textContent = scored ? e.grade! : '—';
+      grade.dataset.grade = scored ? e.grade! : 'none';
+      grade.setAttribute('aria-label', scored ? `評等 ${e.grade}` : '未評分');
+      points.textContent = !scored ? '未評分：沒有投籃' : e.violation ? '預期得分 0（違例）' : `預期得分 ${e.expectedPoints!.toFixed(2)} 分`;
       list.replaceChildren(
         ...e.comments.map((c) => {
           const button = document.createElement('button');

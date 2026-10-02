@@ -71,6 +71,11 @@ export const PAINT_RATE = [0.5, 0.6, 0.68, 0.77, 0.85] as const; // 禁區（禁
 export const MID_RATE = [0.35, 0.43, 0.5, 0.58, 0.65] as const; // 中距離（外線投射）
 export const THREE_RATE = [0.1, 0.22, 0.32, 0.39, 0.45] as const; // 弧外（外線投射）
 
+/**
+ * 干擾的判定：防守者離籃框不比出手者遠超過這個值（公尺）才算在出手者與籃框之間（含並排）。
+ * 比出手者離籃框更遠的防守者已經被甩開，不算干擾。用距離比較，靠近籃框時也不會因為方向變化而誤判。
+ */
+export const CONTEST_SIDE_MARGIN = 0.3;
 /** 最近的防守者在這個距離以外，就算完全空檔（公尺） */
 export const OPEN_DISTANCE = 3.0;
 /** 防守者貼身（BODY_DISTANCE）時，命中率剩下的比例 */
@@ -103,3 +108,13 @@ export const GRADE_THRESHOLDS = [
 export const BETTER_OPTION_MARGIN = 0.1;
 /** 兩名藍隊球員距離小於這個值（公尺），算擠壓空間 */
 export const SPACING_DISTANCE = 3.0;
+
+/**
+ * 協防站位：沒有要阻絕時，防外圍無球者站在「對位者與籃框之間」（OFF_BALL_GAP），
+ * 再往持球者方向偏 HELP_SHADE 公尺，守住內切（SPEC §6.2）。
+ */
+export const HELP_SHADE = 0.8;
+/** 對位者往外（遠離籃框）跑的速度超過這個值（m/s），代表想出來接球，防守者才上去阻絕 */
+export const DENY_TRIGGER_SPEED = 1.5;
+/** 估算對位者速度用的時間間隔（秒） */
+export const VELOCITY_DT = 0.1;

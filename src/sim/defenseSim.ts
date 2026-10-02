@@ -13,8 +13,9 @@ import {
   SCREEN_CONTACT,
   SCREEN_HOLD_RADIUS,
   SWITCH_DELAY,
+  VELOCITY_DT,
 } from './config';
-import { chaseTarget, defendPosition } from './defense';
+import { chaseTarget, defendPosition, nextDenyState, outwardSpeedOf } from './defense';
 
 // 防守 AI（SPEC §6.2）：人盯人＋阻絕外圍傳球路線，追不上就是追不上；遇到掩護時依設定換防或擠過。
 // 藍隊的移動不受紅隊影響，所以先用時間軸算出藍隊位置，再一格一格推進紅隊。完全決定性。
@@ -97,6 +98,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   /** 已決定、還在 SWITCH_DELAY 延遲中的換防，依時間先後排列 */
   const pendingSwaps: PendingSwap[] = [];
   const handled = new Set<number>();
+  /** 每位防守者是否正在阻絕（換防後重新判斷） */
+  const denying: Record<string, boolean> = {};
 
   // 起始位置：理想位置
   const start = poseAt(tactic, timeline, 0).positions;
@@ -113,6 +116,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
     if (due.length) {
       Object.assign(assign, applySwaps(assign, due));
       pendingSwaps.splice(0, due.length);
+      for (const s of due) denying[s.a] = denying[s.b] = false; // 換了人盯，重新判斷要不要阻絕
     }
 
     if (i > 0) {
@@ -120,6 +124,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
       const seen = Math.max(0, t - REACTION_TIME);
       const seenPos = poseAt(tactic, timeline, seen).positions;
       const seenHolder = ballHolderAt(tactic, timeline, seen);
+      // 對位者剛才的位置，用來判斷他是不是往外跑想接球（要不要阻絕）
+      const prevPos = poseAt(tactic, timeline, Math.max(0, seen - VELOCITY_DT)).positions;
       const now = poseAt(tactic, timeline, t).positions;
       // 含延遲中換防的預計對位；每一格算一次就好
       const projected = pendingSwaps.length ? applySwaps(assign, pendingSwaps) : assign;
@@ -128,7 +134,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         if (t < (frozenUntil[r.id] ?? 0)) continue;
         const man = assign[r.id]!;
         const seenBall = seenHolder ? seenPos[seenHolder]! : null;
-        const target = chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man);
+        denying[r.id] = nextDenyState(denying[r.id] ?? false, outwardSpeedOf(prevPos[man]!, seenPos[man]!, VELOCITY_DT));
+        const target = chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id]);
         const p = cur[r.id]!;
         const dx = target.x - p.x;
         const dy = target.y - p.y;

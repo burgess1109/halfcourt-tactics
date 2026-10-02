@@ -7,6 +7,7 @@ import {
   BETTER_OPTION_MARGIN,
   BODY_DISTANCE,
   CONTESTED_FACTOR,
+  CONTEST_SIDE_MARGIN,
   GRADE_THRESHOLDS,
   ISO_SEPARATION,
   MID_RATE,
@@ -77,7 +78,7 @@ export function shotValue(
   const zone = zoneOf(at);
   const skills = skillsOf(shooter);
   const baseRate = zone === 'paint' ? PAINT_RATE[skills.finishing] : zone === 'mid' ? MID_RATE[skills.shooting] : THREE_RATE[skills.shooting];
-  const toRim = { x: RIM.x - at.x, y: RIM.y - at.y };
+  const shooterRimDist = dist(at, RIM);
 
   // 找干擾最大的防守者：距離越近、身高優勢越大，造成的命中率損失越多。
   // 在出手者身後（不在出手者與籃框之間）的防守者已經被甩開，追在後面不算干擾。
@@ -87,7 +88,7 @@ export function shotValue(
   for (const red of players.filter((p) => p.team === 'red')) {
     const rp = positions[red.id]!;
     const d = dist(rp, at);
-    const behind = (rp.x - at.x) * toRim.x + (rp.y - at.y) * toRim.y < 0;
+    const behind = dist(rp, RIM) > shooterRimDist + CONTEST_SIDE_MARGIN;
     const effective = d + (dribbled ? ISO_SEPARATION[skills.iso] : 0);
     const openness = behind ? 1 : Math.min(1, Math.max(0, (effective - BODY_DISTANCE) / span));
     const edge = heightOf(shooter, players) - heightOf(red, players);
@@ -139,8 +140,9 @@ export interface Comment {
 }
 
 export interface Evaluation {
-  grade: Grade;
-  expectedPoints: number;
+  /** 沒有投籃時不評分（SPEC §6.4），為 null */
+  grade: Grade | null;
+  expectedPoints: number | null;
   shot: ShotValue;
   /** 使用者有畫投籃 */
   hasShot: boolean;
@@ -206,7 +208,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     : [...options].sort((a, b) => b.expectedPoints - a.expectedPoints)[0]!;
 
   const violation = possessionSeconds(timeline) > SHOT_CLOCK_SECONDS;
-  const expectedPoints = violation ? 0 : shot.expectedPoints;
+  const expectedPoints = !shotPath ? null : violation ? 0 : shot.expectedPoints;
   const comments: Comment[] = [];
   const name = (id: string) => label(players, id);
   const fmt = (v: number) => v.toFixed(2);
@@ -216,17 +218,35 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     : shot.openness >= 1 ? `完全空檔（最近的防守者 ${shot.defenderDistance.toFixed(1)} m）`
     : shot.openness <= 0.2 ? `被 ${name(shot.defenderId)} 貼身干擾`
     : `${name(shot.defenderId)} 在 ${shot.defenderDistance.toFixed(1)} m 外干擾`;
-  comments.push({
-    text: `${shotPath ? '' : '這套戰術沒有投籃，系統挑最好的出手評分：'}第 ${releaseFrame + 1} 分鏡，${name(shot.playerId)} 在${ZONE_LABEL[shot.zone]}出手（${shot.points} 分），${space}，預期得分 ${fmt(shot.expectedPoints)}`,
-    frameIndex: releaseFrame,
-    playerIds: [shot.playerId, shot.defenderId],
-    priority: 0,
-  });
+  if (shotPath) {
+    comments.push({
+      text: `第 ${releaseFrame + 1} 分鏡，${name(shot.playerId)} 在${ZONE_LABEL[shot.zone]}出手（${shot.points} 分），${space}，預期得分 ${fmt(shot.expectedPoints)}`,
+      frameIndex: releaseFrame,
+      playerIds: [shot.playerId, shot.defenderId],
+      priority: 0,
+    });
+  } else {
+    // 沒有投籃：不評分，只提示誰最有機會（不附分數）
+    comments.push({
+      text: '這套戰術沒有投籃，所以不評分。在最後一個分鏡加入投籃，就會計算預期得分和評等。',
+      frameIndex: releaseFrame,
+      playerIds: [],
+      priority: 0,
+    });
+    comments.push({
+      text: `提示：最後一刻最有機會的是 ${name(shot.playerId)}，在${ZONE_LABEL[shot.zone]}，${space}`,
+      frameIndex: releaseFrame,
+      playerIds: [shot.playerId],
+      priority: 1,
+    });
+  }
 
   // 2. 時間
   if (violation) {
     comments.push({
-      text: `第 ${possessionSeconds(timeline).toFixed(1)} 秒才出手，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限，違例不計分`,
+      text: shotPath
+        ? `第 ${possessionSeconds(timeline).toFixed(1)} 秒才出手，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限，違例不計分`
+        : `整個戰術 ${possessionSeconds(timeline).toFixed(1)} 秒，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限，就算最後投籃也是違例`,
       frameIndex: releaseFrame,
       playerIds: [shot.playerId],
       priority: 1,
@@ -305,19 +325,19 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     }
   }
 
-  // 6. 命中率：說明分數從哪裡來
+  // 6. 命中率：說明分數從哪裡來（沒有投籃就不說）
   const skillName = shot.zone === 'paint' ? '禁區終結' : '外線投射';
   const skillValue = shot.zone === 'paint' ? skillsOf(players.find((p) => p.id === shot.playerId)!).finishing : skillsOf(players.find((p) => p.id === shot.playerId)!).shooting;
   const finalRate = shot.expectedPoints / shot.points;
-  comments.push({
+  if (shotPath) comments.push({
     text: `${name(shot.playerId)} 的${skillName}「${RATING_LABEL[skillValue]}」，${ZONE_LABEL[shot.zone]}空檔命中率 ${Math.round(shot.baseRate * 100)}%${finalRate < shot.baseRate - 0.005 ? `，受干擾後剩 ${Math.round(finalRate * 100)}%` : ''}${mismatchText(shot)}`,
     frameIndex: releaseFrame,
     playerIds: [shot.playerId],
     priority: 2,
   });
 
-  // 7. 出手時間（違例已在前面說明）
-  if (!violation) {
+  // 7. 出手時間（違例已在前面說明；沒有投籃就沒有出手時間）
+  if (shotPath && !violation) {
     comments.push({
       text: `第 ${possessionSeconds(timeline).toFixed(1)} 秒出手，在 ${SHOT_CLOCK_SECONDS} 秒進攻時限內`,
       frameIndex: releaseFrame,
@@ -327,7 +347,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   }
 
   return {
-    grade: gradeOf(expectedPoints),
+    grade: expectedPoints === null ? null : gradeOf(expectedPoints),
     expectedPoints,
     shot,
     hasShot: !!shotPath,

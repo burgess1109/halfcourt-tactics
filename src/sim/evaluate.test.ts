@@ -110,10 +110,14 @@ describe('整套戰術的評分', () => {
     expect(e.comments.length).toBeLessThanOrEqual(5);
   });
 
-  it('沒有投籃：挑最好的出手，並提醒沒有終結點', () => {
+  it('沒有投籃：不評分（沒有評等、預期得分），只提示誰最有機會', () => {
     const e = run(createDefaultTactic());
     expect(e.hasShot).toBe(false);
-    expect(e.comments[0]!.text).toContain('沒有投籃');
+    expect(e.grade).toBeNull();
+    expect(e.expectedPoints).toBeNull();
+    expect(e.comments[0]!.text).toContain('沒有投籃，所以不評分');
+    expect(e.comments[1]!.text).toMatch(/^提示：最後一刻最有機會的是/);
+    expect(e.comments.slice(1).some((c) => /預期得分|命中率/.test(c.text))).toBe(false);
   });
 
   it('出手超過 12 秒：違例，預期得分 0、評等 D', () => {
@@ -207,7 +211,7 @@ describe('身高錯位', () => {
     const tall = loadPlay(base, play, roles);
     const e0 = evaluate(even, simulate(even));
     const e1 = evaluate(tall, simulate(tall));
-    expect(e1.expectedPoints).toBeGreaterThan(e0.expectedPoints + 0.1);
+    expect(e1.expectedPoints!).toBeGreaterThan(e0.expectedPoints! + 0.1);
     expect(e1.comments.map((c) => c.text).join('\n')).toContain('高 20 cm，干擾減少 80%');
   });
 });
