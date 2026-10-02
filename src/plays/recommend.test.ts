@@ -203,3 +203,28 @@ describe('開局站位', () => {
     expect(f.ballHolderId).toBe('b2');
   });
 });
+
+describe('isBlankTactic', () => {
+  it('和「建立空白戰術再比對」的結果一致', async () => {
+    const { createBlankTactic } = await import('../model/defaults');
+    const { isBlankTactic, applyLineup } = await import('../model/lineup');
+    const t = createDefaultTactic();
+    expect(isBlankTactic(t)).toBe(true);
+    expect(isBlankTactic(createBlankTactic(t))).toBe(true);
+
+    // 換站位並套用 → 仍是空白
+    t.setup.lineup = { top: 'b2', left: 'b1', right: 'b3' };
+    expect(isBlankTactic(t)).toBe(false);
+    applyLineup(t.frames[0]!, t.setup.lineup);
+    expect(isBlankTactic(t)).toBe(true);
+
+    // 拖動一位球員、畫一條路線、載入內建戰術 → 都不是空白
+    const moved = structuredClone(t);
+    moved.frames[0]!.start.b1 = { x: 1, y: 1 };
+    expect(isBlankTactic(moved)).toBe(false);
+    const drawn = structuredClone(t);
+    drawn.frames[0]!.paths.push({ id: 'x', kind: 'cut', actorId: 'b1', points: [{ x: -5.4, y: 6 }, { x: -2, y: 3 }], freehand: false });
+    expect(isBlankTactic(drawn)).toBe(false);
+    expect(isBlankTactic(loadPlay(t, PLAYS[0]!, { A: 'b1', B: 'b2', C: 'b3' }))).toBe(false);
+  });
+});

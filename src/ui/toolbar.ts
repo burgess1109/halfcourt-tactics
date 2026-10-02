@@ -1,7 +1,7 @@
 import type { Store, Tool } from '../model/store';
 import { PATH_KIND_LABEL } from '../model/paths';
 import { createBlankTactic } from '../model/defaults';
-import { authoredSignature } from '../model/store';
+import { isBlankTactic } from '../model/lineup';
 import { bindMenu } from './menu';
 import { setTip } from './tooltip';
 
@@ -108,8 +108,7 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
     redo.disabled = s.playing || !store.canRedo;
     del.disabled = s.playing || !s.selectedPathId;
     // 已經是空白戰術（開局站位、沒有路線、不是內建戰術）時不需要清空
-    const blank = !s.tactic.basedOn && authoredSignature(s.tactic) === authoredSignature(createBlankTactic(s.tactic));
-    clear.disabled = s.playing || blank;
+    clear.disabled = s.playing || isBlankTactic(s.tactic);
     toolBtn.disabled = s.playing;
     toolIcon.setAttribute('href', `#icon-${s.tool}`);
     toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);

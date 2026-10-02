@@ -41,3 +41,19 @@ export function applyLineup(frame: Frame, lineup: Lineup): void {
 export function canApplyLineupNow(tactic: Tactic): boolean {
   return tactic.frames.length === 1 && tactic.frames[0]!.paths.length === 0;
 }
+
+const samePoint = (a: Vec2 | undefined, b: Vec2) => !!a && Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
+
+/**
+ * 目前的戰術是否已經是空白戰術（清空也不會有變化）：不是內建戰術、只有一個分鏡、沒有路線，
+ * 藍隊與球都在開局站位、弧頂的人持球。直接比對，不建立複本（工具列每次更新都會呼叫）。
+ */
+export function isBlankTactic(tactic: Tactic): boolean {
+  if (tactic.basedOn || !canApplyLineupNow(tactic)) return false;
+  const lineup = lineupOf(tactic);
+  const frame = tactic.frames[0]!;
+  if (frame.ballHolderId !== lineup.top) return false;
+  const top = SLOT_POSITION.top;
+  if (!samePoint(frame.start[BALL_ID], { x: top.x + BALL_HOLD_OFFSET.x, y: top.y + BALL_HOLD_OFFSET.y })) return false;
+  return SLOTS.every((slot) => samePoint(frame.start[lineup[slot]], SLOT_POSITION[slot]));
+}
