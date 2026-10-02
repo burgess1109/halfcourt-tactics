@@ -178,57 +178,6 @@ describe('空白戰術', () => {
   });
 });
 
-describe('開局站位', () => {
-  it('換站位後，目前的戰術仍然算空白戰術（比對不受欄位順序影響）', async () => {
-    const { createBlankTactic } = await import('../model/defaults');
-    const { applyLineup, assignSlot, DEFAULT_LINEUP } = await import('../model/lineup');
-    const { authoredSignature } = await import('../model/store');
-    const t = createDefaultTactic();
-    t.setup.lineup = assignSlot(DEFAULT_LINEUP, 'top', 'b3');
-    expect(t.setup.lineup).toEqual({ top: 'b3', left: 'b2', right: 'b1' });
-    applyLineup(t.frames[0]!, t.setup.lineup);
-    expect(t.frames[0]!.ballHolderId).toBe('b3');
-    expect(authoredSignature(t)).toBe(authoredSignature(createBlankTactic(t)));
-  });
-
-  it('空白戰術依開局站位擺人，弧頂的人持球', async () => {
-    const { createBlankTactic } = await import('../model/defaults');
-    const { SLOT_POSITION } = await import('../model/lineup');
-    const t = createDefaultTactic();
-    t.setup.lineup = { top: 'b2', left: 'b3', right: 'b1' };
-    const f = createBlankTactic(t).frames[0]!;
-    expect(f.start.b2).toEqual(SLOT_POSITION.top);
-    expect(f.start.b3).toEqual(SLOT_POSITION.left);
-    expect(f.start.b1).toEqual(SLOT_POSITION.right);
-    expect(f.ballHolderId).toBe('b2');
-  });
-});
-
-describe('isBlankTactic', () => {
-  it('和「建立空白戰術再比對」的結果一致', async () => {
-    const { createBlankTactic } = await import('../model/defaults');
-    const { isBlankTactic, applyLineup } = await import('../model/lineup');
-    const t = createDefaultTactic();
-    expect(isBlankTactic(t)).toBe(true);
-    expect(isBlankTactic(createBlankTactic(t))).toBe(true);
-
-    // 換站位並套用 → 仍是空白
-    t.setup.lineup = { top: 'b2', left: 'b1', right: 'b3' };
-    expect(isBlankTactic(t)).toBe(false);
-    applyLineup(t.frames[0]!, t.setup.lineup);
-    expect(isBlankTactic(t)).toBe(true);
-
-    // 拖動一位球員、畫一條路線、載入內建戰術 → 都不是空白
-    const moved = structuredClone(t);
-    moved.frames[0]!.start.b1 = { x: 1, y: 1 };
-    expect(isBlankTactic(moved)).toBe(false);
-    const drawn = structuredClone(t);
-    drawn.frames[0]!.paths.push({ id: 'x', kind: 'cut', actorId: 'b1', points: [{ x: -5.4, y: 6 }, { x: -2, y: 3 }], freehand: false });
-    expect(isBlankTactic(drawn)).toBe(false);
-    expect(isBlankTactic(loadPlay(t, PLAYS[0]!, { A: 'b1', B: 'b2', C: 'b3' }))).toBe(false);
-  });
-});
-
 describe('依實際模擬的預期得分排序', () => {
   it('推薦依預期得分由高到低；每張都有預期評等，和載入後實際評分一致', async () => {
     const { rankBySimulation } = await import('./recommend');
@@ -264,5 +213,55 @@ describe('依實際模擬的預期得分排序', () => {
     expect(recommendationKey(t)).toBe(key);
     t.screenDefense = 'fight-over';
     expect(recommendationKey(t)).not.toBe(key);
+  });
+});
+
+describe('開局站位（自由放置）', () => {
+  it('套用陣型：持球者到持球位置，另外兩人依左右順序就位', async () => {
+    const { DEFAULT_LINEUP, FORMATIONS, applyFormation } = await import('../model/lineup');
+    const corners = FORMATIONS.find((f) => f.id === 'top-corners')!;
+    const l = applyFormation({ ...DEFAULT_LINEUP, holder: 'b3' }, corners);
+    expect(l.holder).toBe('b3');
+    expect(l.positions.b3).toEqual(corners.spots[0]);
+    // b2 原本在左（x 較小）→ 左底角；b1 原本在弧頂中間（x = 0）→ 右底角
+    expect(l.positions.b2!.x).toBeLessThan(0);
+    expect(l.positions.b1!.x).toBeGreaterThan(0);
+  });
+
+  it('拖曳限制在可視範圍內；點一下換持球者', async () => {
+    const { DEFAULT_LINEUP, moveInLineup, setHolder } = await import('../model/lineup');
+    const moved = moveInLineup(DEFAULT_LINEUP, 'b2', { x: -50, y: 3 });
+    expect(moved.positions.b2!.x).toBeGreaterThan(-9);
+    expect(setHolder(moved, 'b2').holder).toBe('b2');
+  });
+
+  it('空白戰術依自訂站位擺人，持球者拿球；換站位套用後仍算空白戰術', async () => {
+    const { createBlankTactic } = await import('../model/defaults');
+    const { applyLineup, isBlankTactic } = await import('../model/lineup');
+    const { BALL_HOLD_OFFSET } = await import('../model/entities');
+    const t = createDefaultTactic();
+    t.setup.lineup = { positions: { b1: { x: -3, y: 9 }, b2: { x: 4, y: 3 }, b3: { x: 6.6, y: 1.2 } }, holder: 'b2' };
+    const blank = createBlankTactic(t);
+    const f = blank.frames[0]!;
+    expect(f.start.b1).toEqual({ x: -3, y: 9 });
+    expect(f.ballHolderId).toBe('b2');
+    expect(f.start.ball).toEqual({ x: 4 + BALL_HOLD_OFFSET.x, y: 3 + BALL_HOLD_OFFSET.y });
+    expect(isBlankTactic(blank)).toBe(true);
+    expect(isBlankTactic(t)).toBe(false); // 還沒套用
+    applyLineup(t.frames[0]!, t.setup.lineup);
+    expect(isBlankTactic(t)).toBe(true);
+  });
+
+  it('拖動球員、畫路線、載入內建戰術後都不是空白戰術', async () => {
+    const { isBlankTactic } = await import('../model/lineup');
+    const t = createDefaultTactic();
+    expect(isBlankTactic(t)).toBe(true);
+    const moved = structuredClone(t);
+    moved.frames[0]!.start.b1 = { x: 1, y: 1 };
+    expect(isBlankTactic(moved)).toBe(false);
+    const drawn = structuredClone(t);
+    drawn.frames[0]!.paths.push({ id: 'x', kind: 'cut', actorId: 'b1', points: [{ x: 0, y: 8.6 }, { x: -2, y: 3 }], freehand: false });
+    expect(isBlankTactic(drawn)).toBe(false);
+    expect(isBlankTactic(loadPlay(t, PLAYS[0]!, { A: 'b1', B: 'b2', C: 'b3' }))).toBe(false);
   });
 });

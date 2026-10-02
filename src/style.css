@@ -955,31 +955,6 @@ body[data-screen='board'] .app {
   pointer-events: none;
 }
 
-/* 站位與對位頁 */
-.choice .slot {
-  display: grid;
-  grid-template-columns: 7em 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 8px;
-}
-
-.slot__name {
-  color: #c9ccd3;
-}
-
-.slot select {
-  width: 100%;
-  height: 42px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 10px;
-  background: #1f56e0;
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-}
-
 .setup__section {
   margin: 6px 0 -4px;
   color: #c9ccd3;
@@ -989,7 +964,8 @@ body[data-screen='board'] .app {
 /* 第 3 步：開局站位、小標題、掩護設定獨佔一整列；只有對位卡片在寬螢幕並排 */
 .setup__body > .choice,
 .setup__body > .setup__section,
-.setup__body > .link-btn {
+.setup__body > .link-btn,
+.setup__body > .lineup {
   grid-column: 1 / -1;
 }
 
@@ -1164,3 +1140,47 @@ body[data-screen='board'] .app {
 .play-item__grade[data-grade='B'] { --grade: #64b5f6; }
 .play-item__grade[data-grade='C'] { --grade: #ffb74d; }
 .play-item__grade[data-grade='D'] { --grade: #e57373; }
+
+/* 開局站位小球場 */
+.lineup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+}
+
+.lineup__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lineup__preset {
+  padding: 8px 12px;
+  border: 1px solid #3a3d45;
+  border-radius: 999px;
+  background: #1f2126;
+  color: #e3e5ea;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.lineup__preset:hover,
+.lineup__preset:focus-visible {
+  border-color: var(--accent);
+}
+
+.lineup__court {
+  display: block;
+  /* canvas 大小一定要由 CSS 指定（見 CLAUDE.md） */
+  width: 100%;
+  aspect-ratio: 16.6 / 12;
+  touch-action: none;
+}
+
+.lineup__hint {
+  margin: 0;
+  color: #9da2ad;
+  font-size: 13px;
+}

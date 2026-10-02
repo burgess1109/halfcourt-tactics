@@ -1,6 +1,7 @@
 import { defaultPlayer } from '../model/defaults';
 import { assignMatchup, defaultMatchups } from '../model/matchups';
-import { SLOTS, SLOT_LABEL, applyLineup, assignSlot, canApplyLineupNow, lineupOf, type Lineup } from '../model/lineup';
+import { applyLineup, canApplyLineupNow, lineupOf, type Lineup } from '../model/lineup';
+import { createLineupEditor } from './lineupEditor';
 import {
   DEFAULT_SKILLS,
   RATINGS,
@@ -24,7 +25,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 const STEP_TEXT: Record<Step, { title: string; hint: string }> = {
   1: { title: '你的球隊（藍隊）', hint: '都是選填。能力以場上六個人的平均為基準，預設平均；有填身高才會推薦內建戰術。' },
   2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時跟藍隊同順序的球員一樣高；速度以場上六個人的平均為基準，預設平均。' },
-  3: { title: '站位與對位', hint: '設定開局誰站弧頂（持球）、誰站兩翼，以及紅隊誰盯誰。' },
+  3: { title: '站位與對位', hint: '在小球場上擺好開局站位、指定誰持球，再設定紅隊誰盯誰。' },
 };
 
 const teamPlayers = (t: Tactic, team: Team) => t.players.filter((p) => p.team === team);
@@ -179,19 +180,18 @@ export function attachSetup(
     const label = (p: Player) => `${p.number} 號 ${p.name}（${heightOf(p, players)} cm）`;
     form.replaceChildren();
 
-    // 開局站位：三個位置各一人，選單換人時兩人交換
-    const blues = teamPlayers(t, 'blue');
-    const lineupBox = el('fieldset', { class: 'choice' }, el('legend', {}, '開局站位'));
-    for (const slot of SLOTS) {
-      const select = el('select', { 'aria-label': `${SLOT_LABEL[slot]}的球員` });
-      for (const b of blues) select.append(el('option', { value: b.id, selected: draftLineup[slot] === b.id }, `${b.number} 號 ${b.name}`));
-      select.addEventListener('change', () => {
-        draftLineup = assignSlot(draftLineup, slot, select.value);
-        renderMatchups();
-      });
-      lineupBox.append(el('label', { class: 'slot' }, el('span', { class: 'slot__name' }, SLOT_LABEL[slot]), select));
-    }
-    form.append(lineupBox);
+    // 開局站位：小球場自由放置（紅隊依目前的對位即時站好）
+    form.append(el('h3', { class: 'setup__section' }, '開局站位'));
+    form.append(
+      createLineupEditor({
+        players,
+        matchups: draftMatchups,
+        lineup: draftLineup,
+        onChange: (next) => {
+          draftLineup = next;
+        },
+      }),
+    );
     form.append(el('h3', { class: 'setup__section' }, '對位'));
 
     for (const b of teamPlayers(t, 'blue')) {
@@ -303,7 +303,7 @@ export function attachSetup(
         s.tactic.matchups = { ...draftMatchups };
         s.tactic.setup.matchupsCustomized = draftCustomized;
         s.tactic.screenDefense = draftScreen;
-        s.tactic.setup.lineup = { ...draftLineup };
+        s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理
         if (lineupChanged && applyNow) applyLineup(s.tactic.frames[0]!, draftLineup);
       });
