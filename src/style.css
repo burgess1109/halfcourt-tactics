@@ -900,3 +900,51 @@ body[data-screen='board'] .app {
 .play-item--plain {
   grid-template-columns: 1fr;
 }
+
+.lib-list--top {
+  margin-top: 12px;
+}
+
+.lib-summary {
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid #3a3020;
+  border-radius: 12px;
+  background: #241f18;
+}
+
+.lib-summary__title {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.lib-summary__list {
+  margin: 0 0 8px;
+  padding-left: 1.1em;
+  color: #e3e5ea;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lib-summary__advice {
+  margin: 0;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---- 按鈕提示（滑鼠移上去時） ---- */
+.tip {
+  position: fixed;
+  z-index: 50;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f1f2f4;
+  color: #1b1b1f;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}

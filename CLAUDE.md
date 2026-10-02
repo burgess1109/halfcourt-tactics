@@ -75,7 +75,8 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - **能力等級**：優勢 / 稍強 / 平均 / 稍弱 / 劣勢（分數 4 → 0），以場上六個人的平均為基準。藍隊有 4 項（外線投射、速度、禁區終結、單打），紅隊只有速度。
 - **計分**：FIBA 3x3，弧內 1 分、弧外 2 分。判斷弧內外一律用 `isBeyondArc`，不要只算離籃框的距離（底角是直線）。
 - **係數**：模擬、速度相關的數字放在 `sim/config.ts` 或 `model/physique.ts`，不要散落在邏輯裡。
-- **介面文字**：繁體中文；狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`。
+- **介面文字**：繁體中文；狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`。
+- **按鈕提示**：用 `data-tip`（`ui/tooltip.ts` 的 `setTip` 可動態更新），不要用 `title`，否則會和自訂提示重複出現；有快捷鍵的寫在括號裡。
 - **分鏡圖 SVG**：必須是嚴格合法的 XML，不能有重複屬性、不能用 `rgba()`（PhpStorm 的 SVG 檢視器會載入失敗），有測試把關。
 
 ## Code review 重點

@@ -132,3 +132,48 @@ describe('推薦理由', () => {
     }
   });
 });
+
+describe('球隊總評', () => {
+  it('全部平均：沒有強項，給一般性建議', async () => {
+    const { teamSummary } = await import('./recommend');
+    const s = teamSummary(createDefaultTactic());
+    expect(s.strengths).toEqual([]);
+    expect(s.advice).toContain('平均水準');
+  });
+
+  it('列出每個人的強項、對應的戰術類型與例子，並給整體建議', async () => {
+    const { teamSummary } = await import('./recommend');
+    const t = team({ b3: { shooting: 4 }, b2: { finishing: 3 } }, { b1: 180, b2: 198, b3: 185, r1: 180, r2: 185, r3: 185 });
+    // 預設對位依身高：b2(198)→r2/r3(185)… 讓 b2 有身高優勢
+    const s = teamSummary(t);
+    const shooter = s.strengths.find((x) => x.playerId === 'b3' && x.key === 'shooting')!;
+    expect(shooter.label).toBe('外線投射「優勢」');
+    expect(shooter.style).toBe('外線出手');
+    expect(shooter.examples.length).toBeGreaterThan(0);
+    for (const p of shooter.examples) expect(p.weights[p.finisher].shooting).toBeGreaterThan(0);
+    expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'finishing')).toBe(true);
+    expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'height')).toBe(true);
+    // 最強的是 3 號的外線，第二選擇是另一個人
+    expect(s.advice).toMatch(/^建議以 3 號 球員 3 的外線出手為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」。$/);
+  });
+});
+
+describe('空白戰術', () => {
+  it('保留球員資料、對位與掩護應對，跑位清空、只剩一個分鏡、不再標示內建戰術', async () => {
+    const { createBlankTactic } = await import('../model/defaults');
+    const base = team({ b3: { shooting: 4 } }, { b1: 180, b2: 198, b3: 185 });
+    base.matchups = { b1: 'r3', b2: 'r2', b3: 'r1' };
+    base.screenDefense = 'fight-over';
+    base.players.find((p) => p.id === 'b1')!.name = '小明';
+    const loaded = loadPlay(base, PLAYS[0]!, { A: 'b1', B: 'b2', C: 'b3' });
+    const blank = createBlankTactic(loaded);
+    expect(blank.id).not.toBe(loaded.id);
+    expect(blank.basedOn).toBeUndefined();
+    expect(blank.frames).toHaveLength(1);
+    expect(blank.frames[0]!.paths).toEqual([]);
+    expect(blank.frames[0]!.ballHolderId).toBe('b1');
+    expect(blank.players).toEqual(loaded.players);
+    expect(blank.matchups).toEqual(base.matchups);
+    expect(blank.screenDefense).toBe('fight-over');
+  });
+});

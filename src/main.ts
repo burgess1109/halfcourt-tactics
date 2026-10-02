@@ -10,12 +10,14 @@ import { attachLibrary } from './ui/library';
 import { attachSetup } from './ui/setup';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
+import { attachTooltips, setTip } from './ui/tooltip';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 const stage = $<HTMLElement>('#stage');
 const canvas = $<HTMLCanvasElement>('#court');
 
+attachTooltips();
 const store = new Store();
 const renderer = new Renderer(canvas);
 const playback = new Playback(store, renderer);
@@ -100,7 +102,7 @@ playBtn.addEventListener('click', togglePlay);
 store.subscribe((s) => {
   playBtn.querySelector('use')!.setAttribute('href', s.playing ? '#icon-stop' : '#icon-play');
   playBtn.setAttribute('aria-label', s.playing ? '停止' : '播放');
-  playBtn.title = s.playing ? '停止' : '播放';
+  setTip(playBtn, s.playing ? '停止（空白鍵）' : '播放（空白鍵）');
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== ' ' || document.body.dataset.screen !== 'board' || document.querySelector('dialog[open]')) return;

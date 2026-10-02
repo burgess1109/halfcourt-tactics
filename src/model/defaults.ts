@@ -1,5 +1,6 @@
 import { DEFAULT_SKILLS } from './physique';
 import { defaultMatchups } from './matchups';
+import { syncFrames } from './frames';
 import { newId } from './id';
 import { BALL_ID, type Player, type Tactic } from './types';
 
@@ -39,5 +40,23 @@ export function createDefaultTactic(): Tactic {
     ],
     updatedAt: Date.now(),
   };
+  return tactic;
+}
+
+/**
+ * 空白戰術：保留球員資料、對位與掩護應對，跑位回到預設站位、只有一個分鏡（SPEC §6.3）。
+ */
+export function createBlankTactic(base: Tactic): Tactic {
+  const fresh = createDefaultTactic();
+  const tactic: Tactic = {
+    ...structuredClone(base),
+    id: fresh.id,
+    name: '',
+    frames: fresh.frames,
+    updatedAt: Date.now(),
+  };
+  delete tactic.basedOn;
+  delete tactic.lastResult;
+  syncFrames(tactic, true);
   return tactic;
 }

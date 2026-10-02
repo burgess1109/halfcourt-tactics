@@ -1,6 +1,7 @@
 import type { Store, Tool } from '../model/store';
 import { PATH_KIND_LABEL } from '../model/paths';
 import { bindMenu } from './menu';
+import { setTip } from './tooltip';
 
 const TOOL_LABEL: Record<Tool, string> = { move: '移動', ...PATH_KIND_LABEL };
 
@@ -100,7 +101,7 @@ export function attachToolbar(store: Store): void {
     toolBtn.disabled = s.playing;
     toolIcon.setAttribute('href', `#icon-${s.tool}`);
     toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);
-    toolBtn.title = `工具：${TOOL_LABEL[s.tool]}`;
+    setTip(toolBtn, `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}，點開切換（V、1–5、F）`);
     badge.hidden = !s.freehand;
     for (const item of toolItems) item.setAttribute('aria-checked', String(item.dataset.tool === s.tool));
     freehandItem.setAttribute('aria-checked', String(s.freehand));

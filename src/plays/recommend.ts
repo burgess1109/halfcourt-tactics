@@ -115,3 +115,77 @@ export function rankPlays(tactic: Tactic): Recommendation[] {
 export function recommend(tactic: Tactic, count = RECOMMEND_COUNT): Recommendation[] {
   return rankPlays(tactic).slice(0, count);
 }
+
+// ---- 球隊總評（SPEC §6.3） ----
+
+/** 強項的門檻：能力「稍強」以上；身高高 5 cm 以上；速度快 5% 以上（都是分數 ≥ 3） */
+const STRENGTH_SCORE = 3;
+
+const STYLE: Record<WeightKey, string> = {
+  shooting: '外線出手',
+  finishing: '切入或下順到籃下終結',
+  iso: '持球單打',
+  speed: '空切、背切或持球切入',
+  height: '低位要位或擋拆下順',
+};
+
+export interface Strength {
+  playerId: string;
+  key: WeightKey;
+  score: number;
+  /** 例如「外線投射「優勢」」「比對位的防守者高 8 cm」 */
+  label: string;
+  style: string;
+  /** 由這位球員終結、而且看重這一項的戰術，最多 2 套 */
+  examples: Play[];
+}
+
+export interface TeamSummary {
+  strengths: Strength[];
+  advice: string;
+}
+
+function strengthLabel(tactic: Tactic, blue: Player, key: WeightKey): string {
+  const { players } = tactic;
+  if (key === 'height') return `比對位的防守者高 ${heightOf(blue, players) - heightOf(defenderOf(tactic, blue), players)} cm`;
+  if (key === 'speed') return `比對位的防守者快 ${Math.round((speedRatio(tactic, blue) - 1) * 100)}%`;
+  return `${SKILL_LABEL[key]}「${RATING_LABEL[skillsOf(blue)[key]]}」`;
+}
+
+export function teamSummary(tactic: Tactic): TeamSummary {
+  const ranked = rankPlays(tactic);
+  const keys: WeightKey[] = ['shooting', 'finishing', 'iso', 'speed', 'height'];
+  const strengths: Strength[] = [];
+
+  for (const blue of tactic.players.filter((p) => p.team === 'blue')) {
+    for (const key of keys) {
+      const score = attributeScore(tactic, blue, key);
+      if (score < STRENGTH_SCORE) continue;
+      const examples = ranked
+        .filter((r) => r.roles[r.play.finisher] === blue.id && (r.play.weights[r.play.finisher][key] ?? 0) > 0)
+        .slice(0, 2)
+        .map((r) => r.play);
+      strengths.push({ playerId: blue.id, key, score, label: strengthLabel(tactic, blue, key), style: STYLE[key], examples });
+    }
+  }
+  // 越強的排越前面；同分時，對應戰術在推薦裡排越前面的優先（總評才會跟推薦清單一致）
+  const rankOf = (s: Strength) => (s.examples[0] ? ranked.findIndex((r) => r.play === s.examples[0]) : ranked.length);
+  strengths.sort((a, b) => b.score - a.score || rankOf(a) - rankOf(b));
+
+  const top = ranked[0]!;
+  let advice: string;
+  if (strengths.length === 0) {
+    advice = '球隊能力都在平均水準，沒有特別突出的強項，可以從適合度最高的戰術開始，再依實際比賽調整。';
+  } else {
+    const first = strengths[0]!;
+    const firstName = playerLabel(tactic.players.find((p) => p.id === first.playerId)!);
+    const second = strengths.find((s) => s.playerId !== first.playerId);
+    advice = `建議以 ${firstName} 的${first.style}為主要攻擊點`;
+    if (second) {
+      const secondName = playerLabel(tactic.players.find((p) => p.id === second.playerId)!);
+      advice += `，${secondName} 的${second.style}當第二選擇`;
+    }
+    advice += `。最適合的戰術是「${top.play.category}-${top.play.name}」。`;
+  }
+  return { strengths, advice };
+}

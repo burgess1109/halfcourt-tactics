@@ -52,26 +52,26 @@
     <div class="app screen">
       <!-- 直式在上方，橫式在左側 -->
       <nav class="toolbar toolbar--primary" aria-label="主要工具">
-        <button class="tool" type="button" title="戰術列表" aria-label="戰術列表" disabled>
+        <button class="tool" type="button" data-tip="戰術列表（即將推出）" aria-label="戰術列表" disabled>
           <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
         </button>
-        <button id="library" class="tool" type="button" title="戰術庫" aria-label="戰術庫">
+        <button id="library" class="tool" type="button" data-tip="戰術庫：推薦戰術、內建戰術、空白戰術" aria-label="戰術庫">
           <svg viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 7h7M9 11h5"/></svg>
         </button>
-        <button id="play" class="tool" type="button" title="播放" aria-label="播放">
+        <button id="play" class="tool" type="button" data-tip="播放（空白鍵）" aria-label="播放">
           <svg viewBox="0 0 24 24"><use href="#icon-play"/></svg>
         </button>
-        <button id="team" class="tool" type="button" title="球隊設定（球員、對位）" aria-label="球隊設定">
+        <button id="team" class="tool" type="button" data-tip="球隊設定：藍隊、紅隊、對位" aria-label="球隊設定">
           <svg viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
         </button>
         <span class="toolbar__spacer"></span>
-        <button class="tool" type="button" title="分享" aria-label="分享" disabled>
+        <button class="tool" type="button" data-tip="分享（即將推出）" aria-label="分享" disabled>
           <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
         </button>
-        <button class="tool" type="button" title="存檔" aria-label="存檔" disabled>
+        <button class="tool" type="button" data-tip="存檔（即將推出）" aria-label="存檔" disabled>
           <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
         </button>
-        <button class="tool" type="button" title="設定" aria-label="設定" disabled>
+        <button class="tool" type="button" data-tip="設定（即將推出）" aria-label="設定" disabled>
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>
         </button>
       </nav>
@@ -84,27 +84,27 @@
 
       <!-- 直式在下方，橫式在右側 -->
       <nav class="toolbar toolbar--edit" aria-label="編輯工具">
-        <button id="undo" class="tool tool--boxed" type="button" title="復原" aria-label="復原" disabled>
+        <button id="undo" class="tool tool--boxed" type="button" data-tip="復原（⌘Z / Ctrl+Z）" aria-label="復原" disabled>
           <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
         </button>
-        <button id="redo" class="tool tool--boxed" type="button" title="重做" aria-label="重做" disabled>
+        <button id="redo" class="tool tool--boxed" type="button" data-tip="重做（⇧⌘Z / Ctrl+Y）" aria-label="重做" disabled>
           <svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
         </button>
         <span class="toolbar__spacer"></span>
         <div class="frames" role="group" aria-label="分鏡">
-          <button id="frame-prev" class="frames__btn" type="button" aria-label="上一個分鏡">‹</button>
-          <button id="frame-label" class="frames__label" type="button" aria-haspopup="menu" aria-expanded="false" title="分鏡選單">1 / 1</button>
-          <button id="frame-next" class="frames__btn" type="button" aria-label="下一個分鏡">›</button>
-          <button id="frame-add" class="frames__btn" type="button" aria-label="在後面新增分鏡">＋</button>
+          <button id="frame-prev" class="frames__btn" type="button" data-tip="上一個分鏡（←）" aria-label="上一個分鏡">‹</button>
+          <button id="frame-label" class="frames__label" type="button" aria-haspopup="menu" aria-expanded="false" data-tip="分鏡選單：刪除這個分鏡">1 / 1</button>
+          <button id="frame-next" class="frames__btn" type="button" data-tip="下一個分鏡（→）" aria-label="下一個分鏡">›</button>
+          <button id="frame-add" class="frames__btn" type="button" data-tip="在後面新增分鏡" aria-label="在後面新增分鏡">＋</button>
         </div>
         <span class="toolbar__spacer"></span>
-        <button id="tool" class="tool tool--boxed" type="button" title="工具" aria-label="工具：移動" aria-haspopup="menu" aria-expanded="false">
+        <button id="tool" class="tool tool--boxed" type="button" data-tip="工具：移動" aria-label="工具：移動" aria-haspopup="menu" aria-expanded="false">
           <svg viewBox="0 0 24 24"><use href="#icon-move"/></svg>
           <span class="tool__badge" hidden>
             <svg viewBox="0 0 24 24"><use href="#icon-freehand"/></svg>
           </span>
         </button>
-        <button id="delete" class="tool tool--boxed" type="button" title="刪除路線" aria-label="刪除路線" disabled>
+        <button id="delete" class="tool tool--boxed" type="button" data-tip="刪除選取的路線（Delete）" aria-label="刪除路線" disabled>
           <svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
       </nav>

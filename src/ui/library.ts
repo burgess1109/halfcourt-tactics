@@ -3,7 +3,8 @@ import type { Store } from '../model/store';
 import type { Player } from '../model/types';
 import { loadPlay, type RoleAssignment } from '../plays/instantiate';
 import { PLAYS, ROLES, type Play } from '../plays/library';
-import { bestAssignment, recommend } from '../plays/recommend';
+import { createBlankTactic } from '../model/defaults';
+import { bestAssignment, recommend, teamSummary } from '../plays/recommend';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -67,7 +68,40 @@ export function attachLibrary(
     const t = store.get().tactic;
     body.replaceChildren();
 
+    // 回到空白戰術：保留球員資料與對位，只清掉跑位
+    const blank = el(
+      'button',
+      { type: 'button', class: 'play-item play-item--plain' },
+      el('span', { class: 'play-item__name' }, '空白戰術'),
+      el('span', { class: 'play-item__text' }, '清掉目前的跑位，回到預設站位自己畫（球員資料和對位會保留）。'),
+    );
+    blank.addEventListener('click', () => {
+      dialog.close();
+      store.load(createBlankTactic(store.get().tactic));
+      opts.notify('已換成空白戰術，按復原可以回到剛才的戰術');
+    });
+    body.append(el('ul', { class: 'lib-list lib-list--top' }, el('li', {}, blank)));
+
     if (isBlueComplete(t.players, t.setup.blueSkipped)) {
+      const summary = teamSummary(t);
+      const box = el('section', { class: 'lib-summary', 'aria-label': '球隊總評' }, el('h3', { class: 'lib-summary__title' }, '球隊總評'));
+      if (summary.strengths.length > 0) {
+        // 每人一行：合併同一個人的強項、戰術類型與例子（例子去掉重複，最多 3 套）
+        const list = el('ul', { class: 'lib-summary__list' });
+        const order = [...new Set(summary.strengths.map((st) => st.playerId))];
+        for (const id of order) {
+          const mine = summary.strengths.filter((st) => st.playerId === id);
+          const labels = mine.map((st) => st.label).join('、');
+          const styles = [...new Set(mine.map((st) => st.style))].join('、');
+          const examples = [...new Set(mine.flatMap((st) => st.examples))].slice(0, 3).map(playTitle);
+          const tail = examples.length ? `，例如 ${examples.join('、')}` : '';
+          list.append(el('li', {}, el('strong', {}, nameOf(t.players, id)), `：${labels} → 適合${styles}的戰術${tail}`));
+        }
+        box.append(list);
+      }
+      box.append(el('p', { class: 'lib-summary__advice' }, summary.advice));
+      body.append(box);
+
       body.append(el('h3', { class: 'lib-section' }, '推薦給你的球隊'));
       const list = el('ol', { class: 'lib-list' });
       recommend(t).forEach((r, i) => list.append(item(r.play, r.roles, r.reason, i + 1)));
