@@ -979,3 +979,14 @@ body[data-screen='board'] .app {
   color: #c9ccd3;
   font-size: 15px;
 }
+
+/* 第 3 步：開局站位、小標題、掩護設定獨佔一整列；只有對位卡片在寬螢幕並排 */
+.setup__body > .choice,
+.setup__body > .setup__section,
+.setup__body > .link-btn {
+  grid-column: 1 / -1;
+}
+
+.setup__body > .choice {
+  max-width: 560px;
+}
