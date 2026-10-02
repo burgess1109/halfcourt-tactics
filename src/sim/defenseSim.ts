@@ -44,6 +44,36 @@ export interface DefenseResult {
   finalAssignments: Record<string, string>;
 }
 
+interface PendingSwap {
+  at: number;
+  a: string;
+  b: string;
+}
+
+/** 依時間順序套用換防（交換兩位防守者的對象）；交換的順序會影響結果，不能倒著套 */
+export function applySwaps(assign: Readonly<Record<string, string>>, swaps: readonly PendingSwap[]): Record<string, string> {
+  const out = { ...assign };
+  for (const s of swaps) [out[s.a], out[s.b]] = [out[s.b]!, out[s.a]!];
+  return out;
+}
+
+/**
+ * 換防：defenderId 被 screenerId 的掩護擋到。
+ * 先把還在延遲中、已經決定的換防算進去（連續掩護時，前一次換防可能還沒生效），
+ * 再找出「盯掩護者的人」當交換對象，並算出這次換防完成後的對位。
+ */
+export function planSwitch(
+  assign: Readonly<Record<string, string>>,
+  pending: readonly PendingSwap[],
+  defenderId: string,
+  screenerId: string,
+): { partnerId?: string; after: Record<string, string> } {
+  const projected = applySwaps(assign, pending);
+  const partnerId = Object.keys(projected).find((id) => id !== defenderId && projected[id] === screenerId);
+  const after = partnerId ? applySwaps(projected, [{ at: 0, a: defenderId, b: partnerId }]) : projected;
+  return { partnerId, after };
+}
+
 export function fightOverDelay(screenerCm: number, defenderCm: number): number {
   const d = FIGHT_OVER_DELAY + FIGHT_OVER_PER_CM * (screenerCm - defenderCm);
   return Math.min(FIGHT_OVER_RANGE.max, Math.max(FIGHT_OVER_RANGE.min, d));
@@ -64,7 +94,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   const events: DefenseEvent[] = [];
 
   const frozenUntil: Record<string, number> = {};
-  const pendingSwaps: { at: number; a: string; b: string }[] = [];
+  /** 已決定、還在 SWITCH_DELAY 延遲中的換防，依時間先後排列 */
+  const pendingSwaps: PendingSwap[] = [];
   const handled = new Set<number>();
 
   // 起始位置：理想位置
@@ -77,12 +108,11 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   for (let i = 0; i < ticks; i++) {
     const t = i * DT;
 
-    // 換防到時間了就交換對位
-    for (let k = pendingSwaps.length - 1; k >= 0; k--) {
-      const s = pendingSwaps[k]!;
-      if (s.at > t) continue;
-      [assign[s.a], assign[s.b]] = [assign[s.b]!, assign[s.a]!];
-      pendingSwaps.splice(k, 1);
+    // 換防到時間了就交換對位（依時間順序）
+    const due = pendingSwaps.filter((s) => s.at <= t);
+    if (due.length) {
+      Object.assign(assign, applySwaps(assign, due));
+      pendingSwaps.splice(0, due.length);
     }
 
     if (i > 0) {
@@ -116,7 +146,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
 
         // 掩護：掩護者已經到位，而且擋在防守者要去的方向上
         screens.forEach((sc, idx) => {
-          if (sc.screenerId === man || t < sc.setAt) return;
+          // 自己（含延遲中即將換到）盯的人是掩護者時，不算被掩護
+          if (sc.screenerId === man || sc.screenerId === applySwaps(assign, pendingSwaps)[r.id] || t < sc.setAt) return;
           // 每個掩護只觸發一次：換防後，接手的防守者經過同一個掩護時不會再換回來
           if (handled.has(idx)) return;
           const sp = now[sc.screenerId]!;
@@ -131,18 +162,16 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             frozenUntil[r.id] = t + delay;
             events.push({ t, type: 'fight-over', defenderId: r.id, screenerId: sc.screenerId, delay });
           } else {
-            const partner = reds.find((x) => assign[x.id] === sc.screenerId);
+            const { partnerId, after } = planSwitch(assign, pendingSwaps, r.id, sc.screenerId);
             frozenUntil[r.id] = t + SWITCH_DELAY;
-            if (partner) pendingSwaps.push({ at: t + SWITCH_DELAY, a: r.id, b: partner.id });
-            const after = { ...assign };
-            if (partner) [after[r.id], after[partner.id]] = [assign[partner.id]!, assign[r.id]!];
+            if (partnerId) pendingSwaps.push({ at: t + SWITCH_DELAY, a: r.id, b: partnerId });
             events.push({
               t,
               type: 'switch',
               defenderId: r.id,
               screenerId: sc.screenerId,
               delay: SWITCH_DELAY,
-              partnerId: partner?.id,
+              partnerId,
               assignmentsAfter: after,
             });
           }

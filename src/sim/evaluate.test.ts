@@ -251,3 +251,18 @@ describe('4. 戰術一改就清掉上次的評分', () => {
     expect(store.get().tactic.lastResult).toBeUndefined();
   });
 });
+
+describe('載入戰術時保留它自己的評分', () => {
+  it('store.load 不會清掉新戰術的 lastResult；之後修改才清掉', async () => {
+    const { Store } = await import('../model/store');
+    const store = new Store();
+    const saved = createDefaultTactic();
+    saved.lastResult = { grade: 'B', expectedPoints: 0.5 };
+    store.load(saved);
+    expect(store.get().tactic.lastResult).toEqual({ grade: 'B', expectedPoints: 0.5 });
+    store.commit((s) => {
+      s.tactic.frames[0]!.start.b2 = { x: -4, y: 7 };
+    });
+    expect(store.get().tactic.lastResult).toBeUndefined();
+  });
+});

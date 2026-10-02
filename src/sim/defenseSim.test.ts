@@ -179,3 +179,32 @@ describe('被甩開只能從後面追', () => {
     });
   });
 });
+
+describe('連續換防', () => {
+  it('第二次換防時，前一次換防還在延遲中也要算進去（review 的連續掩護例子）', async () => {
+    const { planSwitch, applySwaps } = await import('./defenseSim');
+    const assign = { r1: 'b1', r2: 'b2', r3: 'b3' };
+    // t：b2 掩護擋到 r1 → r1、r2 換防（還在 0.3 秒延遲中）
+    const first = planSwitch(assign, [], 'r1', 'b2');
+    expect(first.partnerId).toBe('r2');
+    expect(first.after).toEqual({ r1: 'b2', r2: 'b1', r3: 'b3' });
+    const pending = [{ at: 0.3, a: 'r1', b: first.partnerId! }];
+    // t + 0.1：b1 幫 b3 掩護，擋到 r3 → 交換對象是「換防後盯 b1 的人」r2，不是還沒換完的 r1
+    const second = planSwitch(assign, pending, 'r3', 'b1');
+    expect(second.partnerId).toBe('r2');
+    expect(second.after).toEqual({ r1: 'b2', r2: 'b3', r3: 'b1' });
+    // 兩次都生效後的實際對位，和第二次記下的一致
+    expect(applySwaps(assign, [...pending, { at: 0.4, a: 'r3', b: 'r2' }])).toEqual(second.after);
+  });
+
+  it('換防要依時間順序套用（倒著套結果會不同）', async () => {
+    const { applySwaps } = await import('./defenseSim');
+    const assign = { r1: 'b1', r2: 'b2', r3: 'b3' };
+    const swaps = [
+      { at: 1, a: 'r1', b: 'r2' },
+      { at: 1, a: 'r2', b: 'r3' },
+    ];
+    expect(applySwaps(assign, swaps)).toEqual({ r1: 'b2', r2: 'b3', r3: 'b1' });
+    expect(applySwaps(assign, [...swaps].reverse())).not.toEqual(applySwaps(assign, swaps));
+  });
+});

@@ -97,8 +97,9 @@ export class Store {
       if (t.basedOn && t.id === p.snapshot.id && authoredSignature(t) !== authoredSignature(p.snapshot)) {
         t.basedOn.modified = true;
       }
-      // 戰術變了，上次的評分已經不準（M8 存檔、分享時不能帶出舊評等）
-      delete t.lastResult;
+      // 同一份戰術被修改了，上次的評分已經不準（M8 存檔、分享時不能帶出舊評等）。
+      // 載入另一份戰術（id 不同）時保留它自己的評分。
+      if (t.id === p.snapshot.id) delete t.lastResult;
       t.updatedAt = Date.now();
       this.history.push(p.snapshot);
     }
