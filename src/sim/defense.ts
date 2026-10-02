@@ -10,6 +10,7 @@ import {
   DENY_TOWARD_RIM,
   DENY_TRIGGER_SPEED,
   HELP_SHADE,
+  JUMP_TO_BALL,
   MIN_GAP,
   OFF_BALL_GAP,
   ON_BALL_GAP,
@@ -61,7 +62,27 @@ const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);
  * 防守者這一刻要追的點：平常是 defendPosition；
  * 但對位者已經切到防守者前面、擋在防守者和籃框之間時，防守者穿不過去，只能追在對位者身後。
  */
-export function chaseTarget(defender: Vec2, man: Vec2, ball: Vec2 | null, hasBall: boolean, deny = false): Vec2 {
+/** 往球的方向靠：在對位者往接球者方向 JUMP_TO_BALL 公尺的位置（站到傳球路線上） */
+export function jumpPosition(man: Vec2, ball: Vec2): Vec2 {
+  const dx = ball.x - man.x;
+  const dy = ball.y - man.y;
+  const d = Math.hypot(dx, dy);
+  if (d === 0) return { ...man };
+  const k = Math.min(JUMP_TO_BALL, d / 2) / d;
+  return { x: man.x + dx * k, y: man.y + dy * k };
+}
+
+/**
+ * jumpTo：對位者剛把球傳出去時，防守者往球的方向靠（給接球者的位置）；其他時候為 null。
+ */
+export function chaseTarget(
+  defender: Vec2,
+  man: Vec2,
+  ball: Vec2 | null,
+  hasBall: boolean,
+  deny = false,
+  jumpTo: Vec2 | null = null,
+): Vec2 {
   const dx = defender.x - man.x;
   const dy = defender.y - man.y;
   const d = Math.hypot(dx, dy) || 1;
@@ -69,7 +90,9 @@ export function chaseTarget(defender: Vec2, man: Vec2, ball: Vec2 | null, hasBal
   const ry = RIM.y - man.y;
   const rd = Math.hypot(rx, ry) || 1;
   const behind = (dx * rx + dy * ry) / (d * rd) < BEATEN_COS;
-  if (!behind || rimDistance(defender) <= rimDistance(man) + BEATEN_MARGIN) return defendPosition(man, ball, hasBall, deny);
+  if (!behind || rimDistance(defender) <= rimDistance(man) + BEATEN_MARGIN) {
+    return jumpTo ? jumpPosition(man, jumpTo) : defendPosition(man, ball, hasBall, deny);
+  }
   return { x: man.x + (dx / d) * BODY_DISTANCE, y: man.y + (dy / d) * BODY_DISTANCE };
 }
 

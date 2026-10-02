@@ -224,3 +224,25 @@ describe('連續換防', () => {
     expect(applySwaps(assign, [...swaps].reverse())).not.toEqual(applySwaps(assign, swaps));
   });
 });
+
+describe('往球的方向靠', () => {
+  it('jumpPosition：往接球者方向 2 m，距離太近時最多到兩人中間', async () => {
+    const { jumpPosition } = await import('./defense');
+    expect(jumpPosition({ x: 0, y: 8 }, { x: 5, y: 8 })).toEqual({ x: 2, y: 8 });
+    expect(jumpPosition({ x: 0, y: 8 }, { x: 2, y: 8 })).toEqual({ x: 1, y: 8 });
+  });
+
+  it('傳切：傳球後防守者往球靠，傳球者往籃下切時把防守者甩在身後', async () => {
+    const { PLAYS } = await import('../plays/library');
+    const { loadPlay } = await import('../plays/instantiate');
+    const { poseAt } = await import('../anim/timeline');
+    const t = loadPlay(createDefaultTactic(), PLAYS.find((p) => p.id === 'cut-give-go')!, { A: 'b1', B: 'b2', C: 'b3' });
+    const tl = buildTimeline(t);
+    const res = simulateDefense(t, tl);
+    const at = tl.shotReleaseAt!;
+    const rim = { x: 0, y: 1.575 };
+    const shooter = poseAt(t, tl, at).positions.b1!;
+    const defender = redAt(res, at).positions.r1!;
+    expect(dist(defender, rim)).toBeGreaterThan(dist(shooter, rim));
+  });
+});

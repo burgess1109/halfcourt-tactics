@@ -1,4 +1,4 @@
-import { ballHolderAt, poseAt, screensOf, type Timeline } from '../anim/timeline';
+import { ballHolderAt, passAt, poseAt, screensOf, type Timeline } from '../anim/timeline';
 import { defenderAssignments } from '../model/matchups';
 import { heightOf, speedOf } from '../model/physique';
 import type { Tactic, Vec2 } from '../model/types';
@@ -7,6 +7,7 @@ import {
   DEFENSE_SPEED_FACTOR,
   DT,
   FIGHT_OVER_DELAY,
+  JUMP_DURATION,
   FIGHT_OVER_PER_CM,
   FIGHT_OVER_RANGE,
   REACTION_TIME,
@@ -100,6 +101,10 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   const handled = new Set<number>();
   /** 每位防守者是否正在阻絕（換防後重新判斷） */
   const denying: Record<string, boolean> = {};
+  /** 對位者傳完球後，防守者往球的方向靠到這個時間 */
+  const jumpUntil: Record<string, number> = {};
+  /** 往球的方向靠時，球要去的地方（接球者） */
+  const jumpToward: Record<string, string> = {};
 
   // 起始位置：理想位置
   const start = poseAt(tactic, timeline, 0).positions;
@@ -116,7 +121,11 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
     if (due.length) {
       Object.assign(assign, applySwaps(assign, due));
       pendingSwaps.splice(0, due.length);
-      for (const s of due) denying[s.a] = denying[s.b] = false; // 換了人盯，重新判斷要不要阻絕
+      for (const s of due) {
+        // 換了人盯，重新判斷要不要阻絕、往球的方向靠
+        denying[s.a] = denying[s.b] = false;
+        jumpUntil[s.a] = jumpUntil[s.b] = -1;
+      }
     }
 
     if (i > 0) {
@@ -129,13 +138,22 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
       const now = poseAt(tactic, timeline, t).positions;
       // 含延遲中換防的預計對位；每一格算一次就好
       const projected = pendingSwaps.length ? applySwaps(assign, pendingSwaps) : assign;
+      const seenPass = passAt(timeline, seen);
 
       for (const r of reds) {
         if (t < (frozenUntil[r.id] ?? 0)) continue;
         const man = assign[r.id]!;
         const seenBall = seenHolder ? seenPos[seenHolder]! : null;
         denying[r.id] = nextDenyState(denying[r.id] ?? false, outwardSpeedOf(prevPos[man]!, seenPos[man]!, VELOCITY_DT));
-        const target = chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id]);
+        // 看到對位者把球傳出去：往接球者的方向靠一下（傳球飛行中持續延長）
+        if (seenPass && seenPass.from === man) {
+          jumpUntil[r.id] = seen + JUMP_DURATION;
+          jumpToward[r.id] = seenPass.to;
+          denying[r.id] = false;
+        }
+        const jumping = seen < (jumpUntil[r.id] ?? -1) && seenHolder !== man;
+        const jumpTo = jumping ? seenPos[jumpToward[r.id]!]! : null;
+        const target = chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo);
         const p = cur[r.id]!;
         const dx = target.x - p.x;
         const dy = target.y - p.y;

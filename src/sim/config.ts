@@ -118,3 +118,10 @@ export const HELP_SHADE = 0.8;
 export const DENY_TRIGGER_SPEED = 1.5;
 /** 估算對位者速度用的時間間隔（秒） */
 export const VELOCITY_DT = 0.1;
+
+/**
+ * 往球的方向靠（jump to the ball）：對位者把球傳出去後，防守者有 JUMP_DURATION 秒
+ * 往接球者的方向移動 JUMP_TO_BALL 公尺。對位者這時往籃下切（傳切），就會從防守者背後過去。
+ */
+export const JUMP_DURATION = 0.8;
+export const JUMP_TO_BALL = 2.0;

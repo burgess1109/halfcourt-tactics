@@ -213,3 +213,16 @@ export function screensOf(tactic: Tactic, timeline: Timeline): ScreenSpot[] {
   });
   return out;
 }
+
+/** 時間 t 時正在飛行中的傳球（不含投籃）；沒有則回傳 null */
+export function passAt(timeline: Timeline, t: number): { from: string; to: string } | null {
+  let frameIndex = timeline.frames.findIndex((f) => t < f.start + f.duration);
+  if (frameIndex === -1) frameIndex = timeline.frames.length - 1;
+  const timing = timeline.frames[frameIndex]!;
+  const local = t - timing.start;
+  const { flight } = timing;
+  if (flight?.kind === 'pass' && local >= flight.launch && local < flight.launch + flight.flight) {
+    return { from: flight.from, to: flight.to! };
+  }
+  return null;
+}
