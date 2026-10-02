@@ -34,3 +34,13 @@ export const VIEW_BOUNDS = {
   minY: -COURT_MARGIN,
   maxY: COURT_DEPTH + COURT_MARGIN,
 } as const;
+
+/**
+ * 出手位置是否在弧線（三分線）以外：3x3 記 2 分（SPEC §6.4）。
+ * 底角是直線段（|x| = THREE_POINT_CORNER_X，y 低於 THREE_POINT_CORNER_Y），其餘是以籃框為圓心的圓弧。
+ * 所以底角的點即使離籃框不到 6.75 m，也可能在線外。
+ */
+export function isBeyondArc(p: { x: number; y: number }): boolean {
+  if (p.y < THREE_POINT_CORNER_Y) return Math.abs(p.x) > THREE_POINT_CORNER_X;
+  return Math.hypot(p.x, p.y - BASKET_Y) > THREE_POINT_RADIUS;
+}

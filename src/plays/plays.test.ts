@@ -3,8 +3,7 @@ import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds, screensOf } from 
 import { createDefaultTactic } from '../model/defaults';
 import { MAX_FRAMES } from '../model/frames';
 import { simulateDefense } from '../sim/defenseSim';
-import { THREE_POINT_RADIUS } from '../court/fiba';
-import { RIM } from '../model/paths';
+import { isBeyondArc } from '../court/fiba';
 import { PLAYS } from './library';
 import { loadPlay } from './instantiate';
 
@@ -49,7 +48,7 @@ describe('內建戰術庫', () => {
       const last = t.frames.at(-1)!;
       const shot = last.paths.find((p) => p.kind === 'shot')!;
       const pos = last.start[shot.actorId]!;
-      const beyondArc = Math.hypot(pos.x - RIM.x, pos.y - RIM.y) > THREE_POINT_RADIUS;
+      const beyondArc = isBeyondArc(pos);
       const note = play.frames.at(-1)!.note;
       expect(note, `${play.id}：${note}`).toContain(beyondArc ? '（2 分）' : '（1 分）');
       if (beyondArc) expect(note, play.id).toContain('弧外');
