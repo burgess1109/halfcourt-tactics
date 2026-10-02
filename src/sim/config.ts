@@ -74,8 +74,16 @@ export const OPEN_DISTANCE = 3.0;
 export const CONTESTED_FACTOR = 0.5;
 /** 防守者在出手者身後（已被甩開）時，干擾距離多算這麼多（公尺） */
 export const TRAILING_BONUS = 1.0;
-/** 防守者每比出手者高 1 cm，干擾範圍多這麼多（公尺） */
-export const HEIGHT_REACH_PER_CM = 0.02;
+/**
+ * 身高錯位：出手者每比干擾他的防守者高 1 cm，干擾造成的命中率損失少 MISMATCH_PER_CM（禁區出手）；
+ * 跳投（中距離、弧外）效果打 MISMATCH_JUMPSHOT_WEIGHT 折。
+ * 損失最多少 MISMATCH_MAX_REDUCTION；防守者比較高時，損失最多變成 1 + MISMATCH_MAX_INCREASE 倍。
+ * 例：換防後在禁區高 20 cm → 干擾損失少 80%。
+ */
+export const MISMATCH_PER_CM = 0.04;
+export const MISMATCH_JUMPSHOT_WEIGHT = 0.5;
+export const MISMATCH_MAX_REDUCTION = 0.8;
+export const MISMATCH_MAX_INCREASE = 0.5;
 /** 出手前有運球時，依單打能力額外拉開的距離（公尺），0（劣勢）→ 4（優勢） */
 export const ISO_SEPARATION = [0, 0.15, 0.3, 0.45, 0.6] as const;
 

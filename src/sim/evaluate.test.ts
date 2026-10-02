@@ -153,3 +153,43 @@ describe('評價數量與內容', () => {
     }
   });
 });
+
+describe('身高錯位', () => {
+  it('禁區：高 10 cm 干擾少 40%、高 20 cm 少 80%（上限）；跳投效果減半；防守者比較高時干擾增加', async () => {
+    const { mismatchEffect } = await import('./evaluate');
+    expect(mismatchEffect(10, 'paint')).toBeCloseTo(0.4);
+    expect(mismatchEffect(20, 'paint')).toBeCloseTo(0.8);
+    expect(mismatchEffect(30, 'paint')).toBeCloseTo(0.8);
+    expect(mismatchEffect(20, 'three')).toBeCloseTo(0.4);
+    expect(mismatchEffect(-10, 'paint')).toBeCloseTo(-0.4);
+    expect(mismatchEffect(-30, 'paint')).toBeCloseTo(-0.5);
+  });
+
+  it('被貼身干擾的禁區出手：高 20 cm 時預期得分大幅提高', () => {
+    const shooter = { x: 0, y: 3 };
+    const defender = { x: 0, y: 1.7 };
+    const even = createDefaultTactic();
+    const tall = createDefaultTactic();
+    tall.players.find((p) => p.id === 'b1')!.heightCm = 195; // r1 未填 → 跟 b1 一樣高，所以要明確設定
+    tall.players.find((p) => p.id === 'r1')!.heightCm = 175;
+    const a = shotValue(even, 'b1', positions(shooter, defender), false);
+    const b = shotValue(tall, 'b1', positions(shooter, defender), false);
+    expect(a.expectedPoints).toBeCloseTo(PAINT_RATE[2] * 0.5);
+    expect(b.heightEdge).toBe(20);
+    expect(b.expectedPoints).toBeCloseTo(PAINT_RATE[2] * (1 - 0.5 * 0.2));
+  });
+
+  it('高位擋拆換防後，高 20 cm 的下順者從 D 進步，評價說明身高優勢', () => {
+    const play = PLAYS.find((p) => p.id === 'high-pnr-roll')!;
+    const even = loadPlay(createDefaultTactic(), play, roles);
+    const base = createDefaultTactic();
+    base.players.find((p) => p.id === 'b2')!.heightCm = 195;
+    base.players.find((p) => p.id === 'r2')!.heightCm = 195; // 原本盯 b2 的人一樣高；換防後換成 175 的 r1 盯 b2
+    base.players.find((p) => p.id === 'r1')!.heightCm = 175;
+    const tall = loadPlay(base, play, roles);
+    const e0 = evaluate(even, simulate(even));
+    const e1 = evaluate(tall, simulate(tall));
+    expect(e1.expectedPoints).toBeGreaterThan(e0.expectedPoints + 0.1);
+    expect(e1.comments.map((c) => c.text).join('\n')).toContain('高 20 cm，干擾減少 80%');
+  });
+});

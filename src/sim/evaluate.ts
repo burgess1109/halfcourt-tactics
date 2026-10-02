@@ -8,9 +8,12 @@ import {
   BODY_DISTANCE,
   CONTESTED_FACTOR,
   GRADE_THRESHOLDS,
-  HEIGHT_REACH_PER_CM,
   ISO_SEPARATION,
   MID_RATE,
+  MISMATCH_JUMPSHOT_WEIGHT,
+  MISMATCH_MAX_INCREASE,
+  MISMATCH_MAX_REDUCTION,
+  MISMATCH_PER_CM,
   OPEN_DISTANCE,
   PAINT_RATE,
   SPACING_DISTANCE,
@@ -44,9 +47,19 @@ export interface ShotValue {
   defenderId: string;
   /** 防守者是否被甩在身後 */
   defenderBehind: boolean;
-  /** 0–1，1 = 完全空檔 */
+  /** 0–1，1 = 完全空檔（只看距離，不含身高） */
   openness: number;
+  /** 出手者比這位防守者高多少 cm（負數 = 比較矮） */
+  heightEdge: number;
+  /** 身高錯位讓干擾損失減少的比例（負數 = 增加） */
+  mismatch: number;
   expectedPoints: number;
+}
+
+/** 身高錯位對干擾損失的影響：正數 = 減少，負數 = 增加 */
+export function mismatchEffect(heightEdgeCm: number, zone: Zone): number {
+  const weight = zone === 'paint' ? 1 : MISMATCH_JUMPSHOT_WEIGHT;
+  return Math.min(MISMATCH_MAX_REDUCTION, Math.max(-MISMATCH_MAX_INCREASE, heightEdgeCm * MISMATCH_PER_CM * weight));
 }
 
 /**
@@ -67,21 +80,23 @@ export function shotValue(
   const baseRate = zone === 'paint' ? PAINT_RATE[skills.finishing] : zone === 'mid' ? MID_RATE[skills.shooting] : THREE_RATE[skills.shooting];
   const toRim = { x: RIM.x - at.x, y: RIM.y - at.y };
 
-  // 找干擾最大的防守者：距離越近、越高、越在出手者前方，干擾越大
-  let best: { id: string; d: number; effective: number; behind: boolean } | null = null;
+  // 找干擾最大的防守者：距離越近、越在出手者前方、身高優勢越大，造成的命中率損失越多
+  const span = OPEN_DISTANCE - BODY_DISTANCE;
+  let best: { id: string; d: number; behind: boolean; openness: number; edge: number; mismatch: number; loss: number } | null = null;
   for (const red of players.filter((p) => p.team === 'red')) {
     const rp = positions[red.id]!;
     const d = dist(rp, at);
     const behind = (rp.x - at.x) * toRim.x + (rp.y - at.y) * toRim.y < 0;
     let effective = d;
     if (behind) effective += TRAILING_BONUS;
-    effective -= (heightOf(red, players) - heightOf(shooter, players)) * HEIGHT_REACH_PER_CM;
     if (dribbled) effective += ISO_SEPARATION[skills.iso];
-    if (!best || effective < best.effective) best = { id: red.id, d, effective, behind };
+    const openness = Math.min(1, Math.max(0, (effective - BODY_DISTANCE) / span));
+    const edge = heightOf(shooter, players) - heightOf(red, players);
+    const mismatch = mismatchEffect(edge, zone);
+    const loss = (1 - CONTESTED_FACTOR) * (1 - openness) * (1 - mismatch);
+    if (!best || loss > best.loss) best = { id: red.id, d, behind, openness, edge, mismatch, loss };
   }
-  const span = OPEN_DISTANCE - BODY_DISTANCE;
-  const openness = Math.min(1, Math.max(0, (best!.effective - BODY_DISTANCE) / span));
-  const factor = CONTESTED_FACTOR + (1 - CONTESTED_FACTOR) * openness;
+  const factor = 1 - best!.loss;
   const points = zone === 'three' ? 2 : 1;
   return {
     playerId,
@@ -92,9 +107,20 @@ export function shotValue(
     defenderDistance: best!.d,
     defenderId: best!.id,
     defenderBehind: best!.behind,
-    openness,
+    openness: best!.openness,
+    heightEdge: best!.edge,
+    mismatch: best!.mismatch,
     expectedPoints: baseRate * factor * points,
   };
+}
+
+/** 身高錯位的說明（差距 5 cm 以上、而且確實有受到干擾才說） */
+function mismatchText(shot: ShotValue): string {
+  if (Math.abs(shot.heightEdge) < 5 || shot.openness >= 1) return '';
+  const pct = Math.round(Math.abs(shot.mismatch) * 100);
+  return shot.heightEdge > 0
+    ? `（比干擾他的防守者高 ${shot.heightEdge} cm，干擾減少 ${pct}%）`
+    : `（比干擾他的防守者矮 ${-shot.heightEdge} cm，干擾增加 ${pct}%）`;
 }
 
 export function gradeOf(expectedPoints: number): Grade {
@@ -251,7 +277,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   const skillValue = shot.zone === 'paint' ? skillsOf(players.find((p) => p.id === shot.playerId)!).finishing : skillsOf(players.find((p) => p.id === shot.playerId)!).shooting;
   const finalRate = shot.expectedPoints / shot.points;
   comments.push({
-    text: `${name(shot.playerId)} 的${skillName}「${RATING_LABEL[skillValue]}」，${ZONE_LABEL[shot.zone]}空檔命中率 ${Math.round(shot.baseRate * 100)}%${finalRate < shot.baseRate - 0.005 ? `，受干擾後剩 ${Math.round(finalRate * 100)}%` : ''}`,
+    text: `${name(shot.playerId)} 的${skillName}「${RATING_LABEL[skillValue]}」，${ZONE_LABEL[shot.zone]}空檔命中率 ${Math.round(shot.baseRate * 100)}%${finalRate < shot.baseRate - 0.005 ? `，受干擾後剩 ${Math.round(finalRate * 100)}%` : ''}${mismatchText(shot)}`,
     frameIndex: releaseFrame,
     playerIds: [shot.playerId],
   });
