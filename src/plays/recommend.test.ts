@@ -96,4 +96,39 @@ describe('載入內建戰術', () => {
     store.undo();
     expect(store.get().tactic.id).toBe(before);
   });
+
+  it('改對位、紅隊身高與速度、掩護應對（紅隊位置會重算）不算修改戰術', () => {
+    const store = new Store();
+    const play = PLAYS.find((p) => p.id === 'high-pnr-roll')!;
+    store.load(loadPlay(store.get().tactic, play, { A: 'b1', B: 'b2', C: 'b3' }));
+    const before = JSON.stringify(store.get().tactic.frames.map((f) => f.start.r1));
+    store.commit((s) => {
+      s.tactic.matchups = { b1: 'r3', b2: 'r2', b3: 'r1' };
+      s.tactic.screenDefense = 'fight-over';
+      const r2 = s.tactic.players.find((p) => p.id === 'r2')!;
+      r2.heightCm = 210;
+      r2.speedRating = 0;
+    });
+    // 紅隊位置確實變了，但沒有動到使用者畫的部分
+    expect(JSON.stringify(store.get().tactic.frames.map((f) => f.start.r1))).not.toBe(before);
+    expect(store.get().tactic.basedOn!.modified).toBe(false);
+
+    // 拖動第 1 個分鏡的藍隊站位 → 已修改
+    store.commit((s) => {
+      s.tactic.frames[0]!.start.b3 = { x: -4, y: 7 };
+    });
+    expect(store.get().tactic.basedOn!.modified).toBe(true);
+  });
+});
+
+describe('推薦理由', () => {
+  it('速度只快不到 1% 時不拿來當理由（不會出現「快 0%」）', () => {
+    const t = createDefaultTactic();
+    for (const p of t.players) p.heightCm = 180;
+    t.players.find((p) => p.id === 'b1')!.heightCm = 179; // 矮 1 cm → 只快約 0.3%
+    for (const play of PLAYS) {
+      const r = bestAssignment(t, play);
+      expect(r.reason, play.id).not.toContain('快 0%');
+    }
+  });
 });

@@ -2,7 +2,7 @@ import { createDefaultTactic } from './defaults';
 import { syncFrames } from './frames';
 import { History } from './history';
 import type { Draft } from './paths';
-import type { Frame, PathKind, Tactic } from './types';
+import { BALL_ID, type Frame, type PathKind, type Tactic } from './types';
 
 /** 'move' = 拖曳球員與球；其他 = 畫該種路線 */
 export type Tool = 'move' | PathKind;
@@ -23,6 +23,17 @@ export interface EditorState {
 }
 
 type Listener = (state: EditorState) => void;
+
+/**
+ * 使用者自己畫的部分：第 1 個分鏡的藍隊站位、球與持球者，以及每個分鏡的路線。
+ * 紅隊位置與後面分鏡的起始位置都是自動算出來的（改對位、身高、速度、掩護應對時會變），不算在內。
+ */
+export function authoredSignature(tactic: Tactic): string {
+  const blue = new Set(tactic.players.filter((p) => p.team === 'blue').map((p) => p.id));
+  const first = tactic.frames[0]!;
+  const start = Object.fromEntries(Object.entries(first.start).filter(([id]) => blue.has(id) || id === BALL_ID));
+  return JSON.stringify({ start, holder: first.ballHolderId, paths: tactic.frames.map((f) => f.paths) });
+}
 
 export class Store {
   private state: EditorState = {
@@ -78,8 +89,8 @@ export class Store {
     if (removed > 0) this.notify(`球換人持有，移除了 ${removed} 條運球 / 傳球 / 投籃路線`);
     if (p && JSON.stringify(this.state.tactic) !== p.json) {
       const t = this.state.tactic;
-      // 從內建戰術載入後，動到分鏡就算「已修改」（SPEC §6.3：不會改寫內建戰術）
-      if (t.basedOn && t.id === p.snapshot.id && JSON.stringify(t.frames) !== JSON.stringify(p.snapshot.frames)) {
+      // 從內建戰術載入後，動到使用者畫的部分才算「已修改」（SPEC §6.3：不會改寫內建戰術）
+      if (t.basedOn && t.id === p.snapshot.id && authoredSignature(t) !== authoredSignature(p.snapshot)) {
         t.basedOn.modified = true;
       }
       t.updatedAt = Date.now();

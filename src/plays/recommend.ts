@@ -22,6 +22,11 @@ function defenderOf(tactic: Tactic, blue: Player): Player {
   return tactic.players.find((p) => p.id === redId)!;
 }
 
+/** 藍隊球員跑動速度 ÷ 對位防守者的跑動速度 */
+function speedRatio(tactic: Tactic, blue: Player): number {
+  return speedOf(blue, tactic.players, false) / speedOf(defenderOf(tactic, blue), tactic.players, false);
+}
+
 /** 某位藍隊球員在某一項的分數（0–4） */
 export function attributeScore(tactic: Tactic, blue: Player, key: WeightKey): number {
   const { players } = tactic;
@@ -29,10 +34,7 @@ export function attributeScore(tactic: Tactic, blue: Player, key: WeightKey): nu
     const diff = heightOf(blue, players) - heightOf(defenderOf(tactic, blue), players);
     return clamp04(2 + diff / HEIGHT_STEP_CM);
   }
-  if (key === 'speed') {
-    const ratio = speedOf(blue, players, false) / speedOf(defenderOf(tactic, blue), players, false);
-    return clamp04(2 + (ratio - 1) / SPEED_STEP);
-  }
+  if (key === 'speed') return clamp04(2 + (speedRatio(tactic, blue) - 1) / SPEED_STEP);
   return skillsOf(blue)[key];
 }
 
@@ -42,6 +44,8 @@ function reasonFor(tactic: Tactic, play: Play, roles: RoleAssignment): string {
   for (const role of ROLES) {
     const blue = tactic.players.find((p) => p.id === roles[role])!;
     for (const [key, w] of Object.entries(play.weights[role]) as [WeightKey, number][]) {
+      // 速度快不到 1%（四捨五入後顯示 0%）時不拿來當理由
+      if (key === 'speed' && Math.round((speedRatio(tactic, blue) - 1) * 100) < 1) continue;
       const gain = w * (attributeScore(tactic, blue, key) - 2);
       if (gain > 0 && (!best || gain > best.gain)) best = { role, key, gain };
     }
@@ -54,8 +58,7 @@ function reasonFor(tactic: Tactic, play: Play, roles: RoleAssignment): string {
     const diff = heightOf(blue, players) - heightOf(defenderOf(tactic, blue), players);
     what = ` 比對位的防守者高 ${diff} cm`;
   } else if (best.key === 'speed') {
-    const ratio = speedOf(blue, players, false) / speedOf(defenderOf(tactic, blue), players, false);
-    what = ` 比對位的防守者快 ${Math.round((ratio - 1) * 100)}%`;
+    what = ` 比對位的防守者快 ${Math.round((speedRatio(tactic, blue) - 1) * 100)}%`;
   } else {
     const key = best.key as keyof Skills;
     what = ` 的${SKILL_LABEL[key]}「${RATING_LABEL[skillsOf(blue)[key]]}」`;
