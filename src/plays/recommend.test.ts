@@ -154,7 +154,7 @@ describe('球隊總評', () => {
     expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'finishing')).toBe(true);
     expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'height')).toBe(true);
     // 最強的是 3 號的外線，第二選擇是另一個人
-    expect(s.advice).toMatch(/^建議以 3 號 球員 3 的外線出手為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」。$/);
+    expect(s.advice).toMatch(/^建議以 3 號 球員 3 的外線出手為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」（預期 [SABCD]）。$/);
   });
 });
 
@@ -226,5 +226,43 @@ describe('isBlankTactic', () => {
     drawn.frames[0]!.paths.push({ id: 'x', kind: 'cut', actorId: 'b1', points: [{ x: -5.4, y: 6 }, { x: -2, y: 3 }], freehand: false });
     expect(isBlankTactic(drawn)).toBe(false);
     expect(isBlankTactic(loadPlay(t, PLAYS[0]!, { A: 'b1', B: 'b2', C: 'b3' }))).toBe(false);
+  });
+});
+
+describe('依實際模擬的預期得分排序', () => {
+  it('推薦依預期得分由高到低；每張都有預期評等，和載入後實際評分一致', async () => {
+    const { rankBySimulation } = await import('./recommend');
+    const { simulate } = await import('../anim/simulation');
+    const { evaluate } = await import('../sim/evaluate');
+    const t = team({ b1: { iso: 3 }, b2: { finishing: 3 }, b3: { shooting: 4 } }, { b1: 180, b2: 198, b3: 185 });
+    const ranked = rankBySimulation(t);
+    expect(ranked).toHaveLength(PLAYS.length);
+    for (let i = 1; i < ranked.length; i++) {
+      expect(ranked[i - 1]!.expectedPoints!).toBeGreaterThanOrEqual(ranked[i]!.expectedPoints!);
+    }
+    const top = recommend(t, 5, ranked);
+    expect(top).toEqual(ranked.slice(0, 5));
+    // 推薦時說的分數 = 點下去播完的分數
+    const loaded = loadPlay(t, top[0]!.play, top[0]!.roles);
+    const e = evaluate(loaded, simulate(loaded));
+    expect(e.expectedPoints).toBeCloseTo(top[0]!.expectedPoints!);
+    expect(e.grade).toBe(top[0]!.grade);
+  });
+
+  it('同分時看適合度，再維持戰術庫順序', async () => {
+    const { sortBySimulation } = await import('./recommend');
+    const rec = (i: number, xp: number, score: number) => ({ play: PLAYS[i]!, roles: { A: 'b1', B: 'b2', C: 'b3' }, score, reason: '', expectedPoints: xp });
+    const sorted = sortBySimulation([rec(3, 0.5, 2), rec(1, 0.5, 2), rec(2, 0.5, 3), rec(0, 0.7, 1)]);
+    expect(sorted.map((r) => PLAYS.indexOf(r.play))).toEqual([0, 2, 1, 3]);
+  });
+
+  it('快取鍵只看球員、對位、掩護應對，不看目前畫的路線', async () => {
+    const { recommendationKey } = await import('./recommend');
+    const t = createDefaultTactic();
+    const key = recommendationKey(t);
+    t.frames[0]!.start.b1 = { x: 1, y: 7 };
+    expect(recommendationKey(t)).toBe(key);
+    t.screenDefense = 'fight-over';
+    expect(recommendationKey(t)).not.toBe(key);
   });
 });

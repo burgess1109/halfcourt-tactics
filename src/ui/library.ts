@@ -4,7 +4,15 @@ import type { Player } from '../model/types';
 import { loadPlay, type RoleAssignment } from '../plays/instantiate';
 import { PLAYS, ROLES, type Play } from '../plays/library';
 import { createBlankTactic } from '../model/defaults';
-import { bestAssignment, recommend, teamSummary } from '../plays/recommend';
+import {
+  bestAssignment,
+  recommend,
+  recommendationKey,
+  sortBySimulation,
+  teamSummary,
+  withSimulation,
+  type Recommendation,
+} from '../plays/recommend';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -50,13 +58,17 @@ export function attachLibrary(
     opts.onLoaded();
   };
 
-  const item = (play: Play, roles: RoleAssignment, text: string, rank?: number) => {
+  const item = (rec: Recommendation, text: string, rank?: number) => {
+    const { play, roles } = rec;
     const current = store.get().tactic.basedOn?.playId === play.id;
+    const expected = rec.grade
+      ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, `預期 ${rec.grade} ${rec.expectedPoints!.toFixed(2)}`)]
+      : [];
     const button = el(
       'button',
       { type: 'button', class: `play-item${rank ? '' : ' play-item--plain'}`, 'aria-current': String(current) },
       ...(rank ? [el('span', { class: 'play-item__rank' }, String(rank))] : []),
-      el('span', { class: 'play-item__name' }, el('span', { class: 'play-item__cat' }, play.category), play.name),
+      el('span', { class: 'play-item__name' }, el('span', { class: 'play-item__cat' }, play.category), play.name, ...expected),
       el('span', { class: 'play-item__text' }, text),
       el('span', { class: 'play-item__roles' }, rolesText(play, roles)),
     );
@@ -64,9 +76,10 @@ export function attachLibrary(
     return el('li', {}, button);
   };
 
-  const render = () => {
+  const render = (ranked: readonly Recommendation[]) => {
     const t = store.get().tactic;
     body.replaceChildren();
+    const byPlay = new Map(ranked.map((rec) => [rec.play.id, rec]));
 
     // 回到空白戰術：保留球員資料與對位，只清掉跑位
     const blank = el(
@@ -83,7 +96,7 @@ export function attachLibrary(
     body.append(el('ul', { class: 'lib-list lib-list--top' }, el('li', {}, blank)));
 
     if (isBlueComplete(t.players, t.setup.blueSkipped)) {
-      const summary = teamSummary(t);
+      const summary = teamSummary(t, ranked);
       const box = el('section', { class: 'lib-summary', 'aria-label': '球隊總評' }, el('h3', { class: 'lib-summary__title' }, '球隊總評'));
       if (summary.strengths.length > 0) {
         // 每人一行：合併同一個人的強項、戰術類型與例子（例子去掉重複，最多 3 套）
@@ -104,7 +117,7 @@ export function attachLibrary(
 
       body.append(el('h3', { class: 'lib-section' }, '推薦給你的球隊'));
       const list = el('ol', { class: 'lib-list' });
-      recommend(t).forEach((r, i) => list.append(item(r.play, r.roles, r.reason, i + 1)));
+      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(rec, rec.reason, i + 1)));
       body.append(list);
     } else {
       const go = el('button', { type: 'button', class: 'btn' }, '去填身高');
@@ -120,11 +133,51 @@ export function attachLibrary(
       body.append(el('h3', { class: 'lib-section' }, category));
       const list = el('ul', { class: 'lib-list' });
       for (const play of PLAYS.filter((p) => p.category === category)) {
-        list.append(item(play, bestAssignment(t, play).roles, play.summary));
+        list.append(item(byPlay.get(play.id) ?? bestAssignment(t, play), play.summary));
       }
       body.append(list);
     }
   };
+
+  // ---- 模擬：每套戰術模擬一次（約 15 ms），逐套進行並顯示進度，畫面不會卡住 ----
+  let cache: { key: string; ranked: Recommendation[] } | null = null;
+  /** 每次打開加一；關閉或重新打開時，舊的計算就停下來 */
+  let run = 0;
+
+  const showLoading = (done: number) => {
+    body.replaceChildren(
+      el(
+        'div',
+        { class: 'lib-loading', role: 'status', 'aria-live': 'polite' },
+        el('span', { class: 'spinner', 'aria-hidden': 'true' }),
+        el('span', {}, `正在模擬戰術 ${done} / ${PLAYS.length}…`),
+      ),
+    );
+  };
+
+  const computeAndRender = async () => {
+    const id = ++run;
+    const t = store.get().tactic;
+    const key = recommendationKey(t);
+    if (cache?.key !== key) {
+      const results: Recommendation[] = [];
+      for (const play of PLAYS) {
+        showLoading(results.length);
+        // 讓瀏覽器先畫出進度，再算下一套
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        if (id !== run || !dialog.open) return;
+        results.push(withSimulation(t, bestAssignment(t, play)));
+      }
+      cache = { key, ranked: sortBySimulation(results) };
+    }
+    if (id !== run || !dialog.open) return;
+    render(cache.ranked);
+    body.scrollTop = 0;
+  };
+
+  dialog.addEventListener('close', () => {
+    run++; // 關閉時停止還在進行的計算
+  });
 
   $<HTMLButtonElement>('#library-close').addEventListener('click', () => dialog.close());
   // 點背景關閉
@@ -145,9 +198,8 @@ export function attachLibrary(
   return {
     open() {
       if (store.get().playing) return;
-      render();
       dialog.showModal();
-      body.scrollTop = 0;
+      void computeAndRender();
     },
   };
 }

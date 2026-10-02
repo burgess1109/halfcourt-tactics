@@ -45,7 +45,7 @@ function placeDefenders(tactic: Tactic, frame: Frame): void {
  * prune = true 時，一併移除不再成立的路線（例如球換人之後的運球），回傳移除數量。
  * 拖曳中不要 prune：球暫時離手時，不應該把後面的傳球刪掉。
  */
-export function syncFrames(tactic: Tactic, prune: boolean): number {
+export function syncFrames(tactic: Tactic, prune: boolean, opts: { defense?: boolean } = {}): number {
   let removed = 0;
   tactic.frames.forEach((frame, i) => {
     if (i > 0) {
@@ -57,8 +57,9 @@ export function syncFrames(tactic: Tactic, prune: boolean): number {
     if (prune) removed += pruneInvalidPaths(frame, tactic.players);
   });
 
-  // 之後的分鏡：紅隊在防守 AI 模擬中、該分鏡開始時的實際位置（可能被甩開或被掩護卡住）
-  if (tactic.frames.length > 1) {
+  // 之後的分鏡：紅隊在防守 AI 模擬中、該分鏡開始時的實際位置（可能被甩開或被掩護卡住）。
+  // defense: false 時跳過（例如一次建好多個分鏡時，只在最後算一次）
+  if (tactic.frames.length > 1 && opts.defense !== false) {
     const timeline = buildTimeline(tactic);
     const red = simulateDefense(tactic, timeline);
     tactic.frames.forEach((frame, i) => {
@@ -80,11 +81,11 @@ export function cannotInsertAfter(tactic: Tactic, index: number): string | null 
 }
 
 /** 在 index 後面插入新分鏡，回傳新分鏡的 index；不能插入則回傳 null */
-export function insertFrameAfter(tactic: Tactic, index: number): number | null {
+export function insertFrameAfter(tactic: Tactic, index: number, opts: { defense?: boolean } = {}): number | null {
   if (cannotInsertAfter(tactic, index)) return null;
   const { start, ballHolderId } = endState(tactic.frames[index]!);
   tactic.frames.splice(index + 1, 0, { start, ballHolderId, paths: [] });
-  syncFrames(tactic, true);
+  syncFrames(tactic, true, opts);
   return index + 1;
 }
 

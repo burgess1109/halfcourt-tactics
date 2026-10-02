@@ -1113,3 +1113,54 @@ body[data-screen='board'] .app {
 .hud {
   left: calc((100% - var(--reserve-right, 0px)) / 2);
 }
+
+/* 戰術庫：模擬中 */
+.lib-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  color: #c9ccd3;
+  font-size: 15px;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #3a3d45;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* 推薦卡片上的預期評等 */
+.play-item__grade {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--grade, #888);
+  color: #1b1b1f;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+
+.play-item__grade[data-grade='S'] { --grade: #ffd54f; }
+.play-item__grade[data-grade='A'] { --grade: #81c784; }
+.play-item__grade[data-grade='B'] { --grade: #64b5f6; }
+.play-item__grade[data-grade='C'] { --grade: #ffb74d; }
+.play-item__grade[data-grade='D'] { --grade: #e57373; }

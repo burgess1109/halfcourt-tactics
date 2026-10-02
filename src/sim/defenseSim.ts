@@ -121,6 +121,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
       const seenPos = poseAt(tactic, timeline, seen).positions;
       const seenHolder = ballHolderAt(tactic, timeline, seen);
       const now = poseAt(tactic, timeline, t).positions;
+      // 含延遲中換防的預計對位；每一格算一次就好
+      const projected = pendingSwaps.length ? applySwaps(assign, pendingSwaps) : assign;
 
       for (const r of reds) {
         if (t < (frozenUntil[r.id] ?? 0)) continue;
@@ -147,7 +149,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         // 掩護：掩護者已經到位，而且擋在防守者要去的方向上
         screens.forEach((sc, idx) => {
           // 自己（含延遲中即將換到）盯的人是掩護者時，不算被掩護
-          if (sc.screenerId === man || sc.screenerId === applySwaps(assign, pendingSwaps)[r.id] || t < sc.setAt) return;
+          if (sc.screenerId === man || sc.screenerId === projected[r.id] || t < sc.setAt) return;
           // 每個掩護只觸發一次：換防後，接手的防守者經過同一個掩護時不會再換回來
           if (handled.has(idx)) return;
           const sp = now[sc.screenerId]!;

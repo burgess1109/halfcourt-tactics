@@ -29,7 +29,7 @@ function buildPaths(frame: Frame, data: PlayFrame, roles: RoleAssignment): void 
  * 把內建戰術載入成一份新的戰術（複本，SPEC §6.3：不會改到內建戰術）。
  * 沿用 base 的球員、對位與掩護應對設定。
  */
-export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment): Tactic {
+export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment, opts: { defense?: boolean } = {}): Tactic {
   const tactic: Tactic = structuredClone(base);
   tactic.id = newId();
   tactic.name = '';
@@ -41,14 +41,17 @@ export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment): Tacti
   const holder = roles[play.ball];
   start[BALL_ID] = { x: start[holder]!.x + BALL_HOLD_OFFSET.x, y: start[holder]!.y + BALL_HOLD_OFFSET.y };
   tactic.frames = [{ start, ballHolderId: holder, paths: [] }];
-  syncFrames(tactic, false);
+  // 建分鏡時只需要藍隊的位置；紅隊的防守模擬最後算一次就好（每個分鏡都算會很慢）
+  const fast = { defense: false };
+  syncFrames(tactic, false, fast);
 
   play.frames.forEach((data, i) => {
-    if (i > 0) insertFrameAfter(tactic, i - 1);
+    if (i > 0) insertFrameAfter(tactic, i - 1, fast);
     buildPaths(tactic.frames[i]!, data, roles);
-    syncFrames(tactic, false);
+    syncFrames(tactic, false, fast);
   });
-  const removed = syncFrames(tactic, true);
+  // defense: false 時連最後的紅隊位置都不算（只用來評分時，評分會自己跑一次完整模擬）
+  const removed = syncFrames(tactic, true, opts);
   if (removed > 0) throw new Error(`戰術 ${play.id} 有 ${removed} 條路線不成立`);
   tactic.updatedAt = Date.now();
   return tactic;

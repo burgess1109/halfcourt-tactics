@@ -1,7 +1,9 @@
 import { RATING_LABEL, SKILL_LABEL, heightOf, skillsOf, speedOf } from '../model/physique';
-import type { Player, Skills, Tactic } from '../model/types';
+import { simulate } from '../anim/simulation';
+import { evaluate } from '../sim/evaluate';
+import type { Grade, Player, Skills, Tactic } from '../model/types';
 import { PLAYS, ROLES, type Play, type Role, type RoleWeights } from './library';
-import type { RoleAssignment } from './instantiate';
+import { loadPlay, type RoleAssignment } from './instantiate';
 
 // 推薦演算法（SPEC §6.3）：完全決定性。
 // - 外線投射、禁區終結、單打：直接用能力等級（0–4 分）
@@ -88,9 +90,38 @@ export function scoreAssignment(tactic: Tactic, play: Play, roles: RoleAssignmen
 export interface Recommendation {
   play: Play;
   roles: RoleAssignment;
-  /** 0–4，2 = 平均 */
+  /** 適合度 0–4，2 = 平均（只看能力與權重，用來決定角色分配） */
   score: number;
   reason: string;
+  /** 用這個角色分配實際模擬後的預期得分與評等（有跑過模擬才有） */
+  expectedPoints?: number;
+  grade?: Grade;
+}
+
+/** 用推薦的角色分配實際模擬、評分一次；評分自己跑完整模擬，所以載入時不必先算紅隊位置 */
+export function withSimulation(tactic: Tactic, rec: Recommendation): Recommendation {
+  const loaded = loadPlay(tactic, rec.play, rec.roles, { defense: false });
+  const e = evaluate(loaded, simulate(loaded));
+  return { ...rec, expectedPoints: e.expectedPoints, grade: e.grade };
+}
+
+/** 依預期得分排序；同分時看適合度，再維持戰術庫順序 */
+export function sortBySimulation(list: readonly Recommendation[]): Recommendation[] {
+  const order = (r: Recommendation) => PLAYS.indexOf(r.play);
+  return [...list].sort(
+    (a, b) =>
+      (b.expectedPoints ?? 0) - (a.expectedPoints ?? 0) || b.score - a.score || order(a) - order(b),
+  );
+}
+
+/** 推薦（SPEC §6.3）：角色分配看適合度，排序看實際模擬的預期得分 */
+export function rankBySimulation(tactic: Tactic): Recommendation[] {
+  return sortBySimulation(PLAYS.map((play) => withSimulation(tactic, bestAssignment(tactic, play))));
+}
+
+/** 推薦結果只和球員、對位、掩護應對有關（和目前畫的路線無關），用來快取 */
+export function recommendationKey(tactic: Tactic): string {
+  return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense });
 }
 
 /** 這套戰術最適合的角色分配；同分時取排列順序在前的 */
@@ -112,8 +143,12 @@ export function rankPlays(tactic: Tactic): Recommendation[] {
     .map((x) => x.r);
 }
 
-export function recommend(tactic: Tactic, count = RECOMMEND_COUNT): Recommendation[] {
-  return rankPlays(tactic).slice(0, count);
+export function recommend(
+  tactic: Tactic,
+  count = RECOMMEND_COUNT,
+  ranked: readonly Recommendation[] = rankBySimulation(tactic),
+): Recommendation[] {
+  return ranked.slice(0, count);
 }
 
 // ---- 球隊總評（SPEC §6.3） ----
@@ -152,8 +187,8 @@ function strengthLabel(tactic: Tactic, blue: Player, key: WeightKey): string {
   return `${SKILL_LABEL[key]}「${RATING_LABEL[skillsOf(blue)[key]]}」`;
 }
 
-export function teamSummary(tactic: Tactic): TeamSummary {
-  const ranked = rankPlays(tactic);
+/** ranked 預設為依預期得分排序的結果，總評的「最適合的戰術」才會跟推薦清單一致 */
+export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = rankBySimulation(tactic)): TeamSummary {
   const keys: WeightKey[] = ['shooting', 'finishing', 'iso', 'speed', 'height'];
   const strengths: Strength[] = [];
 
@@ -185,7 +220,7 @@ export function teamSummary(tactic: Tactic): TeamSummary {
       const secondName = playerLabel(tactic.players.find((p) => p.id === second.playerId)!);
       advice += `，${secondName} 的${second.style}當第二選擇`;
     }
-    advice += `。最適合的戰術是「${top.play.category}-${top.play.name}」。`;
+    advice += `。最適合的戰術是「${top.play.category}-${top.play.name}」${top.grade ? `（預期 ${top.grade}）` : ''}。`;
   }
   return { strengths, advice };
 }
