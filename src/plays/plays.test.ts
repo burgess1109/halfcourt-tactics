@@ -3,6 +3,8 @@ import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds, screensOf } from 
 import { createDefaultTactic } from '../model/defaults';
 import { MAX_FRAMES } from '../model/frames';
 import { simulateDefense } from '../sim/defenseSim';
+import { THREE_POINT_RADIUS } from '../court/fiba';
+import { RIM } from '../model/paths';
 import { PLAYS } from './library';
 import { loadPlay } from './instantiate';
 
@@ -40,6 +42,21 @@ describe('內建戰術庫', () => {
       });
     });
   }
+
+  it('出手說明寫的分數和實際出手位置一致（弧外 2 分、弧內 1 分）', () => {
+    for (const play of PLAYS) {
+      const t = loadPlay(createDefaultTactic(), play, roles);
+      const last = t.frames.at(-1)!;
+      const shot = last.paths.find((p) => p.kind === 'shot')!;
+      const pos = last.start[shot.actorId]!;
+      const beyondArc = Math.hypot(pos.x - RIM.x, pos.y - RIM.y) > THREE_POINT_RADIUS;
+      const note = play.frames.at(-1)!.note;
+      expect(note, `${play.id}：${note}`).toContain(beyondArc ? '（2 分）' : '（1 分）');
+      if (beyondArc) expect(note, play.id).toContain('弧外');
+    }
+    // 移動說明也統一用「弧外」，不混用「三分線外」
+    for (const play of PLAYS) for (const f of play.frames) expect(f.note, play.id).not.toContain('三分線');
+  });
 
   it('載入不會改到內建戰術資料', () => {
     const before = JSON.stringify(PLAYS);

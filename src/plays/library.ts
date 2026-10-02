@@ -1,7 +1,8 @@
 import type { PathKind, Skills, Vec2 } from '../model/types';
 
 // 內建戰術庫（SPEC §6.3）。每套戰術用三個角色 A / B / C 描述，載入時再換成實際球員。
-// 座標單位為公尺：原點在底線中點，籃框在 (0, 1.575)，三分線半徑 6.75。
+// 座標單位為公尺：原點在底線中點，籃框在 (0, 1.575)，弧線（三分線）半徑 6.75。
+// 用詞：3x3 規則弧內 1 分、弧外 2 分，說明一律寫「弧內 / 弧外」。
 
 export type Role = 'A' | 'B' | 'C';
 export const ROLES: readonly Role[] = ['A', 'B', 'C'];
@@ -80,7 +81,7 @@ export const PLAYS: readonly Play[] = [
           { kind: 'cut', actor: 'B', to: { x: 1.0, y: 2.8 } },
         ],
       },
-      { note: 'A 急停跳投（弧內，1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
+      { note: 'A 在弧內急停跳投（1 分）。', paths: [{ kind: 'shot', actor: 'A' }] },
     ],
     finisher: 'A',
     finish: 'A 擋拆後急停跳投',
@@ -143,7 +144,7 @@ export const PLAYS: readonly Play[] = [
     frames: [
       HIGH_PICK_SET,
       {
-        note: 'A 從 B 外側繞過掩護往右運球，吸引防守；B 先站住擋人，再往左外彈到三分線外。',
+        note: 'A 從 B 外側繞過掩護往右運球，吸引防守；B 先站住擋人，再往左外彈到弧外。',
         paths: [
           { kind: 'dribble', actor: 'A', to: { x: 3.4, y: 5.6 }, via: [AROUND_SCREEN] },
           { kind: 'cut', actor: 'B', to: { x: -1.6, y: 8.6 } },
@@ -296,7 +297,7 @@ export const PLAYS: readonly Play[] = [
         paths: [{ kind: 'screen', actor: 'B', to: { x: -2.0, y: 3.2 } }],
       },
       {
-        note: 'C 繞過掩護往左翼跑到三分線外，A 配合時機傳球；B 先站住擋人，再往禁區卡位。',
+        note: 'C 繞過掩護往左翼跑到弧外，A 配合時機傳球；B 先站住擋人，再往禁區卡位。',
         paths: [
           { kind: 'cut', actor: 'C', to: { x: -5.4, y: 6.2 }, via: [{ x: -3.8, y: 4.4 }] },
           { kind: 'cut', actor: 'B', to: { x: -0.6, y: 3.4 } },
@@ -366,7 +367,7 @@ export const PLAYS: readonly Play[] = [
     ],
     finisher: 'A',
     finish: 'A 交叉掩護後外彈投籃（C 切入是第二選擇）',
-    weights: { A: { shooting: 3 }, B: { height: 2 }, C: { finishing: 1 } },
+    weights: { A: { shooting: 3 }, B: { height: 2 }, C: { finishing: 1, speed: 1 } },
   },
   {
     id: 'dho-drive',
@@ -422,7 +423,7 @@ export const PLAYS: readonly Play[] = [
           { kind: 'screen', actor: 'A', to: { x: 2.6, y: 6.1 } },
         ],
       },
-      { note: 'B 在弧頂投籃（2 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
+      { note: 'B 在弧頂的弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'B' }] },
     ],
     finisher: 'B',
     finish: 'B 繞過 A 到弧頂投籃',
