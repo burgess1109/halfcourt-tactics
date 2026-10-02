@@ -12,6 +12,8 @@ export class Playback {
   private startedAt = 0;
   /** 每一格回報目前時間，給 HUD 用 */
   onTick: (t: number, total: number) => void = () => {};
+  /** 完整播完（不是中途按停止）時呼叫，給評分用 */
+  onFinished: (sim: Simulation) => void = () => {};
 
   constructor(
     private readonly store: Store,
@@ -68,7 +70,10 @@ export class Playback {
     if (!sim) return;
     const t = this.elapsed();
     this.render(Math.min(t, sim.timeline.total));
-    if (t >= sim.timeline.total + END_HOLD_SECONDS) this.stop();
+    if (t >= sim.timeline.total + END_HOLD_SECONDS) {
+      this.stop();
+      this.onFinished(sim);
+    }
     else this.raf = requestAnimationFrame(this.tick);
   };
 }

@@ -494,8 +494,8 @@ export const PLAYS: readonly Play[] = [
     ball: 'A',
     frames: [
       {
-        note: 'B 從罰球線右側往下，到右側低位要位。',
-        paths: [{ kind: 'cut', actor: 'B', to: { x: 2.7, y: 2.6 } }],
+        note: 'B 從罰球線右側往下，到右側低位（禁區內）要位。',
+        paths: [{ kind: 'cut', actor: 'B', to: { x: 2.2, y: 2.6 } }],
       },
       { note: 'A 把球傳進低位的 B。', paths: [{ kind: 'pass', actor: 'A', target: 'B' }] },
       {

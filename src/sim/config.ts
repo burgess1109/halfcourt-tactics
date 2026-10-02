@@ -60,3 +60,37 @@ export const BEATEN_MARGIN = 0.3;
  * 只是往籃下走（例如要位）、防守者還在旁邊時，不算被甩開。
  */
 export const BEATEN_COS = -0.5;
+
+// ---- 評分（SPEC §6.4、§7.2） ----
+
+/** 空檔命中率，依能力等級 0（劣勢）→ 4（優勢） */
+export const PAINT_RATE = [0.4, 0.48, 0.55, 0.62, 0.7] as const; // 禁區（禁區終結）
+export const MID_RATE = [0.3, 0.35, 0.4, 0.45, 0.5] as const; // 中距離（外線投射）
+export const THREE_RATE = [0.23, 0.28, 0.33, 0.37, 0.42] as const; // 弧外（外線投射）
+
+/** 最近的防守者在這個距離以外，就算完全空檔（公尺） */
+export const OPEN_DISTANCE = 3.0;
+/** 防守者貼身（BODY_DISTANCE）時，命中率剩下的比例 */
+export const CONTESTED_FACTOR = 0.5;
+/** 防守者在出手者身後（已被甩開）時，干擾距離多算這麼多（公尺） */
+export const TRAILING_BONUS = 1.0;
+/** 防守者每比出手者高 1 cm，干擾範圍多這麼多（公尺） */
+export const HEIGHT_REACH_PER_CM = 0.02;
+/** 出手前有運球時，依單打能力額外拉開的距離（公尺），0（劣勢）→ 4（優勢） */
+export const ISO_SEPARATION = [0, 0.15, 0.3, 0.45, 0.6] as const;
+
+/**
+ * 評等門檻（預期得分），由高到低。依 18 套戰術的實測結果校正（SPEC §6.4）：
+ * 平均能力的人空檔投弧外 ≈ 0.66（A）、甩開防守者上籃 ≈ 0.49（B）、被貼身干擾 < 0.36（D）。
+ */
+export const GRADE_THRESHOLDS = [
+  { grade: 'S', min: 0.75 },
+  { grade: 'A', min: 0.6 },
+  { grade: 'B', min: 0.48 },
+  { grade: 'C', min: 0.36 },
+] as const;
+
+/** 其他人比出手者多這麼多預期得分，才列為「更好的選擇」 */
+export const BETTER_OPTION_MARGIN = 0.1;
+/** 兩名藍隊球員距離小於這個值（公尺），算擠壓空間 */
+export const SPACING_DISTANCE = 3.0;

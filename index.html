@@ -80,6 +80,17 @@
         <canvas id="court" aria-label="半場球場，可以拖曳藍隊球員與球"></canvas>
         <div id="board-title" class="board-title" hidden></div>
         <div id="hud" class="hud" aria-live="polite"></div>
+        <section id="result" class="result" aria-labelledby="result-grade" hidden>
+          <div class="result__head">
+            <div id="result-grade" class="result__grade">A</div>
+            <div class="result__summary">
+              <div id="result-points" class="result__points"></div>
+              <div class="result__hint">點評價可以跳到該分鏡</div>
+            </div>
+            <button id="result-close" class="result__close" type="button" data-tip="關閉評分" aria-label="關閉評分">✕</button>
+          </div>
+          <ol id="result-comments" class="result__comments"></ol>
+        </section>
       </main>
 
       <!-- 直式在下方，橫式在右側 -->

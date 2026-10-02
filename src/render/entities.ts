@@ -70,6 +70,21 @@ export function drawPlayerLabel(
   ctx.shadowColor = 'transparent';
 }
 
+/** 點評價時標示的球員：外圍一圈白色光圈 */
+export function drawHighlight(ctx: CanvasRenderingContext2D, vp: Viewport, pos: Vec2): void {
+  const c = toScreen(vp, pos);
+  const r = PLAYER_RADIUS * vp.scale;
+  ctx.save();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  ctx.shadowColor = 'rgba(255,255,255,0.9)';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, r * 1.45, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** 被掩護卡住的防守者：外圍一圈黃色光暈 */
 export function drawStuck(ctx: CanvasRenderingContext2D, vp: Viewport, pos: Vec2): void {
   const c = toScreen(vp, pos);

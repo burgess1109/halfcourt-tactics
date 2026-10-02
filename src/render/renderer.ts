@@ -3,7 +3,7 @@ import { ballPosition } from '../model/entities';
 import type { EditorState } from '../model/store';
 import { BALL_ID } from '../model/types';
 import { drawCourt } from './court';
-import { drawBall, drawPlayer, drawPlayerLabel, drawStuck } from './entities';
+import { drawBall, drawHighlight, drawPlayer, drawPlayerLabel, drawStuck } from './entities';
 import { drawGhost, drawHandles, drawPath } from './paths';
 import { isMovement, pathHandles, resolvePoints } from '../model/paths';
 import { fitViewport, type Viewport } from './viewport';
@@ -82,6 +82,7 @@ export class Renderer {
     for (const p of players) {
       const pos = positionOf(p.id);
       if (pos && pose?.stuck.has(p.id)) drawStuck(ctx, this.viewport, pos);
+      if (pos && !pose && state.highlightIds.includes(p.id)) drawHighlight(ctx, this.viewport, pos);
     }
     for (const p of players) {
       const pos = positionOf(p.id);

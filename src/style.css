@@ -48,9 +48,15 @@ body {
 
 #court {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  left: 0;
+  /*
+   * canvas 的大小一定要由 CSS 明確指定：只靠 inset 時，瀏覽器會改用 canvas 自己的像素大小，
+   * 而 Renderer 又依顯示大小設定像素大小，兩者互相放大會讓頁面當掉。
+   * 評分卡片打開時，用這兩個變數讓出右側或下方的空間。
+   */
+  width: calc(100% - var(--reserve-right, 0px));
+  height: calc(100% - var(--reserve-bottom, 0px));
   display: block;
   touch-action: none;
 }
@@ -989,4 +995,121 @@ body[data-screen='board'] .app {
 
 .setup__body > .choice {
   max-width: 560px;
+}
+
+/* ---- 評分結果（SPEC §6.4、§6.5） ---- */
+.result {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(460px, calc(100% - 16px));
+  max-height: 46%;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(23, 25, 29, 0.96);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  transform: translateX(-50%);
+}
+
+.result__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.result__grade {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--grade, #888);
+  color: #1b1b1f;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.result__grade[data-grade='S'] { --grade: #ffd54f; }
+.result__grade[data-grade='A'] { --grade: #81c784; }
+.result__grade[data-grade='B'] { --grade: #64b5f6; }
+.result__grade[data-grade='C'] { --grade: #ffb74d; }
+.result__grade[data-grade='D'] { --grade: #e57373; }
+
+.result__summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.result__points {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.result__hint {
+  color: #9da2ad;
+  font-size: 12px;
+}
+
+.result__close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #2f323a;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.result__comments {
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result__comments button {
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #e3e5ea;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result__comments button:hover,
+.result__comments button:focus-visible {
+  background: #2a2d33;
+}
+
+@media (orientation: landscape) {
+  /* 橫式：評分卡片放在球場右側 */
+  .result {
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    left: auto;
+    width: min(320px, 45%);
+    max-height: none;
+    transform: none;
+  }
+}
+
+/* 評分卡片在右側時，戰術名稱與時間資訊跟著球場置中 */
+.board-title,
+.hud {
+  left: calc((100% - var(--reserve-right, 0px)) / 2);
 }

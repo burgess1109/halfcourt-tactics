@@ -19,7 +19,7 @@
 | `docs/PLAYS.md`、`docs/plays/*.svg` | 18 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：改 `src/plays/library.ts` 後執行 `npm run plays-doc` |
 
 - 行為改變時，要同步更新 `docs/SPEC.md`，並在 §14 決策紀錄加一列（被取代的舊決策用 `~~刪除線~~` 標註，不要直接刪掉）。
-- 里程碑狀態見 SPEC §13（M1–M6 已完成，M7 評分、M8 存檔分享、M9 防守模式）。
+- 里程碑狀態見 SPEC §13（M1–M7 已完成，M8 存檔分享、M9 防守模式）。
 
 ## 常用指令
 
@@ -51,6 +51,7 @@ src/
     config.ts        所有模擬係數（距離、反應時間、掩護、阻絕…）集中在這裡
     defense.ts       防守位置：人盯人、阻絕、被甩開只能從後面追
     defenseSim.ts    以 1/60 秒推進紅隊；掩護的換防 / 擠過
+    evaluate.ts      評分：區域、空檔程度、預期得分、評等、3–5 條評價
   anim/            時間軸與播放
     timeline.ts      藍隊依路線與速度移動、傳球時機、投籃、掩護者先站 0.5 秒
     simulation.ts    時間軸 + 防守模擬 = 完整姿態
@@ -61,7 +62,7 @@ src/
     recommend.ts     推薦演算法：能力 + 對位的身高差、速度差，6 種角色排列取最高分
   render/          Canvas 繪圖（球場離屏快取、球員、路線、分身、把手）
   input/pointer.ts 指標事件：拖曳、畫線、編輯控制點、點球員開設定
-  ui/              DOM 介面：設定流程、戰術庫面板、工具列、分鏡列、HUD、選單、提示
+  ui/              DOM 介面：設定流程、戰術庫面板、評分卡片、工具列、分鏡列、HUD、選單、提示
 scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 ```
 
@@ -78,6 +79,7 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - **係數**：模擬、速度相關的數字放在 `sim/config.ts` 或 `model/physique.ts`，不要散落在邏輯裡。
 - **介面文字**：繁體中文；狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`。
 - **按鈕提示**：用 `data-tip`（`ui/tooltip.ts` 的 `setTip` 可動態更新），不要用 `title`，否則會和自訂提示重複出現；有快捷鍵的寫在括號裡。
+- **canvas 大小一定要由 CSS 明確指定**（`width` / `height`）：只靠 `inset` 時瀏覽器會用 canvas 自己的像素大小，而 Renderer 依顯示大小設定像素大小，兩者互相放大會讓頁面當掉。要讓位給其他介面時，改 `#stage` 上的 `--reserve-right` / `--reserve-bottom`。
 - **分鏡圖 SVG**：必須是嚴格合法的 XML，不能有重複屬性、不能用 `rgba()`（PhpStorm 的 SVG 檢視器會載入失敗），有測試把關。
 
 ## Code review 重點

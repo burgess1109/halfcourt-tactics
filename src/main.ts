@@ -7,6 +7,7 @@ import { Renderer } from './render/renderer';
 import { attachFrames } from './ui/frames';
 import { attachHud } from './ui/hud';
 import { attachLibrary } from './ui/library';
+import { attachResult } from './ui/result';
 import { attachSetup } from './ui/setup';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
@@ -14,7 +15,6 @@ import { attachTooltips, setTip } from './ui/tooltip';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
-const stage = $<HTMLElement>('#stage');
 const canvas = $<HTMLCanvasElement>('#court');
 
 attachTooltips();
@@ -44,11 +44,12 @@ function requestDraw(): void {
 }
 
 function resize(): void {
-  renderer.resize(stage.clientWidth, stage.clientHeight);
+  // 用 canvas 本身的大小：評分卡片打開時，canvas 會讓出空間給卡片
+  renderer.resize(canvas.clientWidth, canvas.clientHeight);
   requestDraw();
   playback.redraw();
 }
-new ResizeObserver(resize).observe(stage);
+new ResizeObserver(resize).observe(canvas);
 
 // 螢幕的 devicePixelRatio 改變時（例如視窗拖到另一個螢幕）要重建快取。
 // 每個 media query 只對應一個 dpr，所以觸發後要用新的值重新監聽。
@@ -74,6 +75,8 @@ attachToolbar(store, notify);
 attachFrames(store, notify);
 const hud = attachHud($('#hud'), store);
 playback.onTick = hud.playing;
+const result = attachResult(store);
+playback.onFinished = (sim) => result.show(sim);
 
 const library = attachLibrary(store, {
   onLoaded: () => playback.start(),

@@ -20,6 +20,8 @@ export interface EditorState {
   draft: Draft | null;
   /** 播放中：禁止編輯 */
   playing: boolean;
+  /** 點評價時在場上標示的球員 */
+  highlightIds: string[];
 }
 
 type Listener = (state: EditorState) => void;
@@ -46,6 +48,7 @@ export class Store {
     selectedPathId: null,
     draft: null,
     playing: false,
+    highlightIds: [],
   };
   /** 顯示提示訊息（由 main 接上 toast） */
   notify: (message: string) => void = () => {};
