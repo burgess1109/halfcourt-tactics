@@ -19,7 +19,7 @@
 | `docs/PLAYS.md`、`docs/plays/*.svg` | 18 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：改 `src/plays/library.ts` 後執行 `npm run plays-doc` |
 
 - 行為改變時，要同步更新 `docs/SPEC.md`，並在 §14 決策紀錄加一列（被取代的舊決策用 `~~刪除線~~` 標註，不要直接刪掉）。
-- 里程碑狀態見 SPEC §13（M1–M5 已完成，M6 戰術庫與推薦、M7 評分、M8 存檔分享、M9 防守模式）。
+- 里程碑狀態見 SPEC §13（M1–M6 已完成，M7 評分、M8 存檔分享、M9 防守模式）。
 
 ## 常用指令
 
@@ -57,9 +57,10 @@ src/
   plays/           內建戰術庫
     library.ts       18 套戰術，用角色 A / B / C 描述
     instantiate.ts   loadPlay：依角色指派載入成戰術「複本」（不會改到內建資料）
+    recommend.ts     推薦演算法：能力 + 對位的身高差、速度差，6 種角色排列取最高分
   render/          Canvas 繪圖（球場離屏快取、球員、路線、分身、把手）
   input/pointer.ts 指標事件：拖曳、畫線、編輯控制點、點球員開設定
-  ui/              DOM 介面：設定流程、工具列、分鏡列、HUD、選單、提示
+  ui/              DOM 介面：設定流程、戰術庫面板、工具列、分鏡列、HUD、選單、提示
 scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 ```
 

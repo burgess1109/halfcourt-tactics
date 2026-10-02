@@ -6,6 +6,7 @@ import { Store } from './model/store';
 import { Renderer } from './render/renderer';
 import { attachFrames } from './ui/frames';
 import { attachHud } from './ui/hud';
+import { attachLibrary } from './ui/library';
 import { attachSetup } from './ui/setup';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
@@ -72,6 +73,13 @@ attachFrames(store, notify);
 const hud = attachHud($('#hud'), store);
 playback.onTick = hud.playing;
 
+const library = attachLibrary(store, {
+  onLoaded: () => playback.start(),
+  notify,
+  openSetup: () => setup.open(1),
+});
+$<HTMLButtonElement>('#library').addEventListener('click', () => library.open());
+
 $<HTMLButtonElement>('#mode-offense').addEventListener('click', () => setup.open(1));
 $<HTMLButtonElement>('#team').addEventListener('click', () => setup.open(1));
 
@@ -95,7 +103,7 @@ store.subscribe((s) => {
   playBtn.title = s.playing ? '停止' : '播放';
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key !== ' ' || document.body.dataset.screen !== 'board') return;
+  if (e.key !== ' ' || document.body.dataset.screen !== 'board' || document.querySelector('dialog[open]')) return;
   if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement) return;
   e.preventDefault();
   togglePlay();

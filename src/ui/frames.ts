@@ -54,7 +54,7 @@ export function attachFrames(store: Store, notify: (message: string) => void): v
 
   // ←/→ 切換分鏡
   document.addEventListener('keydown', (e) => {
-    if (document.body.dataset.screen !== 'board' || store.get().playing) return;
+    if (document.body.dataset.screen !== 'board' || store.get().playing || document.querySelector('dialog[open]')) return;
     if (e.target instanceof HTMLInputElement) return;
     if (e.key === 'ArrowLeft') go(-1);
     else if (e.key === 'ArrowRight') go(1);

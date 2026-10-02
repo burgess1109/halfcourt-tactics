@@ -55,6 +55,9 @@
         <button class="tool" type="button" title="戰術列表" aria-label="戰術列表" disabled>
           <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
         </button>
+        <button id="library" class="tool" type="button" title="戰術庫" aria-label="戰術庫">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 7h7M9 11h5"/></svg>
+        </button>
         <button id="play" class="tool" type="button" title="播放" aria-label="播放">
           <svg viewBox="0 0 24 24"><use href="#icon-play"/></svg>
         </button>
@@ -75,6 +78,7 @@
 
       <main id="stage" class="stage">
         <canvas id="court" aria-label="半場球場，可以拖曳藍隊球員與球"></canvas>
+        <div id="board-title" class="board-title" hidden></div>
         <div id="hud" class="hud" aria-live="polite"></div>
       </main>
 
@@ -135,6 +139,14 @@
         <svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>刪除這個分鏡
       </button>
     </div>
+
+    <dialog id="library-dialog" class="panel" aria-labelledby="library-title">
+      <div class="panel__head">
+        <h2 id="library-title" class="panel__title">戰術庫</h2>
+        <button id="library-close" class="btn" type="button">關閉</button>
+      </div>
+      <div id="library-body" class="panel__body"></div>
+    </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 

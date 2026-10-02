@@ -77,10 +77,27 @@ export class Store {
     const removed = syncFrames(this.state.tactic, true);
     if (removed > 0) this.notify(`球換人持有，移除了 ${removed} 條運球 / 傳球 / 投籃路線`);
     if (p && JSON.stringify(this.state.tactic) !== p.json) {
-      this.state.tactic.updatedAt = Date.now();
+      const t = this.state.tactic;
+      // 從內建戰術載入後，動到分鏡就算「已修改」（SPEC §6.3：不會改寫內建戰術）
+      if (t.basedOn && t.id === p.snapshot.id && JSON.stringify(t.frames) !== JSON.stringify(p.snapshot.frames)) {
+        t.basedOn.modified = true;
+      }
+      t.updatedAt = Date.now();
       this.history.push(p.snapshot);
     }
     this.emit();
+  }
+
+  /** 換成另一份戰術（例如載入內建戰術）；算一步，可以復原回原本的戰術 */
+  load(tactic: Tactic): void {
+    this.begin();
+    const s = this.state;
+    s.tactic = tactic;
+    s.frameIndex = 0;
+    s.selectedPathId = null;
+    s.draft = null;
+    s.draggingId = null;
+    this.end();
   }
 
   undo(): void {
