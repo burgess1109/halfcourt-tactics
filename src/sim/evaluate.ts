@@ -129,6 +129,8 @@ export function gradeOf(expectedPoints: number): Grade {
 
 export interface Comment {
   text: string;
+  /** 重要性：數字越小越重要；超過 5 條時先保留重要的（顯示仍依加入順序） */
+  priority?: number;
   /** 點擊後跳到哪個分鏡 */
   frameIndex: number;
   /** 要在場上標示的球員 */
@@ -156,6 +158,28 @@ const label = (players: readonly Player[], id: string) => {
   const p = players.find((x) => x.id === id)!;
   return `${p.number} 號 ${p.name}`;
 };
+
+/** 這位球員在 frameIndex 之前（含）最近的一條路線是掩護：設完掩護後留在原地也算還在擋人 */
+export function isScreening(tactic: Tactic, playerId: string, frameIndex: number): boolean {
+  for (let i = Math.min(frameIndex, tactic.frames.length - 1); i >= 0; i--) {
+    const path = tactic.frames[i]!.paths.find((p) => p.actorId === playerId);
+    if (path) return path.kind === 'screen';
+  }
+  return false;
+}
+
+/** 最多 5 條：依重要性挑選，再依原本的順序顯示 */
+export const MAX_COMMENTS = 5;
+export function pickComments(all: readonly Comment[]): Comment[] {
+  const keep = new Set(
+    all
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => (a.c.priority ?? 9) - (b.c.priority ?? 9) || a.i - b.i)
+      .slice(0, MAX_COMMENTS)
+      .map((x) => x.c),
+  );
+  return all.filter((c) => keep.has(c)).map(({ priority: _p, ...c }) => c);
+}
 
 /** 出手者在出手前那個分鏡（或出手的分鏡）有沒有運球 */
 function dribbledBefore(tactic: Tactic, playerId: string, frameIndex: number): boolean {
@@ -195,6 +219,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     text: `${shotPath ? '' : '這套戰術沒有投籃，系統挑最好的出手評分：'}第 ${releaseFrame + 1} 分鏡，${name(shot.playerId)} 在${ZONE_LABEL[shot.zone]}出手（${shot.points} 分），${space}，預期得分 ${fmt(shot.expectedPoints)}`,
     frameIndex: releaseFrame,
     playerIds: [shot.playerId, shot.defenderId],
+    priority: 0,
   });
 
   // 2. 時間
@@ -203,6 +228,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
       text: `第 ${possessionSeconds(timeline).toFixed(1)} 秒才出手，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限，違例不計分`,
       frameIndex: releaseFrame,
       playerIds: [shot.playerId],
+      priority: 1,
     });
   }
 
@@ -216,22 +242,24 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
         text: `其實 ${name(better.playerId)} 在${ZONE_LABEL[better.zone]}更空（${better.defenderBehind ? '防守者在身後' : `最近的防守者 ${better.defenderDistance.toFixed(1)} m`}），傳給他預期得分 ${fmt(better.expectedPoints)}`,
         frameIndex: releaseFrame,
         playerIds: [better.playerId],
+        priority: 3,
       });
     }
   }
 
-  // 4. 掩護成效
-  for (const e of defense.events) {
+  // 4. 掩護成效（只算出手之前的掩護）
+  for (const e of defense.events.filter((x) => x.t <= releaseAt)) {
     const fi = frameIndexAt(timeline, e.t);
     if (e.type === 'fight-over') {
       comments.push({
         text: `第 ${fi + 1} 分鏡，${name(e.screenerId)} 的掩護擋住 ${name(e.defenderId)} ${e.delay.toFixed(2)} 秒`,
         frameIndex: fi,
         playerIds: [e.screenerId, e.defenderId],
+        priority: 4,
       });
     } else if (e.partnerId) {
-      // 換防後的錯位：被掩護的人（原本由 defenderId 盯）改由 partnerId 盯
-      const after = defense.finalAssignments;
+      // 換防後的錯位：用「這次換防之後」的對位，不受之後再換防影響
+      const after = e.assignmentsAfter ?? defense.finalAssignments;
       const mismatch = Object.entries(after)
         .map(([redId, blueId]) => {
           const blue = players.find((p) => p.id === blueId)!;
@@ -250,12 +278,15 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
         text: `第 ${fi + 1} 分鏡，${name(e.screenerId)} 的掩護逼對方換防${detail}`,
         frameIndex: fi,
         playerIds: mismatch && mismatch.edge >= 1 ? [mismatch.blueId, mismatch.redId] : [e.screenerId, e.defenderId],
+        priority: 4,
       });
     }
   }
 
-  // 5. 空間配置：出手那一刻，兩名藍隊球員太近（排除出手者與正在掩護的人）
-  const screeners = new Set(tactic.frames[releaseFrame - 1]?.paths.filter((p) => p.kind === 'screen').map((p) => p.actorId));
+  // 5. 空間配置：出手那一刻，兩名藍隊球員太近。
+  // 排除正在掩護的人（最近一條路線是掩護，之後留在原地繼續擋人也算）；
+  // 出手者不排除：隊友擠在出手者旁邊，一個防守者就能同時照顧兩人，這也該提醒。
+  const screeners = new Set(blues.filter((b) => isScreening(tactic, b.id, releaseFrame)).map((b) => b.id));
   for (let i = 0; i < blues.length; i++) {
     for (let j = i + 1; j < blues.length; j++) {
       const a = blues[i]!.id;
@@ -267,6 +298,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
           text: `第 ${releaseFrame + 1} 分鏡，${name(a)} 和 ${name(b)} 只距離 ${d.toFixed(1)} m，空間太擠，一個防守者就能同時照顧兩人`,
           frameIndex: releaseFrame,
           playerIds: [a, b],
+          priority: 5,
         });
       }
     }
@@ -280,6 +312,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     text: `${name(shot.playerId)} 的${skillName}「${RATING_LABEL[skillValue]}」，${ZONE_LABEL[shot.zone]}空檔命中率 ${Math.round(shot.baseRate * 100)}%${finalRate < shot.baseRate - 0.005 ? `，受干擾後剩 ${Math.round(finalRate * 100)}%` : ''}${mismatchText(shot)}`,
     frameIndex: releaseFrame,
     playerIds: [shot.playerId],
+    priority: 2,
   });
 
   // 7. 出手時間（違例已在前面說明）
@@ -288,6 +321,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
       text: `第 ${possessionSeconds(timeline).toFixed(1)} 秒出手，在 ${SHOT_CLOCK_SECONDS} 秒進攻時限內`,
       frameIndex: releaseFrame,
       playerIds: [shot.playerId],
+      priority: 6,
     });
   }
 
@@ -298,6 +332,6 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     hasShot: !!shotPath,
     violation,
     releaseAt,
-    comments: comments.slice(0, 5),
+    comments: pickComments(comments),
   };
 }

@@ -29,6 +29,8 @@ export interface DefenseEvent {
   delay: number;
   /** 換防時，另一位防守者 */
   partnerId?: string;
+  /** 換防時，這次換防完成後的對位（紅隊 id → 藍隊 id）；之後再換防也不會影響 */
+  assignmentsAfter?: Record<string, string>;
 }
 
 export interface DefenseResult {
@@ -132,6 +134,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             const partner = reds.find((x) => assign[x.id] === sc.screenerId);
             frozenUntil[r.id] = t + SWITCH_DELAY;
             if (partner) pendingSwaps.push({ at: t + SWITCH_DELAY, a: r.id, b: partner.id });
+            const after = { ...assign };
+            if (partner) [after[r.id], after[partner.id]] = [assign[partner.id]!, assign[r.id]!];
             events.push({
               t,
               type: 'switch',
@@ -139,6 +143,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
               screenerId: sc.screenerId,
               delay: SWITCH_DELAY,
               partnerId: partner?.id,
+              assignmentsAfter: after,
             });
           }
         });

@@ -193,3 +193,61 @@ describe('身高錯位', () => {
     expect(e1.comments.map((c) => c.text).join('\n')).toContain('高 20 cm，干擾減少 80%');
   });
 });
+
+describe('review 修正', () => {
+  const run = (t: Tactic) => evaluate(t, simulate(t));
+
+  it('1. 掩護者留在原地繼續擋人，不算空間太擠（Paint Shot）', () => {
+    const t = loadPlay(createDefaultTactic(), PLAYS.find((p) => p.id === 'low-pnr-paint')!, roles);
+    expect(run(t).comments.some((c) => c.text.includes('空間太擠'))).toBe(false);
+  });
+
+  it('2. 換防的錯位說明用「那次換防之後」的對位', () => {
+    const t = loadPlay(createDefaultTactic(), PLAYS.find((p) => p.id === 'offball-post-split')!, roles);
+    const sim = simulate(t);
+    const switches = sim.defense.events.filter((e) => e.type === 'switch');
+    expect(switches.length).toBeGreaterThanOrEqual(2);
+    const [first, second] = switches;
+    // 第 1 次換防後的對位：只交換第 1 次的兩位防守者
+    expect(first!.assignmentsAfter![first!.defenderId]).toBe(first!.screenerId);
+    expect(first!.assignmentsAfter).not.toEqual(second!.assignmentsAfter);
+  });
+
+  it('3. 出手之後才發生的掩護不列入評價', () => {
+    const t = loadPlay(createDefaultTactic(), PLAYS.find((p) => p.id === 'offball-down')!, roles);
+    const sim = simulate(t);
+    const late = sim.timeline.shotReleaseAt! + 0.3;
+    sim.defense.events.push({ t: late, type: 'fight-over', defenderId: 'r1', screenerId: 'b1', delay: 0.5 });
+    expect(evaluate(t, sim).comments.some((c) => c.text.includes('1 號 球員 1 的掩護'))).toBe(false);
+  });
+
+  it('5. 評價超過 5 條時，命中率說明一定保留，顯示順序不變', async () => {
+    const { pickComments } = await import('./evaluate');
+    const make = (text: string, priority: number) => ({ text, frameIndex: 0, playerIds: [], priority });
+    const picked = pickComments([
+      make('出手', 0),
+      make('掩護 1', 4),
+      make('掩護 2', 4),
+      make('掩護 3', 4),
+      make('空間', 5),
+      make('命中率', 2),
+      make('時間', 6),
+    ]);
+    expect(picked.map((c) => c.text)).toEqual(['出手', '掩護 1', '掩護 2', '掩護 3', '命中率']);
+    expect(picked[0]).not.toHaveProperty('priority');
+  });
+});
+
+describe('4. 戰術一改就清掉上次的評分', () => {
+  it('lastResult 在下一次修改後被移除', async () => {
+    const { Store } = await import('../model/store');
+    const store = new Store();
+    store.update((s) => {
+      s.tactic.lastResult = { grade: 'A', expectedPoints: 0.66 };
+    });
+    store.commit((s) => {
+      s.tactic.frames[0]!.start.b2 = { x: -4, y: 7 };
+    });
+    expect(store.get().tactic.lastResult).toBeUndefined();
+  });
+});
