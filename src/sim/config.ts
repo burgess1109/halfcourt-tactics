@@ -75,8 +75,6 @@ export const THREE_RATE = [0.1, 0.22, 0.32, 0.39, 0.45] as const; // 弧外（�
 export const OPEN_DISTANCE = 3.0;
 /** 防守者貼身（BODY_DISTANCE）時，命中率剩下的比例 */
 export const CONTESTED_FACTOR = 0.5;
-/** 防守者在出手者身後（已被甩開）時，干擾距離多算這麼多（公尺） */
-export const TRAILING_BONUS = 1.0;
 /**
  * 身高錯位：出手者每比干擾他的防守者高 1 cm，干擾造成的命中率損失少 MISMATCH_PER_CM（禁區出手）；
  * 跳投（中距離、弧外）效果打 MISMATCH_JUMPSHOT_WEIGHT 折。

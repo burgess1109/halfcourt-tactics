@@ -18,7 +18,6 @@ import {
   PAINT_RATE,
   SPACING_DISTANCE,
   THREE_RATE,
-  TRAILING_BONUS,
 } from './config';
 
 // 評分（SPEC §6.4、§6.5）：完全決定性，只算期望值，不判定進不進。
@@ -80,21 +79,23 @@ export function shotValue(
   const baseRate = zone === 'paint' ? PAINT_RATE[skills.finishing] : zone === 'mid' ? MID_RATE[skills.shooting] : THREE_RATE[skills.shooting];
   const toRim = { x: RIM.x - at.x, y: RIM.y - at.y };
 
-  // 找干擾最大的防守者：距離越近、越在出手者前方、身高優勢越大，造成的命中率損失越多
+  // 找干擾最大的防守者：距離越近、身高優勢越大，造成的命中率損失越多。
+  // 在出手者身後（不在出手者與籃框之間）的防守者已經被甩開，追在後面不算干擾。
+  // 都沒有人干擾時，記下最近的防守者，評價才能說「對方追在身後幾公尺」。
   const span = OPEN_DISTANCE - BODY_DISTANCE;
   let best: { id: string; d: number; behind: boolean; openness: number; edge: number; mismatch: number; loss: number } | null = null;
   for (const red of players.filter((p) => p.team === 'red')) {
     const rp = positions[red.id]!;
     const d = dist(rp, at);
     const behind = (rp.x - at.x) * toRim.x + (rp.y - at.y) * toRim.y < 0;
-    let effective = d;
-    if (behind) effective += TRAILING_BONUS;
-    if (dribbled) effective += ISO_SEPARATION[skills.iso];
-    const openness = Math.min(1, Math.max(0, (effective - BODY_DISTANCE) / span));
+    const effective = d + (dribbled ? ISO_SEPARATION[skills.iso] : 0);
+    const openness = behind ? 1 : Math.min(1, Math.max(0, (effective - BODY_DISTANCE) / span));
     const edge = heightOf(shooter, players) - heightOf(red, players);
     const mismatch = mismatchEffect(edge, zone);
     const loss = (1 - CONTESTED_FACTOR) * (1 - openness) * (1 - mismatch);
-    if (!best || loss > best.loss) best = { id: red.id, d, behind, openness, edge, mismatch, loss };
+    if (!best || loss > best.loss + 1e-12 || (Math.abs(loss - best.loss) <= 1e-12 && d < best.d)) {
+      best = { id: red.id, d, behind, openness, edge, mismatch, loss };
+    }
   }
   const factor = 1 - best!.loss;
   const points = zone === 'three' ? 2 : 1;
@@ -211,8 +212,8 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   const fmt = (v: number) => v.toFixed(2);
 
   // 1. 出手
-  const space = shot.openness >= 1 ? `完全空檔（最近的防守者 ${shot.defenderDistance.toFixed(1)} m）`
-    : shot.defenderBehind ? `甩開防守者，對方追在身後 ${shot.defenderDistance.toFixed(1)} m`
+  const space = shot.defenderBehind ? `甩開防守者，對方都追在身後（最近 ${shot.defenderDistance.toFixed(1)} m），沒有人干擾`
+    : shot.openness >= 1 ? `完全空檔（最近的防守者 ${shot.defenderDistance.toFixed(1)} m）`
     : shot.openness <= 0.2 ? `被 ${name(shot.defenderId)} 貼身干擾`
     : `${name(shot.defenderId)} 在 ${shot.defenderDistance.toFixed(1)} m 外干擾`;
   comments.push({

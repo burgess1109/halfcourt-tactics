@@ -49,11 +49,29 @@ describe('單一出手的預期得分', () => {
     expect(v.expectedPoints).toBeCloseTo(PAINT_RATE[2] * CONTESTED_FACTOR);
   });
 
-  it('同樣距離，防守者在身後的干擾比較小', () => {
-    const front = shotValue(t, 'b1', positions({ x: 0, y: 4 }, { x: 0, y: 2.2 }), false);
-    const behind = shotValue(t, 'b1', positions({ x: 0, y: 4 }, { x: 0, y: 5.8 }), false);
+  it('防守者在身後（不在出手者與籃框之間）：就算貼得很近也不算干擾', () => {
+    const front = shotValue(t, 'b1', positions({ x: 0, y: 4 }, { x: 0, y: 2.7 }), false);
+    const behind = shotValue(t, 'b1', positions({ x: 0, y: 4 }, { x: 0, y: 5.3 }), false);
     expect(behind.defenderBehind).toBe(true);
-    expect(behind.expectedPoints).toBeGreaterThan(front.expectedPoints);
+    expect(behind.openness).toBe(1);
+    expect(behind.expectedPoints).toBeCloseTo(PAINT_RATE[2]);
+    expect(front.expectedPoints).toBeLessThan(behind.expectedPoints);
+  });
+
+  it('使用者回報的情況：切到籃下，三名防守者都在身後 → 完全不受干擾', () => {
+    const t2 = createDefaultTactic();
+    t2.players.find((p) => p.id === 'b1')!.skills!.finishing = 4;
+    const pos = {
+      b1: { x: -0.2, y: 2.3 },
+      b2: { x: -4.5, y: 7.5 },
+      b3: { x: 7, y: 7 },
+      r1: { x: -2.6, y: 5.6 }, // 身後偏左 1.3 m 以上
+      r2: { x: -0.4, y: 5.7 },
+      r3: { x: 5.2, y: 5.4 },
+    };
+    const v = shotValue(t2, 'b1', pos, false);
+    expect(v.defenderBehind).toBe(true);
+    expect(v.expectedPoints).toBeCloseTo(PAINT_RATE[4]);
   });
 
   it('防守者比較高時干擾比較大；單打能力在運球後拉開距離', () => {
