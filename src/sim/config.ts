@@ -36,6 +36,21 @@ export const FIGHT_OVER_DELAY = 0.45;
 export const FIGHT_OVER_PER_CM = 0.015;
 export const FIGHT_OVER_RANGE = { min: 0.25, max: 0.9 } as const;
 
+/**
+ * 擋拆擠過時，掩護者的防守者暫時協防持球者（SPEC §6.2）。
+ * 沉退：退到持球者和籃框的連線上、離籃框 DROP_DEPTH 公尺（最多到離持球者 ON_BALL_GAP），保護籃下。
+ * 上提：站到持球者和籃框之間、離持球者 ON_BALL_GAP，干擾投籃與切入。
+ * 協防至少 HELP_MIN 秒（掩護常在持球者開始運球前就設好，隊友一開始看起來沒有落後）；
+ * 之後被掩護的隊友回到離理想位置 HELP_RECOVERED 公尺內、而且離籃框比持球者近 HELP_FRONT 公尺以上（真的擋在前面），
+ * 或持球者把球傳出去、或過了 HELP_MAX 秒，就回去盯掩護者。
+ * 沉退的位置在罰球線下方，所以持球者在中距離以外急停跳投會比較空。
+ */
+export const DROP_DEPTH = 3.0;
+export const HELP_RECOVERED = 1.0;
+export const HELP_MIN = 1.0;
+export const HELP_FRONT = 0.8;
+export const HELP_MAX = 2.5;
+
 /** 換防：兩位防守者交換對位前的反應時間（秒） */
 export const SWITCH_DELAY = 0.3;
 

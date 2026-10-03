@@ -35,7 +35,8 @@ describe('內建戰術庫', () => {
           const t = loadPlay(base, play, roles);
           const tl = buildTimeline(t);
           const screens = screensOf(t, tl);
-          const events = simulateDefense(t, tl).events;
+          // 只數掩護本身（沉退 / 上提是另外的協防事件）
+          const events = simulateDefense(t, tl).events.filter((e) => e.type === 'switch' || e.type === 'fight-over');
           expect(events.length, `${scheme}：${screens.length} 個掩護`).toBe(screens.length);
         }
       });

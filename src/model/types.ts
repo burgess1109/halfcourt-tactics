@@ -58,6 +58,9 @@ export interface Frame {
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 
+/** drop = 沉退：退到球和籃框之間保護籃下；hedge = 上提：踏出去擋在持球者前面 */
+export type PickCoverage = 'drop' | 'hedge';
+
 export interface Tactic {
   version: 1;
   id: string;
@@ -75,6 +78,8 @@ export interface Tactic {
   /** 藍隊 id → 紅隊 id */
   matchups: Record<string, string>;
   screenDefense: 'switch' | 'fight-over';
+  /** 擠過時，擋拆（掩護持球者的防守者）由掩護者的防守者沉退或上提（SPEC §6.2） */
+  pickCoverage: PickCoverage;
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];

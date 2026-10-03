@@ -14,7 +14,7 @@ import {
 } from '../model/physique';
 import { applyPatch, parseTeamForm, type PlayerFormValues } from '../model/playerForm';
 import type { EditorState, Store } from '../model/store';
-import type { Player, Rating, Skills, Tactic, Team } from '../model/types';
+import type { PickCoverage, Player, Rating, Skills, Tactic, Team } from '../model/types';
 
 // 進攻模式的設定流程（SPEC §1.1）：① 藍隊 → ② 紅隊 → ③ 對位 → 戰術面板。
 
@@ -72,6 +72,7 @@ export function attachSetup(
   let draftMatchups: Record<string, string> = {};
   let draftCustomized = false;
   let draftScreen: Tactic['screenDefense'] = 'switch';
+  let draftCoverage: PickCoverage = 'drop';
   let draftLineup: Lineup = lineupOf(store.get().tactic);
 
   const tactic = () => store.get().tactic;
@@ -237,14 +238,30 @@ export function attachSetup(
     }
 
     const choice = el('fieldset', { class: 'choice' }, el('legend', {}, '遇到掩護時，紅隊要'));
+    // 進階：擠過時，擋拆由掩護者的防守者沉退或上提（換防時用不到，隱藏）
+    const coverage = el('fieldset', { class: 'choice choice--sub' }, el('legend', {}, '擋拆時，盯掩護者的防守者要'));
     const option = (value: Tactic['screenDefense'], text: string, desc: string) => {
       const radio = el('input', { type: 'radio', name: 'screen', value, checked: draftScreen === value });
-      radio.addEventListener('change', () => (draftScreen = value));
+      radio.addEventListener('change', () => {
+        draftScreen = value;
+        coverage.hidden = draftScreen !== 'fight-over';
+      });
       return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
     };
+    const coverageOption = (value: PickCoverage, text: string, desc: string) => {
+      const radio = el('input', { type: 'radio', name: 'pick-coverage', value, checked: draftCoverage === value });
+      radio.addEventListener('change', () => (draftCoverage = value));
+      return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
+    };
+    coverage.append(
+      coverageOption('drop', '沉退 Drop（預設）', '退到罰球線下方保護籃下：切入和順下比較難，但中距離以外急停跳投、掩護者拉開會比較空'),
+      coverageOption('hedge', '上提 Hedge', '踏出去擋在持球者前面干擾投籃：持球者不好直接出手，但掩護者順下會比較空'),
+    );
+    coverage.hidden = draftScreen !== 'fight-over';
     choice.append(
       option('switch', '換防（預設）', '兩位防守者交換對位，可能形成身高錯位'),
       option('fight-over', '擠過', '被掩護的人繞過掩護繼續盯原本的人，會慢一步'),
+      coverage,
     );
     form.append(choice);
   };
@@ -285,6 +302,7 @@ export function attachSetup(
     draftCustomized = t.setup.matchupsCustomized;
     draftMatchups = draftCustomized ? { ...t.matchups } : defaultMatchups(t.players);
     draftScreen = t.screenDefense;
+    draftCoverage = t.pickCoverage;
     draftLineup = lineupOf(t);
   };
 
@@ -303,6 +321,7 @@ export function attachSetup(
         s.tactic.matchups = { ...draftMatchups };
         s.tactic.setup.matchupsCustomized = draftCustomized;
         s.tactic.screenDefense = draftScreen;
+        s.tactic.pickCoverage = draftCoverage;
         s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理
         if (lineupChanged && applyNow) applyLineup(s.tactic.frames[0]!, draftLineup);

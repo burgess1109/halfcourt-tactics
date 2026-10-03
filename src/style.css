@@ -1421,3 +1421,11 @@ body[data-screen='board'] .app {
   align-self: center;
   margin-top: 4px;
 }
+
+/* 擠過底下的進階選項（沉退 / 上提） */
+.choice--sub {
+  margin: 0 0 0 30px;
+  padding: 10px 10px 4px;
+  background: #22252b;
+  font-size: 14px;
+}

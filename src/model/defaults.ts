@@ -25,6 +25,7 @@ export function createDefaultTactic(): Tactic {
     setup: { blueSkipped: false, redSkipped: false, matchupsCustomized: false },
     matchups: defaultMatchups(players),
     screenDefense: 'switch',
+    pickCoverage: 'drop',
     players,
     frames: [frame],
     updatedAt: Date.now(),

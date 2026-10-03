@@ -122,7 +122,7 @@ export function rankBySimulation(tactic: Tactic): Recommendation[] {
 
 /** 推薦結果只和球員、對位、掩護應對有關（和目前畫的路線無關），用來快取 */
 export function recommendationKey(tactic: Tactic): string {
-  return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense });
+  return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense, pick: tactic.pickCoverage });
 }
 
 /** 這套戰術最適合的角色分配；同分時取排列順序在前的 */

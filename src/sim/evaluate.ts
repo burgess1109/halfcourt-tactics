@@ -286,6 +286,19 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
         playerIds: [e.screenerId, e.defenderId],
         priority: 4,
       });
+    } else if (e.type === 'drop' || e.type === 'hedge') {
+      // 擋拆擠過時的協防：說明對方怎麼守，空檔會出現在哪裡
+      const handler = name(e.handlerId!);
+      const text =
+        e.type === 'drop'
+          ? `${name(e.defenderId)} 沉退保護籃下 ${e.delay.toFixed(1)} 秒：${handler} 往籃下切會被擋，中距離以外急停跳投、或 ${name(e.screenerId)} 拉開到外線比較有空間`
+          : `${name(e.defenderId)} 上提干擾 ${handler} ${e.delay.toFixed(1)} 秒：${handler} 不好直接出手，但 ${name(e.screenerId)} 順下或拉開會比較空`;
+      comments.push({
+        text: `第 ${fi + 1} 分鏡，${text}`,
+        frameIndex: fi,
+        playerIds: [e.defenderId, e.screenerId],
+        priority: 4,
+      });
     } else if (e.partnerId) {
       // 換防後的錯位：用「這次換防之後」的對位，不受之後再換防影響
       const after = e.assignmentsAfter ?? defense.finalAssignments;

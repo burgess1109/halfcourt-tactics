@@ -1,7 +1,8 @@
 import { ballHolderAt, passAt, poseAt, screensOf, type Timeline } from '../anim/timeline';
 import { defenderAssignments } from '../model/matchups';
+import { RIM } from '../model/paths';
 import { heightOf, speedOf } from '../model/physique';
-import type { Tactic, Vec2 } from '../model/types';
+import type { PickCoverage, Tactic, Vec2 } from '../model/types';
 import {
   BODY_DISTANCE,
   DEFENSE_SPEED_FACTOR,
@@ -10,25 +11,33 @@ import {
   JUMP_DURATION,
   FIGHT_OVER_PER_CM,
   FIGHT_OVER_RANGE,
+  HELP_FRONT,
+  HELP_MAX,
+  HELP_MIN,
+  HELP_RECOVERED,
   REACTION_TIME,
   SCREEN_CONTACT,
   SCREEN_HOLD_RADIUS,
   SWITCH_DELAY,
   VELOCITY_DT,
 } from './config';
-import { chaseTarget, defendPosition, nextDenyState, outwardSpeedOf } from './defense';
+import { chaseTarget, defendPosition, guardPosition, nextDenyState, outwardSpeedOf, pickHelpPosition } from './defense';
 
-// 防守 AI（SPEC §6.2）：人盯人＋阻絕外圍傳球路線，追不上就是追不上；遇到掩護時依設定換防或擠過。
+// 防守 AI（SPEC §6.2）：人盯人＋阻絕外圍傳球路線，追不上就是追不上；遇到掩護時依設定換防或擠過，
+// 擋拆擠過時，掩護者的防守者沉退或上提。
 // 藍隊的移動不受紅隊影響，所以先用時間軸算出藍隊位置，再一格一格推進紅隊。完全決定性。
 
 export interface DefenseEvent {
   t: number;
-  type: 'fight-over' | 'switch';
-  /** 被掩護的防守者 */
+  /** drop / hedge：擋拆擠過時，掩護者的防守者（defenderId）沉退或上提 */
+  type: 'fight-over' | 'switch' | PickCoverage;
+  /** 被掩護的防守者；drop / hedge 時是協防的人（盯掩護者的防守者） */
   defenderId: string;
   screenerId: string;
-  /** 被卡住的秒數 */
+  /** 被卡住的秒數；drop / hedge 時是協防了多久 */
   delay: number;
+  /** drop / hedge 時，被協防的持球者 */
+  handlerId?: string;
   /** 換防時，另一位防守者 */
   partnerId?: string;
   /** 換防時，這次換防完成後的對位（紅隊 id → 藍隊 id）；之後再換防也不會影響 */
@@ -81,6 +90,8 @@ export function fightOverDelay(screenerCm: number, defenderCm: number): number {
   return Math.min(FIGHT_OVER_RANGE.max, Math.max(FIGHT_OVER_RANGE.min, d));
 }
 
+const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);
+
 export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResult {
   const { players } = tactic;
   const reds = players.filter((p) => p.team === 'red');
@@ -105,6 +116,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   const jumpUntil: Record<string, number> = {};
   /** 往球的方向靠時，球要去的地方（接球者） */
   const jumpToward: Record<string, string> = {};
+  /** 擋拆擠過時正在協防的人（盯掩護者的防守者）→ 協防的對象、被掩護的隊友、對應的事件 */
+  const helping: Record<string, { handler: string; teammate: string; until: number; event: DefenseEvent }> = {};
 
   // 起始位置：理想位置
   const start = poseAt(tactic, timeline, 0).positions;
@@ -153,7 +166,25 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         }
         const jumping = seen < (jumpUntil[r.id] ?? -1) && seenHolder !== man;
         const jumpTo = jumping ? seenPos[jumpToward[r.id]!]! : null;
-        const target = chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo);
+        // 協防擋拆：被掩護的隊友追回來、球傳出去、或時間到了，就回去盯掩護者
+        const help = helping[r.id];
+        if (help) {
+          const mate = cur[help.teammate]!;
+          const handler = seenPos[help.handler]!;
+          const spot = guardPosition(handler, true);
+          const recovered =
+            t >= help.event.t + HELP_MIN &&
+            t >= (frozenUntil[help.teammate] ?? 0) &&
+            Math.hypot(mate.x - spot.x, mate.y - spot.y) <= HELP_RECOVERED &&
+            rimDistance(mate) <= rimDistance(handler) - HELP_FRONT;
+          if (recovered || seenHolder !== help.handler || t >= help.until) {
+            help.event.delay = t - help.event.t;
+            delete helping[r.id];
+          }
+        }
+        const target = helping[r.id]
+          ? pickHelpPosition(tactic.pickCoverage, seenPos[helping[r.id]!.handler]!)
+          : chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo);
         const p = cur[r.id]!;
         const dx = target.x - p.x;
         const dy = target.y - p.y;
@@ -188,6 +219,13 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             const delay = fightOverDelay(heightOf(byId.get(sc.screenerId)!, players), heightOf(r, players));
             frozenUntil[r.id] = t + delay;
             events.push({ t, type: 'fight-over', defenderId: r.id, screenerId: sc.screenerId, delay });
+            // 擋拆（被掩護的人盯的是持球者）：盯掩護者的人沉退或上提，等隊友追回來
+            const big = reds.find((x) => x.id !== r.id && assign[x.id] === sc.screenerId);
+            if (big && ballHolderAt(tactic, timeline, t) === man && !helping[big.id]) {
+              const event: DefenseEvent = { t, type: tactic.pickCoverage, defenderId: big.id, screenerId: sc.screenerId, delay: 0, handlerId: man };
+              events.push(event);
+              helping[big.id] = { handler: man, teammate: r.id, until: t + HELP_MAX, event };
+            }
           } else {
             const { partnerId, after } = planSwitch(assign, pendingSwaps, r.id, sc.screenerId);
             frozenUntil[r.id] = t + SWITCH_DELAY;
@@ -207,6 +245,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
     }
 
     for (const r of reds) red[r.id]!.push({ ...cur[r.id]! });
+    // 模擬結束時還在協防：協防時間算到最後一格
+    if (i === ticks - 1) for (const h of Object.values(helping)) h.event.delay = t - h.event.t;
     stuck.push(new Set(reds.filter((r) => t < (frozenUntil[r.id] ?? 0)).map((r) => r.id)));
   }
 

@@ -1,5 +1,5 @@
 import { RIM } from '../model/paths';
-import type { Vec2 } from '../model/types';
+import type { PickCoverage, Vec2 } from '../model/types';
 import {
   BEATEN_COS,
   BEATEN_MARGIN,
@@ -9,6 +9,7 @@ import {
   DENY_TOWARD_BALL,
   DENY_TOWARD_RIM,
   DENY_TRIGGER_SPEED,
+  DROP_DEPTH,
   HELP_SHADE,
   JUMP_TO_BALL,
   MIN_GAP,
@@ -54,6 +55,21 @@ export function defendPosition(man: Vec2, ball: Vec2 | null, hasBall: boolean, d
     x: man.x + (toBall.x / ballDist) * DENY_TOWARD_BALL + (toRim.x / rimDist) * DENY_TOWARD_RIM,
     y: man.y + (toBall.y / ballDist) * DENY_TOWARD_BALL + (toRim.y / rimDist) * DENY_TOWARD_RIM,
   };
+}
+
+/**
+ * 擋拆擠過時，掩護者的防守者協防持球者的位置（SPEC §6.2）：
+ * 沉退 = 持球者和籃框連線上、離籃框 DROP_DEPTH（持球者很近籃框時最多到離他 ON_BALL_GAP）；
+ * 上提 = 和防持球者相同，站在持球者和籃框之間、離他 ON_BALL_GAP。
+ */
+export function pickHelpPosition(coverage: PickCoverage, handler: Vec2): Vec2 {
+  if (coverage === 'hedge') return guardPosition(handler, true);
+  const dx = handler.x - RIM.x;
+  const dy = handler.y - RIM.y;
+  const d = Math.hypot(dx, dy);
+  if (d === 0) return { ...RIM };
+  const depth = Math.max(0, Math.min(DROP_DEPTH, d - ON_BALL_GAP));
+  return { x: RIM.x + (dx / d) * depth, y: RIM.y + (dy / d) * depth };
 }
 
 const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);

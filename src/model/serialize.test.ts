@@ -78,6 +78,14 @@ describe('JSON 匯出入', () => {
     expect(() => parseTactic(early)).toThrow('最後一個分鏡');
   });
 
+  it('擋拆協防：舊資料沒有這個欄位時預設沉退；不認得的值不接受', () => {
+    const t = JSON.parse(toJsonFile(sample())) as Record<string, unknown>;
+    delete t.pickCoverage;
+    expect(parseTactic(t).tactic.pickCoverage).toBe('drop');
+    expect(parseTactic({ ...t, pickCoverage: 'hedge' }).tactic.pickCoverage).toBe('hedge');
+    expect(() => parseTactic({ ...t, pickCoverage: 'blitz' })).toThrow(TacticFormatError);
+  });
+
   it('座標超出球場時不接受', () => {
     const t = JSON.parse(toJsonFile(sample())) as Tactic;
     t.frames[0]!.start.b1 = { x: 0, y: 99 };
@@ -107,6 +115,7 @@ describe('分享連結', () => {
     for (let i = 0; i < PLAYS.length; i++) {
       const t = sample(i);
       t.lastResult = { grade: 'S', expectedPoints: 1.5 };
+      t.pickCoverage = i % 2 ? 'hedge' : 'drop';
       const hash = await encodeShare(t);
       expect(hash.startsWith(SHARE_PREFIX)).toBe(true);
       expect(hash).toMatch(/^#p=[A-Za-z0-9_-]+$/);
@@ -115,6 +124,7 @@ describe('分享連結', () => {
       expect(withoutIds(tactic)).toEqual(withoutIds(t));
       expect(tactic.players).toEqual(t.players);
       expect(tactic.matchups).toEqual(t.matchups);
+      expect(tactic.pickCoverage).toBe(t.pickCoverage);
       expect(tactic.basedOn).toEqual(t.basedOn);
       expect(tactic.name).toBe(t.name);
       expect(tactic.id).not.toBe(t.id);

@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { buildTimeline } from '../anim/timeline';
+import { simulate } from '../anim/simulation';
+import { buildTimeline, poseAt } from '../anim/timeline';
 import { createDefaultTactic } from '../model/defaults';
 import { insertFrameAfter } from '../model/frames';
 import { putPath } from '../model/paths';
 import type { Tactic } from '../model/types';
 import { SWITCH_DELAY } from './config';
-import { defendPosition, guardPosition } from './defense';
+import { loadPlay } from '../plays/instantiate';
+import { PLAYS } from '../plays/library';
+import { defendPosition, guardPosition, pickHelpPosition } from './defense';
 import { fightOverDelay, redAt, simulateDefense } from './defenseSim';
+import { evaluate } from './evaluate';
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -76,7 +80,8 @@ describe('防守 AI', () => {
     };
     const screened = lag(pickTactic('fight-over'));
     const free = lag(pickTactic('fight-over', 'cut'));
-    expect(screened.res.events).toHaveLength(1);
+    // 擋拆：被掩護的人卡住，另外盯掩護者的人沉退（預設）
+    expect(screened.res.events.map((e) => e.type)).toEqual(['fight-over', 'drop']);
     expect(screened.res.events[0]).toMatchObject({ type: 'fight-over', defenderId: 'r1', screenerId: 'b3' });
     expect(free.res.events).toHaveLength(0);
     expect(screened.d).toBeGreaterThan(free.d + 0.3);
@@ -114,7 +119,7 @@ describe('擋拆後下順', () => {
       const f1 = t.frames[1]!;
       putPath(f1, { id: 'roll', kind: 'cut', actorId: 'b3', points: [f1.start.b3!, { x: 0.4, y: 2.8 }], freehand: false });
       const res = simulateDefense(t, buildTimeline(t));
-      expect(res.events.map((e) => e.type)).toEqual([scheme]);
+      expect(res.events.map((e) => e.type).filter((x) => x === 'switch' || x === 'fight-over')).toEqual([scheme]);
     }
   });
 });
@@ -244,5 +249,78 @@ describe('往球的方向靠', () => {
     const shooter = poseAt(t, tl, at).positions.b1!;
     const defender = redAt(res, at).positions.r1!;
     expect(dist(defender, rim)).toBeGreaterThan(dist(shooter, rim));
+  });
+});
+
+describe('擋拆擠過時的沉退 / 上提', () => {
+  const RIM = { x: 0, y: 1.575 };
+  /** 協防開始後 0.5 秒（隊友還被卡住）時，盯掩護者的紅 3 的位置與持球者的位置 */
+  const helpSnapshot = (coverage: 'drop' | 'hedge') => {
+    const t = pickTactic('fight-over');
+    t.pickCoverage = coverage;
+    const tl = buildTimeline(t);
+    const res = simulateDefense(t, tl);
+    const help = res.events.find((e) => e.type === coverage)!;
+    expect(help).toMatchObject({ defenderId: 'r3', screenerId: 'b3', handlerId: 'b1' });
+    return { res, tl, help, at: redAt(res, help.t + 0.5).positions.r3! };
+  };
+
+  it('換防時沒有沉退 / 上提；無球掩護也沒有', () => {
+    const sw = simulateDefense(pickTactic('switch'), buildTimeline(pickTactic('switch')));
+    expect(sw.events.some((e) => e.type === 'drop' || e.type === 'hedge')).toBe(false);
+  });
+
+  it('沉退：盯掩護者的人退到籃框附近（罰球線下方），不會上前貼持球者', () => {
+    const { at } = helpSnapshot('drop');
+    expect(dist(at, RIM)).toBeLessThan(3.6);
+  });
+
+  it('上提：盯掩護者的人踏出去，離持球者比沉退時近得多', () => {
+    const drop = helpSnapshot('drop');
+    const hedge = helpSnapshot('hedge');
+    const handlerAt = (s: typeof drop) => {
+      const tl = s.tl;
+      return poseAt(pickTactic('fight-over'), tl, s.help.t + 0.5).positions.b1!;
+    };
+    expect(dist(hedge.at, handlerAt(hedge))).toBeLessThan(dist(drop.at, handlerAt(drop)) - 1);
+  });
+
+  it('協防至少 1 秒，最後一定回去盯掩護者', () => {
+    for (const c of ['drop', 'hedge'] as const) {
+      const { res, tl, help } = helpSnapshot(c);
+      expect(help.delay).toBeGreaterThanOrEqual(1 - 1e-9);
+      expect(help.delay).toBeLessThanOrEqual(2.5 + 1e-9);
+      expect(help.t + help.delay).toBeLessThanOrEqual(tl.total + 1e-9);
+      expect(res.finalAssignments.r3).toBe('b3');
+    }
+  });
+
+  it('pickHelpPosition：沉退最深到離籃框 3 m，持球者靠近籃框時最多到離他 1.5 m', () => {
+    expect(dist(pickHelpPosition('drop', { x: 0, y: 9 }), RIM)).toBeCloseTo(3);
+    const near = { x: 0, y: 5 };
+    expect(dist(pickHelpPosition('drop', near), near)).toBeCloseTo(1.5);
+    expect(pickHelpPosition('hedge', { x: 3, y: 7 })).toEqual(guardPosition({ x: 3, y: 7 }, true));
+  });
+});
+
+describe('內建戰術：沉退與上提的差別', () => {
+  const grade = (name: string, coverage: 'drop' | 'hedge') => {
+    const base = createDefaultTactic();
+    base.screenDefense = 'fight-over';
+    base.pickCoverage = coverage;
+    const t = loadPlay(base, PLAYS.find((p) => p.category === '高位擋拆' && p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
+    return evaluate(t, simulate(t)).expectedPoints!;
+  };
+
+  it('擋拆下順：對方上提時順下比較空', () => {
+    expect(grade('Pick and Roll', 'hedge')).toBeGreaterThan(grade('Pick and Roll', 'drop') + 0.1);
+  });
+
+  it('拋投：對方沉退保護籃下時比較難', () => {
+    expect(grade('Floater', 'drop')).toBeLessThan(grade('Floater', 'hedge') - 0.1);
+  });
+
+  it('擋拆外拉：對方沉退時外拉比較空', () => {
+    expect(grade('Pick and Pop', 'drop')).toBeGreaterThan(grade('Pick and Pop', 'hedge'));
   });
 });
