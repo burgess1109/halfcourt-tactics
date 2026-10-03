@@ -9,7 +9,7 @@ import { SWITCH_DELAY } from './config';
 import { loadPlay } from '../plays/instantiate';
 import { PLAYS } from '../plays/library';
 import { defendPosition, guardPosition, pickHelpPosition } from './defense';
-import { fightOverDelay, redAt, simulateDefense } from './defenseSim';
+import { fightOverDelay, pickHelpOver, redAt, simulateDefense } from './defenseSim';
 import { evaluate } from './evaluate';
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -293,6 +293,20 @@ describe('擋拆擠過時的沉退 / 上提', () => {
       expect(help.t + help.delay).toBeLessThanOrEqual(tl.total + 1e-9);
       expect(res.finalAssignments.r3).toBe('b3');
     }
+  });
+
+  it('接球後馬上擋拆：反應時間之前的持球者還是傳球者（或球在空中），不算球傳出去', () => {
+    const help = { start: 3, until: 5.5, handler: 'b1' };
+    // 協防開始後下一格：seen = t - 0.2 在協防開始之前
+    expect(pickHelpOver(help, 3.02, 2.82, 'b2', false)).toBe(false);
+    expect(pickHelpOver(help, 3.02, 2.82, null, false)).toBe(false);
+    // 協防開始之後才看到球離開持球者：結束
+    expect(pickHelpOver(help, 3.6, 3.4, null, false)).toBe(true);
+    expect(pickHelpOver(help, 3.6, 3.4, 'b3', false)).toBe(true);
+    // 隊友追回來、或時間到：結束
+    expect(pickHelpOver(help, 4.2, 4.0, 'b1', true)).toBe(true);
+    expect(pickHelpOver(help, 5.5, 5.3, 'b1', false)).toBe(true);
+    expect(pickHelpOver(help, 4.2, 4.0, 'b1', false)).toBe(false);
   });
 
   it('pickHelpPosition：沉退最深到離籃框 3 m，持球者靠近籃框時最多到離他 1.5 m', () => {

@@ -92,6 +92,22 @@ export function fightOverDelay(screenerCm: number, defenderCm: number): number {
 
 const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);
 
+/**
+ * 擋拆的協防是否結束（SPEC §6.2）：隊友追回來（recovered，已含至少協防 HELP_MIN 秒）、時間到、或持球者把球傳出去。
+ * 防守者看到的是 seen（反應時間之前）的持球者，所以「傳出去」只算 seen 在協防開始之後的變化：
+ * 接球後馬上擋拆時，seen 的持球者可能還是傳球者或球在空中，那不算傳出去。
+ */
+export function pickHelpOver(
+  help: { start: number; until: number; handler: string },
+  t: number,
+  seen: number,
+  seenHolder: string | null,
+  recovered: boolean,
+): boolean {
+  const passedOut = seen >= help.start && seenHolder !== help.handler;
+  return recovered || passedOut || t >= help.until;
+}
+
 export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResult {
   const { players } = tactic;
   const reds = players.filter((p) => p.team === 'red');
@@ -177,7 +193,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             t >= (frozenUntil[help.teammate] ?? 0) &&
             Math.hypot(mate.x - spot.x, mate.y - spot.y) <= HELP_RECOVERED &&
             rimDistance(mate) <= rimDistance(handler) - HELP_FRONT;
-          if (recovered || seenHolder !== help.handler || t >= help.until) {
+          if (pickHelpOver({ start: help.event.t, until: help.until, handler: help.handler }, t, seen, seenHolder, recovered)) {
             help.event.delay = t - help.event.t;
             delete helping[r.id];
           }
