@@ -303,11 +303,18 @@ describe('「都追在身後」只在所有防守者都在身後時才說', () =
     const v = shotValue(t, 'b1', pos, false);
     expect(v.openness).toBe(1);
     expect(v.allBehind).toBe(false);
+    // 代表的防守者是前方那位，評語的距離才不會變成身後緊追的 1.0 m
+    expect(v.defenderId).toBe('r2');
+    expect(v.defenderBehind).toBe(false);
+    expect(v.defenderDistance).toBeCloseTo(3.5);
   });
 
   it('所有防守者都在身後：allBehind', () => {
     const t = createDefaultTactic();
     const pos = { b1: { x: 0, y: 3 }, b2: { x: -7, y: 13 }, b3: { x: 7, y: 13 }, r1: { x: 0, y: 4.5 }, r2: { x: -3, y: 6 }, r3: { x: 3, y: 6 } };
-    expect(shotValue(t, 'b1', pos, false).allBehind).toBe(true);
+    const v = shotValue(t, 'b1', pos, false);
+    expect(v.allBehind).toBe(true);
+    expect(v.defenderId).toBe('r1');
+    expect(v.defenderDistance).toBeCloseTo(1.5);
   });
 });

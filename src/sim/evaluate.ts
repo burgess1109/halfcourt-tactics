@@ -84,7 +84,8 @@ export function shotValue(
 
   // 找干擾最大的防守者：距離越近、身高優勢越大，造成的命中率損失越多。
   // 在出手者身後（不在出手者與籃框之間）的防守者已經被甩開，追在後面不算干擾。
-  // 都沒有人干擾時，記下最近的防守者，評價才能說「對方追在身後幾公尺」。
+  // 都沒有人干擾時：前方有人就記下前方最近的防守者（評價寫「完全空檔（最近的防守者幾公尺）」）；
+  // 全部都在身後才記下身後最近的人（評價寫「對方都追在身後幾公尺」），兩種說法才不會配錯距離。
   const span = OPEN_DISTANCE - BODY_DISTANCE;
   let best: { id: string; d: number; behind: boolean; openness: number; edge: number; mismatch: number; loss: number } | null = null;
   let allBehind = true;
@@ -98,7 +99,9 @@ export function shotValue(
     const edge = heightOf(shooter, players) - heightOf(red, players);
     const mismatch = mismatchEffect(edge, zone);
     const loss = (1 - CONTESTED_FACTOR) * (1 - openness) * (1 - mismatch);
-    if (!best || loss > best.loss + 1e-12 || (Math.abs(loss - best.loss) <= 1e-12 && d < best.d)) {
+    const tie = !!best && Math.abs(loss - best.loss) <= 1e-12;
+    const preferred = tie && (best!.behind !== behind ? !behind : d < best!.d);
+    if (!best || loss > best.loss + 1e-12 || preferred) {
       best = { id: red.id, d, behind, openness, edge, mismatch, loss };
     }
   }
