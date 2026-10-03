@@ -67,10 +67,10 @@ export function attachFrames(store: Store, notify: (message: string) => void): v
     label.setAttribute('aria-label', `第 ${s.frameIndex + 1} 個分鏡，共 ${n} 個`);
     prev.disabled = s.playing || s.frameIndex === 0;
     next.disabled = s.playing || s.frameIndex === n - 1;
-    add.disabled = s.playing || n >= MAX_FRAMES;
-    label.disabled = s.playing;
+    add.disabled = s.playing || s.readonly || n >= MAX_FRAMES;
+    label.disabled = s.playing || s.readonly;
     del.disabled = n <= 1;
-    if (s.playing) menuCtl.close();
+    if (s.playing || s.readonly) menuCtl.close();
   };
   store.subscribe(sync);
   sync();

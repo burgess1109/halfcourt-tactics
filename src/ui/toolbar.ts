@@ -65,7 +65,8 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
   // ---- 鍵盤 ----
   const shortcuts: Record<string, Tool> = { v: 'move', '1': 'cut', '2': 'dribble', '3': 'pass', '4': 'screen', '5': 'shot' };
   document.addEventListener('keydown', (e) => {
-    if (document.body.dataset.screen !== 'board' || store.get().playing || document.querySelector('dialog[open]')) return;
+    const { playing, readonly } = store.get();
+    if (document.body.dataset.screen !== 'board' || playing || readonly || document.querySelector('dialog[open]')) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const mod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
@@ -104,12 +105,14 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
   // ---- 依狀態更新按鈕 ----
   const sync = () => {
     const s = store.get();
-    undo.disabled = s.playing || !store.canUndo;
-    redo.disabled = s.playing || !store.canRedo;
-    del.disabled = s.playing || !s.selectedPathId;
+    const locked = s.playing || s.readonly;
+    undo.disabled = locked || !store.canUndo;
+    redo.disabled = locked || !store.canRedo;
+    del.disabled = locked || !s.selectedPathId;
     // 已經是空白戰術（開局站位、沒有路線、不是內建戰術）時不需要清空
-    clear.disabled = s.playing || isBlankTactic(s.tactic);
-    toolBtn.disabled = s.playing;
+    clear.disabled = locked || isBlankTactic(s.tactic);
+    toolBtn.disabled = locked;
+    if (locked) closeMenu();
     toolIcon.setAttribute('href', `#icon-${s.tool}`);
     toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);
     setTip(toolBtn, `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}，點開切換（V、1–5、F）`);

@@ -147,7 +147,8 @@ export function attachPointer(
   };
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (pointerId !== null || store.get().playing) return; // 只處理單指；播放中不能編輯
+    const { playing, readonly } = store.get();
+    if (pointerId !== null || playing || readonly) return; // 只處理單指；播放中、唯讀預覽不能編輯
     gesture = startGesture(e);
     if (gesture) {
       pointerId = e.pointerId;

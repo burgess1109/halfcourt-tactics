@@ -7,9 +7,9 @@
 
 ## 專案簡介
 
-3 對 3 半場籃球戰術 Web 小遊戲（PWA）。使用者固定操作**藍隊**、系統固定操作**紅隊**。v1 只做**進攻模式**：使用者設定球員 → 對位 → 選內建戰術或自己畫跑位 → 播放，紅隊由防守 AI 即時反應，之後評分（M7）。防守模式暫緩。
+3 對 3 半場籃球戰術 Web 小遊戲（PWA）。使用者固定操作**藍隊**、系統固定操作**紅隊**。v1 只做**進攻模式**：使用者設定球員 → 對位 → 選內建戰術或自己畫跑位 → 播放，紅隊由防守 AI 即時反應，之後評分（M7）；可以存檔、匯入匯出 JSON、產生分享連結，並且能離線使用（M8）。防守模式暫緩。
 
-技術：TypeScript 7 + Vite 8 + 原生 Canvas 2D，測試用 Vitest 5。**沒有任何執行期相依套件**（不用 React 等框架）。
+技術：TypeScript 7 + Vite 8 + 原生 Canvas 2D，測試用 Vitest 5，PWA 用 vite-plugin-pwa（只在打包時使用）。**沒有任何執行期相依套件**（不用 React 等框架）；分享連結的壓縮用瀏覽器內建的 CompressionStream。
 
 ## 規格文件（以這些為準）
 
@@ -19,7 +19,7 @@
 | `docs/PLAYS.md`、`docs/plays/*.svg` | 18 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：改 `src/plays/library.ts` 後執行 `npm run plays-doc` |
 
 - 行為改變時，要同步更新 `docs/SPEC.md`，並在 §14 決策紀錄加一列（被取代的舊決策用 `~~刪除線~~` 標註，不要直接刪掉）。
-- 里程碑狀態見 SPEC §13（M1–M7 已完成，M8 存檔分享、M9 防守模式）。
+- 里程碑狀態見 SPEC §13（M1–M8 已完成，M9 防守模式暫緩）。
 
 ## 常用指令
 
@@ -46,6 +46,8 @@ src/
     physique.ts      能力等級、身高預設、速度公式
     matchups.ts      預設對位（有身高依身高、否則依順序）與交換
     lineup.ts        開局站位（三名藍隊的位置與持球者）、常用陣型
+    serialize.ts     外部資料驗證 parseTactic、JSON 匯出入、分享連結編碼（精簡、四捨五入到公分、deflate-raw + base64url）
+    savedTactics.ts  localStorage 的戰術列表（存檔、重新命名、複製、刪除）
     playerForm.ts    設定頁表單驗證
   sim/             防守 AI（純函式，完全決定性）
     config.ts        所有模擬係數（距離、反應時間、掩護、阻絕…）集中在這裡
@@ -62,7 +64,8 @@ src/
     recommend.ts     推薦演算法：能力 + 對位的身高差、速度差，6 種角色排列取最高分
   render/          Canvas 繪圖（球場離屏快取、球員、路線、分身、把手）
   input/pointer.ts 指標事件：拖曳、畫線、編輯控制點、點球員開設定
-  ui/              DOM 介面：設定流程（含開局站位小球場）、戰術庫面板、評分卡片、工具列、分鏡列、HUD、選單、提示
+  ui/              DOM 介面：設定流程（含開局站位小球場）、戰術庫面板、評分卡片、工具列、分鏡列、HUD、選單、提示、
+                   存檔與戰術列表（saved.ts）、命名對話框、分享與唯讀預覽（share.ts）
 scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 ```
 
@@ -77,7 +80,10 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - **能力等級**：優勢 / 稍強 / 平均 / 稍弱 / 劣勢（分數 4 → 0），以場上六個人的平均為基準。藍隊有 4 項（外線投射、速度、禁區終結、單打），紅隊只有速度。
 - **計分**：FIBA 3x3，弧內 1 分、弧外 2 分。判斷弧內外一律用 `isBeyondArc`，不要只算離籃框的距離（底角是直線）。
 - **係數**：模擬、速度相關的數字放在 `sim/config.ts` 或 `model/physique.ts`，不要散落在邏輯裡。
-- **介面文字**：繁體中文；狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`。
+- **介面文字**：繁體中文；狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`；要清空復原紀錄（分享連結預覽、結束預覽）用 `reset`。
+- **外部資料不直接相信**：localStorage、JSON 檔、分享連結一律經過 `parseTactic` 驗證，紅隊位置與後面分鏡一律重新推算。資料格式改變時，`SCHEMA_VERSION` 加一並在 `parseTactic` 裡遷移舊版本。
+- **唯讀預覽**（`EditorState.readonly`）：新增任何編輯操作時，記得在預覽中停用（和 `playing` 一起檢查）。
+- **改戰術名稱不算修改**：用 `store.update`，不要用 `commit`（否則會清掉評分、標示未存檔）。
 - **按鈕提示**：用 `data-tip`（`ui/tooltip.ts` 的 `setTip` 可動態更新），不要用 `title`，否則會和自訂提示重複出現；有快捷鍵的寫在括號裡。
 - **canvas 大小一定要由 CSS 明確指定**（`width` / `height`）：只靠 `inset` 時瀏覽器會用 canvas 自己的像素大小，而 Renderer 依顯示大小設定像素大小，兩者互相放大會讓頁面當掉。要讓位給其他介面時，改 `#stage` 上的 `--reserve-right` / `--reserve-bottom`。
 - **分鏡圖 SVG**：必須是嚴格合法的 XML，不能有重複屬性、不能用 `rgba()`（PhpStorm 的 SVG 檢視器會載入失敗），有測試把關。

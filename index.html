@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#000000" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="半場戰術板" />
     <title>半場戰術板</title>
   </head>
   <body data-screen="home">
@@ -21,6 +25,7 @@
           <span class="mode-card__title">防守模式</span>
           <span class="mode-card__desc">即將推出</span>
         </button>
+        <button id="home-saved" class="btn home__saved" type="button">開啟已存的戰術</button>
       </div>
     </section>
 
@@ -52,7 +57,7 @@
     <div class="app screen">
       <!-- 直式在上方，橫式在左側 -->
       <nav class="toolbar toolbar--primary" aria-label="主要工具">
-        <button class="tool" type="button" data-tip="戰術列表（即將推出）" aria-label="戰術列表" disabled>
+        <button id="saved" class="tool" type="button" data-tip="戰術列表：開啟、重新命名、複製、刪除、匯入匯出" aria-label="戰術列表">
           <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
         </button>
         <button id="library" class="tool" type="button" data-tip="戰術庫：推薦戰術、內建戰術、空白戰術" aria-label="戰術庫">
@@ -65,10 +70,10 @@
           <svg viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
         </button>
         <span class="toolbar__spacer"></span>
-        <button class="tool" type="button" data-tip="分享（即將推出）" aria-label="分享" disabled>
+        <button id="share" class="tool" type="button" data-tip="分享：產生連結、下載 JSON 檔" aria-label="分享">
           <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
         </button>
-        <button class="tool" type="button" data-tip="存檔（即將推出）" aria-label="存檔" disabled>
+        <button id="save" class="tool" type="button" data-tip="存檔（⌘S / Ctrl+S）" aria-label="存檔">
           <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
         </button>
         <button class="tool" type="button" data-tip="設定（即將推出）" aria-label="設定" disabled>
@@ -79,6 +84,15 @@
       <main id="stage" class="stage">
         <canvas id="court" aria-label="半場球場，可以拖曳藍隊球員與球"></canvas>
         <div id="board-title" class="board-title" hidden></div>
+        <!-- 分享連結的唯讀預覽 -->
+        <div id="preview-bar" class="preview-bar" role="region" aria-label="唯讀預覽" hidden>
+          <span class="preview-bar__text">
+            <span class="preview-bar__label">分享的戰術・唯讀</span>
+            <span id="preview-name" class="preview-bar__name"></span>
+          </span>
+          <button id="preview-save" class="btn btn--primary btn--small" type="button">另存</button>
+          <button id="preview-close" class="btn btn--small" type="button">關閉</button>
+        </div>
         <div id="hud" class="hud" aria-live="polite"></div>
         <section id="result" class="result" aria-labelledby="result-grade" hidden>
           <div class="result__head">
@@ -160,6 +174,49 @@
         <button id="library-close" class="btn" type="button">關閉</button>
       </div>
       <div id="library-body" class="panel__body"></div>
+    </dialog>
+
+    <dialog id="saved-dialog" class="panel" aria-labelledby="saved-title">
+      <div class="panel__head">
+        <h2 id="saved-title" class="panel__title">戰術列表</h2>
+        <div class="panel__actions">
+          <button id="saved-import" class="btn" type="button">匯入 JSON</button>
+          <button id="saved-close" class="btn" type="button">關閉</button>
+        </div>
+      </div>
+      <input id="saved-file" type="file" accept=".json,application/json" hidden />
+      <div id="saved-body" class="panel__body"></div>
+    </dialog>
+
+    <dialog id="name-dialog" class="panel panel--small" aria-labelledby="name-title">
+      <form id="name-form" class="name-form" novalidate>
+        <h2 id="name-title" class="panel__title">存檔</h2>
+        <label class="name-form__field">
+          <span>戰術名稱</span>
+          <input id="name-input" type="text" maxlength="30" autocomplete="off" enterkeyhint="done" />
+        </label>
+        <p id="name-error" class="setup__error" role="alert" hidden></p>
+        <div class="name-form__actions">
+          <button id="name-cancel" class="btn" type="button">取消</button>
+          <button id="name-ok" class="btn btn--primary" type="submit">存檔</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="share-dialog" class="panel panel--small" aria-labelledby="share-title">
+      <div class="panel__head">
+        <h2 id="share-title" class="panel__title">分享</h2>
+        <button id="share-close" class="btn" type="button">關閉</button>
+      </div>
+      <div class="panel__body share">
+        <p class="share__hint">對方打開連結後是唯讀預覽，按「另存」才會存到他的戰術列表。</p>
+        <input id="share-url" class="share__url" type="text" readonly aria-label="分享連結" />
+        <div class="share__actions">
+          <button id="share-copy" class="btn btn--primary" type="button">複製連結</button>
+          <button id="share-native" class="btn" type="button" hidden>傳送到其他 App</button>
+          <button id="share-json" class="btn" type="button">下載 JSON 檔</button>
+        </div>
+      </div>
     </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

@@ -22,6 +22,8 @@ export interface EditorState {
   playing: boolean;
   /** 點評價時在場上標示的球員 */
   highlightIds: string[];
+  /** 分享連結的唯讀預覽（SPEC §8）：只能看、播放，按「另存」後才能編輯 */
+  readonly: boolean;
 }
 
 type Listener = (state: EditorState) => void;
@@ -49,6 +51,7 @@ export class Store {
     draft: null,
     playing: false,
     highlightIds: [],
+    readonly: false,
   };
   /** 顯示提示訊息（由 main 接上 toast） */
   notify: (message: string) => void = () => {};
@@ -106,23 +109,46 @@ export class Store {
     this.emit();
   }
 
-  /** 換成另一份戰術（例如載入內建戰術）；算一步，可以復原回原本的戰術 */
+  /** 換成另一份戰術（例如載入內建戰術）；算一步，可以復原回原本的戰術。會結束唯讀預覽。 */
   load(tactic: Tactic): void {
+    if (this.state.readonly) {
+      this.reset(tactic);
+      return;
+    }
     this.begin();
+    this.replace(tactic);
+    this.end();
+  }
+
+  /**
+   * 換成另一份戰術並清空復原紀錄（開啟分享連結、結束預覽時）。
+   * readonly = true 時進入唯讀預覽。
+   */
+  reset(tactic: Tactic, readonly = false): void {
+    this.history = new History<Tactic>(5);
+    this.replace(tactic);
+    this.state.readonly = readonly;
+    this.state.tool = 'move';
+    this.emit();
+  }
+
+  private replace(tactic: Tactic): void {
     const s = this.state;
     s.tactic = tactic;
     s.frameIndex = 0;
     s.selectedPathId = null;
     s.draft = null;
     s.draggingId = null;
-    this.end();
+    s.highlightIds = [];
   }
 
   undo(): void {
+    if (this.state.readonly) return;
     this.restore(this.history.undo(this.clone()));
   }
 
   redo(): void {
+    if (this.state.readonly) return;
     this.restore(this.history.redo(this.clone()));
   }
 

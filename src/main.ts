@@ -2,13 +2,17 @@ import './style.css';
 import { Playback } from './anim/playback';
 import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds } from './anim/timeline';
 import { attachPointer } from './input/pointer';
+import { SavedTactics, type KeyValueStorage } from './model/savedTactics';
 import { Store } from './model/store';
 import { Renderer } from './render/renderer';
 import { attachFrames } from './ui/frames';
 import { attachHud } from './ui/hud';
 import { attachLibrary } from './ui/library';
+import { askName } from './ui/nameDialog';
 import { attachResult } from './ui/result';
+import { attachSaved } from './ui/saved';
 import { attachSetup } from './ui/setup';
+import { attachShare, type Screen } from './ui/share';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
 import { attachTooltips, setTip } from './ui/tooltip';
@@ -25,7 +29,6 @@ const notify = createToast($('#toast'));
 store.notify = notify;
 
 // ---- 畫面切換：首頁 → 設定 → 戰術面板（SPEC §1.1） ----
-type Screen = 'home' | 'setup' | 'board';
 function show(screen: Screen): void {
   if (screen !== 'board') playback.stop();
   document.body.dataset.screen = screen;
@@ -84,6 +87,38 @@ const library = attachLibrary(store, {
   openSetup: () => setup.open(1),
 });
 $<HTMLButtonElement>('#library').addEventListener('click', () => library.open());
+
+// ---- 存檔、戰術列表、分享（SPEC §8） ----
+/** localStorage 被停用（例如部分瀏覽器的私密模式）時，改存在記憶體裡，關閉頁面後就消失 */
+function storage(): KeyValueStorage {
+  try {
+    const key = '__halfcourt_test__';
+    localStorage.setItem(key, '1');
+    localStorage.removeItem(key);
+    return localStorage;
+  } catch {
+    const memory = new Map<string, string>();
+    notify('瀏覽器不允許儲存資料，存檔只會保留到關閉頁面');
+    return { getItem: (k) => memory.get(k) ?? null, setItem: (k, v) => void memory.set(k, v) };
+  }
+}
+const savedTactics = new SavedTactics(storage());
+const share = attachShare(store, {
+  notify,
+  save: () => saved.save(),
+  show,
+  screen: () => document.body.dataset.screen as Screen,
+});
+const saved = attachSaved(store, savedTactics, {
+  notify,
+  askName,
+  onPreviewEnded: share.previewEnded,
+  onOpened: () => show('board'),
+});
+$<HTMLButtonElement>('#saved').addEventListener('click', () => saved.open());
+$<HTMLButtonElement>('#home-saved').addEventListener('click', () => saved.open());
+$<HTMLButtonElement>('#save').addEventListener('click', () => void saved.save());
+void share.openFromHash();
 
 $<HTMLButtonElement>('#mode-offense').addEventListener('click', () => setup.open(1));
 $<HTMLButtonElement>('#team').addEventListener('click', () => setup.open(1));

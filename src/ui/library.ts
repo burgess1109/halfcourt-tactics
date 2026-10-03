@@ -42,7 +42,6 @@ export function attachLibrary(
 ): { open: () => void } {
   const dialog = $<HTMLDialogElement>('#library-dialog');
   const body = $<HTMLElement>('#library-body');
-  const title = $<HTMLElement>('#board-title');
 
   const nameOf = (players: readonly Player[], id: string) => {
     const p = players.find((x) => x.id === id)!;
@@ -185,19 +184,9 @@ export function attachLibrary(
     if (e.target === dialog) dialog.close();
   });
 
-  // 球場上方顯示目前的戰術名稱
-  const syncTitle = () => {
-    const based = store.get().tactic.basedOn;
-    const play = based && PLAYS.find((p) => p.id === based.playId);
-    title.hidden = !play;
-    if (play) title.textContent = based.modified ? `根據「${playTitle(play)}」修改` : playTitle(play);
-  };
-  store.subscribe(syncTitle);
-  syncTitle();
-
   return {
     open() {
-      if (store.get().playing) return;
+      if (store.get().playing || store.get().readonly) return;
       dialog.showModal();
       void computeAndRender();
     },
