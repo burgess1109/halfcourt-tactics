@@ -38,6 +38,30 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'lineup';
 
+  // 持球者單選：和小球場雙向同步（點小球場上的球員、套用陣型時也會更新）
+  const holderGroup = document.createElement('fieldset');
+  holderGroup.className = 'lineup__holder';
+  const legend = document.createElement('legend');
+  legend.textContent = '持球者';
+  holderGroup.append(legend);
+  const radios = blues.map((b) => {
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'lineup-holder';
+    input.value = b.id;
+    input.addEventListener('change', () => {
+      if (input.checked) update(setHolder(lineup, b.id));
+    });
+    const label = document.createElement('label');
+    label.append(input, document.createTextNode(`${b.number} 號 ${b.name}`));
+    holderGroup.append(label);
+    return input;
+  });
+  const syncRadios = () => {
+    for (const r of radios) r.checked = r.value === lineup.holder;
+  };
+  syncRadios();
+
   // 常用陣型
   const presets = document.createElement('div');
   presets.className = 'lineup__presets';
@@ -57,8 +81,8 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
   canvas.setAttribute('aria-label', '開局站位：拖曳藍隊球員調整位置，點一下讓他持球');
   const hint = document.createElement('p');
   hint.className = 'lineup__hint';
-  hint.textContent = '拖曳藍隊到想要的位置，點一下球員讓他持球；紅隊會依對位自動站好。';
-  wrap.append(presets, canvas, hint);
+  hint.textContent = '拖曳藍隊到想要的位置；選上方的持球者，或在球場上點一下球員，都能換人持球。紅隊會依對位自動站好。';
+  wrap.append(holderGroup, presets, canvas, hint);
 
   const ctx = canvas.getContext('2d')!;
   let vp = fit(0, 0);
@@ -95,6 +119,7 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
   const update = (next: Lineup) => {
     lineup = next;
     opts.onChange(lineup);
+    syncRadios();
     draw();
   };
 

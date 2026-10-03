@@ -1184,3 +1184,38 @@ body[data-screen='board'] .app {
   color: #9da2ad;
   font-size: 13px;
 }
+
+.lineup__holder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lineup__holder legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  color: #c9ccd3;
+  font-size: 14px;
+}
+
+.lineup__holder label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  color: #e3e5ea;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.lineup__holder input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
