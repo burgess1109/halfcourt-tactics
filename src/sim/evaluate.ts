@@ -45,8 +45,10 @@ export interface ShotValue {
   /** 最近防守者的實際距離（公尺） */
   defenderDistance: number;
   defenderId: string;
-  /** 防守者是否被甩在身後 */
+  /** 這位代表的防守者是否被甩在身後 */
   defenderBehind: boolean;
+  /** 所有防守者都被甩在身後（沒有任何人在出手者與籃框之間） */
+  allBehind: boolean;
   /** 0–1，1 = 完全空檔（只看距離，不含身高） */
   openness: number;
   /** 出手者比這位防守者高多少 cm（負數 = 比較矮） */
@@ -85,10 +87,12 @@ export function shotValue(
   // 都沒有人干擾時，記下最近的防守者，評價才能說「對方追在身後幾公尺」。
   const span = OPEN_DISTANCE - BODY_DISTANCE;
   let best: { id: string; d: number; behind: boolean; openness: number; edge: number; mismatch: number; loss: number } | null = null;
+  let allBehind = true;
   for (const red of players.filter((p) => p.team === 'red')) {
     const rp = positions[red.id]!;
     const d = dist(rp, at);
     const behind = dist(rp, RIM) > shooterRimDist + CONTEST_SIDE_MARGIN;
+    if (!behind) allBehind = false;
     const effective = d + (dribbled ? ISO_SEPARATION[skills.iso] : 0);
     const openness = behind ? 1 : Math.min(1, Math.max(0, (effective - BODY_DISTANCE) / span));
     const edge = heightOf(shooter, players) - heightOf(red, players);
@@ -109,6 +113,7 @@ export function shotValue(
     defenderDistance: best!.d,
     defenderId: best!.id,
     defenderBehind: best!.behind,
+    allBehind,
     openness: best!.openness,
     heightEdge: best!.edge,
     mismatch: best!.mismatch,
@@ -214,7 +219,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   const fmt = (v: number) => v.toFixed(2);
 
   // 1. 出手
-  const space = shot.defenderBehind ? `甩開防守者，對方都追在身後（最近 ${shot.defenderDistance.toFixed(1)} m），沒有人干擾`
+  const space = shot.allBehind ? `甩開防守者，對方都追在身後（最近 ${shot.defenderDistance.toFixed(1)} m），沒有人干擾`
     : shot.openness >= 1 ? `完全空檔（最近的防守者 ${shot.defenderDistance.toFixed(1)} m）`
     : shot.openness <= 0.2 ? `被 ${name(shot.defenderId)} 貼身干擾`
     : `${name(shot.defenderId)} 在 ${shot.defenderDistance.toFixed(1)} m 外干擾`;
@@ -260,7 +265,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
       .sort((a, b) => b.expectedPoints - a.expectedPoints)[0];
     if (better) {
       comments.push({
-        text: `其實 ${name(better.playerId)} 在${ZONE_LABEL[better.zone]}更空（${better.defenderBehind ? '防守者在身後' : `最近的防守者 ${better.defenderDistance.toFixed(1)} m`}），傳給他預期得分 ${fmt(better.expectedPoints)}`,
+        text: `其實 ${name(better.playerId)} 在${ZONE_LABEL[better.zone]}更空（${better.allBehind ? '防守者都在身後' : `最近的防守者 ${better.defenderDistance.toFixed(1)} m`}），傳給他預期得分 ${fmt(better.expectedPoints)}`,
         frameIndex: releaseFrame,
         playerIds: [better.playerId],
         priority: 3,

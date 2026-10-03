@@ -9,8 +9,9 @@ import { defendPosition } from '../sim/defense';
 // 站位與對位頁的小球場（SPEC §1.1 步驟 ③）：拖曳藍隊自由放置、點一下指定持球者、一鍵套用常用陣型；
 // 紅隊依目前的對位即時站到防守位置。
 
-/** 只顯示半場靠籃框的部分，球員才不會太小 */
-const VIEW = { minX: -8.3, maxX: 8.3, minY: -0.8, maxY: 11.2 };
+/** 只顯示半場靠籃框的部分，球員才不會太小；拖曳也限制在這個範圍內 */
+export const LINEUP_VIEW = { minX: -8.3, maxX: 8.3, minY: -0.8, maxY: 11.2 };
+const VIEW = LINEUP_VIEW;
 /** 手指移動超過這個距離（CSS px）才算拖曳，否則算點一下 */
 const TAP_SLOP_PX = 5;
 
@@ -171,7 +172,7 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
     if (!moved && Math.hypot(at.x - downAt.x, at.y - downAt.y) < TAP_SLOP_PX) return;
     moved = true;
     const w = toWorld(at.x, at.y);
-    lineup = moveInLineup(lineup, dragging, { x: w.x + grab.x, y: w.y + grab.y });
+    lineup = moveInLineup(lineup, dragging, { x: w.x + grab.x, y: w.y + grab.y }, VIEW);
     draw();
   });
 

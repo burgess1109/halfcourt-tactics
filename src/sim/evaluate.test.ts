@@ -288,3 +288,26 @@ describe('載入戰術時保留它自己的評分', () => {
     expect(store.get().tactic.lastResult).toBeUndefined();
   });
 });
+
+describe('「都追在身後」只在所有防守者都在身後時才說', () => {
+  it('前方 3.5 m 有人（不算干擾）、身後 1 m 有人：說完全空檔，不說都追在身後', () => {
+    const t = createDefaultTactic();
+    const pos = {
+      b1: { x: 0, y: 6 },
+      b2: { x: -7, y: 13 },
+      b3: { x: 7, y: 13 },
+      r1: { x: 0, y: 7 }, // 身後 1 m
+      r2: { x: 0, y: 2.5 }, // 前方 3.5 m
+      r3: { x: 7, y: 14 },
+    };
+    const v = shotValue(t, 'b1', pos, false);
+    expect(v.openness).toBe(1);
+    expect(v.allBehind).toBe(false);
+  });
+
+  it('所有防守者都在身後：allBehind', () => {
+    const t = createDefaultTactic();
+    const pos = { b1: { x: 0, y: 3 }, b2: { x: -7, y: 13 }, b3: { x: 7, y: 13 }, r1: { x: 0, y: 4.5 }, r2: { x: -3, y: 6 }, r3: { x: 3, y: 6 } };
+    expect(shotValue(t, 'b1', pos, false).allBehind).toBe(true);
+  });
+});

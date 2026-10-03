@@ -265,3 +265,13 @@ describe('開局站位（自由放置）', () => {
     expect(isBlankTactic(loadPlay(t, PLAYS[0]!, { A: 'b1', B: 'b2', C: 'b3' }))).toBe(false);
   });
 });
+
+describe('小球場拖曳範圍', () => {
+  it('傳入小球場的範圍時，往上拖不會超出畫面（圓標留在邊緣內）', async () => {
+    const { DEFAULT_LINEUP, moveInLineup } = await import('../model/lineup');
+    const { PLAYER_RADIUS } = await import('../model/entities');
+    const view = { minX: -8.3, maxX: 8.3, minY: -0.8, maxY: 11.2 };
+    const moved = moveInLineup(DEFAULT_LINEUP, 'b2', { x: -5, y: 13 }, view);
+    expect(moved.positions.b2!.y).toBeCloseTo(11.2 - PLAYER_RADIUS);
+  });
+});

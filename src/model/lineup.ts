@@ -60,12 +60,22 @@ export function applyFormation(lineup: Lineup, formation: Formation): Lineup {
   };
 }
 
-/** 拖曳球員：位置限制在可視範圍內 */
-export function moveInLineup(lineup: Lineup, playerId: string, to: Vec2): Lineup {
+export interface Bounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+/**
+ * 拖曳球員：位置限制在畫面範圍內（圓標不超出邊緣）。
+ * 小球場只畫出半場的一部分，要傳入它自己的範圍，否則球員會被拖到畫面外、點不到也拖不回來。
+ */
+export function moveInLineup(lineup: Lineup, playerId: string, to: Vec2, bounds: Bounds = VIEW_BOUNDS): Lineup {
   const r = PLAYER_RADIUS;
   const p = {
-    x: Math.min(VIEW_BOUNDS.maxX - r, Math.max(VIEW_BOUNDS.minX + r, to.x)),
-    y: Math.min(VIEW_BOUNDS.maxY - r, Math.max(VIEW_BOUNDS.minY + r, to.y)),
+    x: Math.min(bounds.maxX - r, Math.max(bounds.minX + r, to.x)),
+    y: Math.min(bounds.maxY - r, Math.max(bounds.minY + r, to.y)),
   };
   return { ...lineup, positions: { ...lineup.positions, [playerId]: p } };
 }
