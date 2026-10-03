@@ -48,6 +48,7 @@ src/
     lineup.ts        開局站位（三名藍隊的位置與持球者）、常用陣型
     serialize.ts     外部資料驗證 parseTactic、JSON 匯出入、分享連結編碼（精簡、四捨五入到公分、deflate-raw + base64url）
     savedTactics.ts  localStorage 的戰術列表（存檔、重新命名、複製、刪除）
+    equal.ts         與欄位順序無關的比對 sameData（同一份資料可能用不同順序建立，不要直接比 JSON.stringify）
     playerForm.ts    設定頁表單驗證
   sim/             防守 AI（純函式，完全決定性）
     config.ts        所有模擬係數（距離、反應時間、掩護、阻絕…）集中在這裡

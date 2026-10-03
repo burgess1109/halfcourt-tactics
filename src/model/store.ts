@@ -1,5 +1,6 @@
 import { createDefaultTactic } from './defaults';
 import { syncFrames } from './frames';
+import { sameData } from './equal';
 import { History } from './history';
 import type { Draft } from './paths';
 import { BALL_ID, type Frame, type PathKind, type Tactic } from './types';
@@ -121,7 +122,7 @@ export class Store {
       return false;
     }
     this.pending = null;
-    const changed = JSON.stringify(this.state.tactic) !== JSON.stringify(tactic);
+    const changed = !sameData(this.state.tactic, tactic);
     if (changed) this.history.push(this.clone());
     this.replace(tactic);
     this.emit();

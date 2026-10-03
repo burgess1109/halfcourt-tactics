@@ -274,6 +274,18 @@ describe('分享連結的唯讀預覽（Store）', () => {
     expect(store.get().tactic.id).not.toBe(saved.id); // 一次復原就回到載入前的戰術
   });
 
+  it('不同方式建立、欄位順序不同的同一份戰術，也算內容相同', async () => {
+    const { Store } = await import('./store');
+    // 角色 A 不是 b1：loadPlay 的 start 依角色順序建立，parseTactic 依固定順序
+    const t = loadPlay(createDefaultTactic(), PLAYS[0]!, { A: 'b2', B: 'b3', C: 'b1' });
+    t.name = 'X';
+    const parsed = parseTactic(JSON.parse(toJsonFile(t))).tactic;
+    expect(JSON.stringify(parsed)).not.toBe(JSON.stringify(t));
+    const store = new Store();
+    store.load(t);
+    expect(store.load(parsed)).toBe(false);
+  });
+
   it('重新開啟正在編輯的同一份存檔（放棄修改）：拿回已存的評分，不會被標成已修改', async () => {
     const { Store } = await import('./store');
     const store = new Store();
