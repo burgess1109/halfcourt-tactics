@@ -33,6 +33,7 @@ export function attachShare(
     save: () => Promise<boolean>;
     show: (screen: Screen) => void;
     screen: () => Screen;
+    stopPlayback: () => void;
   },
 ): ShareUi {
   const { notify } = opts;
@@ -96,8 +97,9 @@ export function attachShare(
     if (!location.hash.startsWith(SHARE_PREFIX)) return false;
     try {
       const { tactic, removed } = await decodeShare(location.hash);
+      // 播放中貼上連結：先停止播放再開預覽
+      opts.stopPlayback();
       const s = store.get();
-      if (s.playing) return false;
       // 連續開兩個分享連結時，保留最早的狀態
       if (!before) before = { tactic: s.tactic, screen: opts.screen() };
       for (const d of document.querySelectorAll('dialog')) if (d.open) d.close();

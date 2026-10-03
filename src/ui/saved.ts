@@ -102,9 +102,7 @@ export function attachSaved(
       store.reset(copy);
       opts.onPreviewEnded();
     } else {
-      store.update((st) => {
-        st.tactic.name = name;
-      });
+      store.renameTactic(copy.id, name);
     }
     notify(`已存檔「${name}」`);
     render();
@@ -174,12 +172,8 @@ export function attachSaved(
       }
       const name = input.value.trim();
       if (!write(() => saved.rename(item.id, name))) return;
-      // 目前開著的就是這份戰術：名稱一起改（不算修改內容）
-      if (store.get().tactic.id === item.id) {
-        store.update((s) => {
-          s.tactic.name = name;
-        });
-      }
+      // 目前開著（或在復原紀錄裡）的就是這份戰術：名稱一起改（不算修改內容）
+      store.renameTactic(item.id, name);
       renaming = null;
       render();
     };

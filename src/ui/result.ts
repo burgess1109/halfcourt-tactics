@@ -17,6 +17,7 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
   const points = $<HTMLElement>('#result-points');
   const list = $<HTMLElement>('#result-comments');
   let shownFor = 0;
+  let shownId = '';
   let timer: number | undefined;
 
   const clearHighlight = () => {
@@ -58,7 +59,8 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
   // 戰術有變（updatedAt 改變）就關閉；播放開始時也關閉
   store.subscribe((s) => {
     if (panel.hidden) return;
-    if (s.playing || s.tactic.updatedAt !== shownFor) hide();
+    // 換成另一份戰術（id 不同）也關閉：載入不會改 updatedAt
+    if (s.playing || s.tactic.updatedAt !== shownFor || s.tactic.id !== shownId) hide();
   });
 
   return {
@@ -71,6 +73,7 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
         else delete s.tactic.lastResult;
       });
       shownFor = store.get().tactic.updatedAt;
+      shownId = store.get().tactic.id;
 
       grade.textContent = scored ? e.grade! : '—';
       grade.dataset.grade = scored ? e.grade! : 'none';

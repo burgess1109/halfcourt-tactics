@@ -27,6 +27,12 @@ export class History<T> {
     return next;
   }
 
+  /** 修改所有快照（例如改名稱：名稱不算一步，但復原後也要保留新名稱） */
+  forEach(fn: (snapshot: T) => void): void {
+    for (const s of this.past) fn(s);
+    for (const s of this.future) fn(s);
+  }
+
   get canUndo(): boolean {
     return this.past.length > 0;
   }

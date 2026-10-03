@@ -250,19 +250,53 @@ describe('分享連結的唯讀預覽（Store）', () => {
     expect(store.canUndo).toBe(false);
   });
 
-  it('改名稱（store.update）不算修改：評分與最後修改時間不變', () => {
-    // 存檔時名稱用 update 寫入，戰術列表才不會顯示「未存檔」、評分也不會被清掉
-    const t = sample();
-    t.lastResult = { grade: 'A', expectedPoints: 0.8 };
-    return import('./store').then(({ Store }) => {
-      const store = new Store();
-      store.load(t);
-      const at = store.get().tactic.updatedAt;
-      store.update((s) => {
-        s.tactic.name = '新名稱';
-      });
-      expect(store.get().tactic.updatedAt).toBe(at);
-      expect(store.get().tactic.lastResult).toEqual({ grade: 'A', expectedPoints: 0.8 });
+  it('開啟存檔原樣載入：最後修改時間、評分、內建戰術來源都不變（標題才不會顯示未存檔）', async () => {
+    const { Store } = await import('./store');
+    const store = new Store();
+    const saved = sample();
+    saved.updatedAt = 1234;
+    saved.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    store.load(structuredClone(saved));
+    expect(store.get().tactic).toEqual(saved);
+    expect(store.canUndo).toBe(true);
+  });
+
+  it('重新開啟正在編輯的同一份存檔（放棄修改）：拿回已存的評分，不會被標成已修改', async () => {
+    const { Store } = await import('./store');
+    const store = new Store();
+    const saved = sample();
+    saved.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    store.load(structuredClone(saved));
+    store.commit((s) => {
+      s.tactic.frames[0]!.paths = [];
     });
+    expect(store.get().tactic.basedOn!.modified).toBe(true);
+    expect(store.get().tactic.lastResult).toBeUndefined();
+    store.load(structuredClone(saved));
+    expect(store.get().tactic).toEqual(saved);
+  });
+
+  it('改名稱不算一步、不算修改；復原後名稱也不會變回去', async () => {
+    const { Store } = await import('./store');
+    const store = new Store();
+    const t = sample();
+    t.name = '';
+    t.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    store.load(t);
+    store.commit((s) => {
+      s.tactic.frames[0]!.start.b3 = { x: -5, y: 6.5 };
+    });
+    const at = store.get().tactic.updatedAt;
+    store.renameTactic(t.id, 'A');
+    expect(store.get().tactic.updatedAt).toBe(at);
+    store.undo();
+    expect(store.get().tactic.name).toBe('A');
+    store.redo();
+    expect(store.get().tactic.name).toBe('A');
+    // 復原到載入之前的另一份戰術：那份的名稱不受影響
+    store.undo();
+    store.undo();
+    expect(store.get().tactic.id).not.toBe(t.id);
+    expect(store.get().tactic.name).toBe('');
   });
 });

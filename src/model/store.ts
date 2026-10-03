@@ -109,15 +109,33 @@ export class Store {
     this.emit();
   }
 
-  /** 換成另一份戰術（例如載入內建戰術）；算一步，可以復原回原本的戰術。會結束唯讀預覽。 */
+  /**
+   * 換成另一份戰術（例如載入內建戰術、開啟存檔）；算一步，可以復原回原本的戰術。會結束唯讀預覽。
+   * 載入的戰術原樣使用：不是「修改」，所以不改 updatedAt、不清評分、不標示已修改
+   * （重新開啟同一份存檔時，id 相同也一樣）。
+   */
   load(tactic: Tactic): void {
     if (this.state.readonly) {
       this.reset(tactic);
       return;
     }
-    this.begin();
+    this.pending = null;
+    this.history.push(this.clone());
     this.replace(tactic);
-    this.end();
+    this.emit();
+  }
+
+  /**
+   * 改戰術名稱：不算一步、不算修改（不改 updatedAt、不清評分），
+   * 復原紀錄裡同一份戰術的名稱也一起改，復原後才不會變回舊名稱。
+   */
+  renameTactic(id: string, name: string): void {
+    const rename = (t: Tactic) => {
+      if (t.id === id) t.name = name;
+    };
+    this.history.forEach(rename);
+    rename(this.state.tactic);
+    this.emit();
   }
 
   /**

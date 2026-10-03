@@ -108,6 +108,7 @@ const share = attachShare(store, {
   save: () => saved.save(),
   show,
   screen: () => document.body.dataset.screen as Screen,
+  stopPlayback: () => playback.stop(),
 });
 const saved = attachSaved(store, savedTactics, {
   notify,
