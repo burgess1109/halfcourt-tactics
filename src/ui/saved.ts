@@ -152,10 +152,10 @@ export function attachSaved(
     if (!t) return;
     const wasPreview = store.get().readonly;
     dialog.close();
-    store.load(t);
+    const undoable = store.load(t);
     if (wasPreview) opts.onPreviewEnded();
     opts.onOpened();
-    notify(wasPreview ? `已開啟「${t.name}」` : `已開啟「${t.name}」，按復原可以回到剛才的戰術`);
+    notify(undoable ? `已開啟「${t.name}」，按復原可以回到剛才的戰術` : `已開啟「${t.name}」`);
   };
 
   const renameRow = (item: SavedSummary) => {

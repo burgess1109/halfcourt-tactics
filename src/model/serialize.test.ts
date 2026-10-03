@@ -261,6 +261,19 @@ describe('分享連結的唯讀預覽（Store）', () => {
     expect(store.canUndo).toBe(true);
   });
 
+  it('重新開啟沒改過的同一份存檔：不多記一步復原', async () => {
+    const { Store } = await import('./store');
+    const store = new Store();
+    store.commit((s) => {
+      s.tactic.frames[0]!.start.b1 = { x: 1, y: 8 };
+    });
+    const saved = sample();
+    expect(store.load(structuredClone(saved))).toBe(true);
+    expect(store.load(structuredClone(saved))).toBe(false);
+    store.undo();
+    expect(store.get().tactic.id).not.toBe(saved.id); // 一次復原就回到載入前的戰術
+  });
+
   it('重新開啟正在編輯的同一份存檔（放棄修改）：拿回已存的評分，不會被標成已修改', async () => {
     const { Store } = await import('./store');
     const store = new Store();

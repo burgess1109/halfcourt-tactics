@@ -113,16 +113,19 @@ export class Store {
    * 換成另一份戰術（例如載入內建戰術、開啟存檔）；算一步，可以復原回原本的戰術。會結束唯讀預覽。
    * 載入的戰術原樣使用：不是「修改」，所以不改 updatedAt、不清評分、不標示已修改
    * （重新開啟同一份存檔時，id 相同也一樣）。
+   * 內容和目前完全相同時不記一步（按復原不會沒反應，也不會擠掉有用的復原）。回傳是否記了一步。
    */
-  load(tactic: Tactic): void {
+  load(tactic: Tactic): boolean {
     if (this.state.readonly) {
       this.reset(tactic);
-      return;
+      return false;
     }
     this.pending = null;
-    this.history.push(this.clone());
+    const changed = JSON.stringify(this.state.tactic) !== JSON.stringify(tactic);
+    if (changed) this.history.push(this.clone());
     this.replace(tactic);
     this.emit();
+    return changed;
   }
 
   /**
