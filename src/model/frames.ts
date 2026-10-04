@@ -134,6 +134,14 @@ export function insertFrameAfter(tactic: Tactic, index: number, opts: { defense?
 /** 刪除分鏡；只剩一個時不能刪。回傳刪除後應該顯示的 index。 */
 export function removeFrame(tactic: Tactic, index: number): number | null {
   if (tactic.frames.length <= 1) return null;
+  // 刪掉第 1 個分鏡：藍隊留在原本第 2 個分鏡開始時的位置（frame.start 不會被重算）。
+  // 關閉自動防守時紅隊也一樣，把那時的位置全部記成開局位置，否則會跳回被刪掉的分鏡裡的開局位置
+  if (index === 0 && !tactic.autoDefense) {
+    const next = tactic.frames[1]!;
+    tactic.redStarts = Object.fromEntries(
+      redIdsOf(tactic).filter((id) => next.start[id]).map((id) => [id, { ...next.start[id]! }]),
+    );
+  }
   tactic.frames.splice(index, 1);
   syncFrames(tactic, true);
   return Math.min(index, tactic.frames.length - 1);

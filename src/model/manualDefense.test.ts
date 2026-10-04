@@ -224,4 +224,25 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
     });
     expect(store.get().tactic.basedOn!.modified).toBe(true);
   });
+
+  it('刪掉第 1 個分鏡：紅隊和藍隊一樣，留在原本第 2 個分鏡開始時的位置，路線從那裡出發', async () => {
+    const { removeFrame } = await import('./frames');
+    const t = manualTactic(); // 紅 1 在第 1 個分鏡跑到 (2.6, 5.6)
+    t.redStarts = { r1: t.frames[0]!.start.r1! };
+    const f1 = t.frames[1]!;
+    putPath(f1, { id: 'r1b', kind: 'cut', actorId: 'r1', points: [f1.start.r1!, { x: 1, y: 3 }], freehand: false });
+    syncFrames(t, true);
+    const before = { ...t.frames[1]!.start };
+    removeFrame(t, 0);
+    for (const id of ['b1', 'b2', 'b3', 'r1', 'r2', 'r3']) expect(t.frames[0]!.start[id], id).toEqual(before[id]);
+    const tl = buildTimeline(t);
+    expect(redAt(simulateDefense(t, tl), 0).positions.r1).toEqual({ x: 2.6, y: 5.6 });
+  });
+
+  it('啟用自動防守時刪掉第 1 個分鏡：不記錄紅隊開局位置（由模擬決定）', async () => {
+    const { removeFrame } = await import('./frames');
+    const t = loadPlay(createDefaultTactic(), play, roles);
+    removeFrame(t, 0);
+    expect(t.redStarts).toBeUndefined();
+  });
 });
