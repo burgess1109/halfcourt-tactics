@@ -1460,3 +1460,9 @@ body[data-screen='board'] .app {
 .choice:disabled {
   opacity: 0.45;
 }
+
+/* 選單裡不能用的項目（例如第 2 個分鏡之後的「移動」） */
+.menu__item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

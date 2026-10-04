@@ -48,8 +48,10 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
   );
   const closeMenu = menuCtl.close;
 
+  const MOVE_LOCKED = '只有第 1 個分鏡可以移動站位；之後的站位由上一個分鏡的路線決定';
   for (const item of toolItems) {
     item.addEventListener('click', () => {
+      if (item.disabled) return;
       store.update((s) => {
         s.tool = item.dataset.tool as Tool;
       });
@@ -87,7 +89,7 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
       } else {
         store.update((s) => {
           s.selectedPathId = null;
-          s.tool = 'move';
+          if (s.frameIndex === 0) s.tool = 'move';
         });
       }
     } else if (!mod && key === 'f') {
@@ -96,6 +98,10 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
       });
     } else if (!mod && shortcuts[key]) {
       const tool = shortcuts[key]!;
+      if (tool === 'move' && store.get().frameIndex > 0) {
+        notify(MOVE_LOCKED);
+        return;
+      }
       store.update((s) => {
         s.tool = tool;
       });
@@ -117,7 +123,15 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
     toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);
     setTip(toolBtn, `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}，點開切換（V、1–5、F）`);
     badge.hidden = !s.freehand;
-    for (const item of toolItems) item.setAttribute('aria-checked', String(item.dataset.tool === s.tool));
+    for (const item of toolItems) {
+      item.setAttribute('aria-checked', String(item.dataset.tool === s.tool));
+      // 「移動」只在第 1 個分鏡可以用
+      if (item.dataset.tool === 'move') {
+        item.disabled = s.frameIndex > 0;
+        if (item.disabled) item.dataset.tip = MOVE_LOCKED;
+        else delete item.dataset.tip;
+      }
+    }
     freehandItem.setAttribute('aria-checked', String(s.freehand));
   };
   store.subscribe(sync);

@@ -210,6 +210,8 @@ export class Store {
   }
 
   private emit(): void {
+    // 第 2 個分鏡之後不能移動站位（都由上一個分鏡的路線推算），「移動」工具不能用：換成「跑位」
+    if (this.state.frameIndex > 0 && this.state.tool === 'move') this.state.tool = 'cut';
     for (const l of this.listeners) l(this.state);
   }
 }
