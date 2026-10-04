@@ -85,14 +85,11 @@ body {
   cursor: pointer;
 }
 
+/* 圖示：Phosphor Bold 是實心路徑（填色）；籃球專用的線條圖示在 symbol 裡自己設定線條 */
 .tool svg {
   width: 28px;
   height: 28px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: currentColor;
 }
 
 .tool--boxed {
@@ -281,11 +278,7 @@ body {
 .menu__item svg {
   width: 22px;
   height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: currentColor;
 }
 
 .menu__item[aria-checked='true'] {

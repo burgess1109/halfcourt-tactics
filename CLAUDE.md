@@ -88,6 +88,7 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - **改戰術名稱不算修改**：用 `store.update`，不要用 `commit`（否則會清掉評分、標示未存檔）。
 - **按鈕提示**：用 `data-tip`（`ui/tooltip.ts` 的 `setTip` 可動態更新），不要用 `title`，否則會和自訂提示重複出現；有快捷鍵的寫在括號裡。
 - **canvas 大小一定要由 CSS 明確指定**（`width` / `height`）：只靠 `inset` 時瀏覽器會用 canvas 自己的像素大小，而 Renderer 依顯示大小設定像素大小，兩者互相放大會讓頁面當掉。要讓位給其他介面時，改 `#stage` 上的 `--reserve-right` / `--reserve-bottom`。
+- **圖示**：放在 `index.html` 的 SVG sprite（`<symbol id="icon-…">`），按鈕用 `<svg><use href="#icon-…"/></svg>`。一般功能用 Phosphor Icons Bold（實心路徑，CSS 用 `fill: currentColor`）；籃球專用的線條圖示在 symbol 裡自己設定 `stroke`。加入新的第三方素材時，要把授權聲明補進 `public/THIRD_PARTY_NOTICES.txt`。
 - **分鏡圖 SVG**：必須是嚴格合法的 XML，不能有重複屬性、不能用 `rgba()`（PhpStorm 的 SVG 檢視器會載入失敗），有測試把關。
 
 ## Code review 重點

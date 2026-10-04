@@ -96,3 +96,5 @@ docs/      規格、規劃、戰術說明
 ## 授權
 
 [MIT](LICENSE)
+
+第三方元件：工具列與選單圖示使用 [Phosphor Icons](https://phosphoricons.com/)（MIT），PWA 的 service worker 由 [Workbox](https://github.com/GoogleChrome/workbox)（MIT）產生。授權全文見 [`public/THIRD_PARTY_NOTICES.txt`](public/THIRD_PARTY_NOTICES.txt)，部署後也會一起發佈。
