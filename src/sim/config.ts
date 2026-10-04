@@ -55,8 +55,11 @@ export const FIGHT_OVER_RANGE = { min: 0.25, max: 0.9 } as const;
  * 之後被掩護的隊友回到離理想位置 HELP_RECOVERED 公尺內、而且離籃框比持球者近 HELP_FRONT 公尺以上（真的擋在前面），
  * 或持球者把球傳出去、或過了 HELP_MAX 秒，就回去盯掩護者。
  * 沉退的位置在罰球線下方，所以持球者在中距離以外急停跳投會比較空。
+ * 沉退時掩護者順下、離籃框只比協防的人遠不到 DROP_PICKUP 公尺（快要超過他），協防的人就回去盯他，不讓他跑到身後；
+ * 這時持球者交給被掩護的隊友去追，急停跳投就比較空（沉退的代價）。
  */
 export const DROP_DEPTH = 3.0;
+export const DROP_PICKUP = 1.5;
 export const HELP_RECOVERED = 1.0;
 export const HELP_MIN = 1.0;
 export const HELP_FRONT = 0.8;

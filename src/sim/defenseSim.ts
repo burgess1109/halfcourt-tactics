@@ -14,6 +14,7 @@ import {
   DRIVE_HELP_MIN_SPEED,
   DRIVE_HELP_SPOTS,
   DRIVE_HELP_COOLDOWN,
+  DROP_PICKUP,
   DT,
   FIGHT_OVER_DELAY,
   JUMP_DURATION,
@@ -205,6 +206,9 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
       // 含延遲中換防的預計對位；每一格算一次就好
       const projected = pendingSwaps.length ? applySwaps(assign, pendingSwaps) : assign;
       const seenPass = passAt(timeline, seen);
+      // 紅隊在「看到的那一刻」的位置：和 seenPos 同一個時間點比較，判斷協防 / 補防的開始與結束才一致
+      const seenIndex = Math.min(Math.round(seen / DT), i - 1);
+      const seenRed = (id: string) => red[id]![seenIndex]!;
 
       // 弱邊補防：持球者甩開防守者往籃框切，來得及的無球防守者補到切入路線上
       if (tactic.driveHelp === 'weak-side' && seenHolder && t >= driveHelpReadyAt && Object.keys(driveHelping).length === 0) {
@@ -212,8 +216,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         const before = prevPos[seenHolder]!;
         const onBall = reds.find((x) => assign[x.id] === seenHolder);
         // 持球者的防守者在同一個時間點（看到的那一刻）的位置
-        const seenIndex = Math.min(Math.round(seen / DT), i - 1);
-        const onBallAt = onBall ? red[onBall.id]![seenIndex]! : null;
+        const onBallAt = onBall ? seenRed(onBall.id) : null;
         const beaten = !onBallAt || rimDistance(onBallAt) > rimDistance(driver) - DRIVE_HELP_BEATEN;
         const inward = -outwardSpeedOf(before, driver, VELOCITY_DT);
         if (beaten && inward >= DRIVE_HELP_MIN_SPEED && rimDistance(driver) <= DRIVE_HELP_MAX_RIM) {
@@ -249,10 +252,11 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         }
         const jumping = seen < (jumpUntil[r.id] ?? -1) && seenHolder !== man;
         const jumpTo = jumping ? seenPos[jumpToward[r.id]!]! : null;
-        // 協防擋拆：被掩護的隊友追回來、球傳出去、或時間到了，就回去盯掩護者
+        // 協防擋拆：被掩護的隊友追回來、球傳出去、或時間到了，就回去盯掩護者；
+        // 沉退時，掩護者順下到比沉退位置更靠近籃框，也回去盯他（不讓順下的人跑到身後）
         const help = helping[r.id];
         if (help) {
-          const mate = cur[help.teammate]!;
+          const mate = seenRed(help.teammate);
           const handler = seenPos[help.handler]!;
           const spot = guardPosition(handler, true, pressure);
           const recovered =
@@ -260,7 +264,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             t >= (frozenUntil[help.teammate] ?? 0) &&
             Math.hypot(mate.x - spot.x, mate.y - spot.y) <= HELP_RECOVERED &&
             rimDistance(mate) <= rimDistance(handler) - HELP_FRONT;
-          if (pickHelpOver({ start: help.event.t, until: help.until, handler: help.handler }, t, seen, seenHolder, recovered)) {
+          const rolled = tactic.pickCoverage === 'drop' && rimDistance(seenPos[man]!) <= rimDistance(cur[r.id]!) + DROP_PICKUP;
+          if (rolled || pickHelpOver({ start: help.event.t, until: help.until, handler: help.handler }, t, seen, seenHolder, recovered)) {
             help.event.delay = t - help.event.t;
             delete helping[r.id];
           }
@@ -271,7 +276,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
           const onBall = reds.find((x) => assign[x.id] === drive.driver);
           const driver = seenPos[drive.driver]!;
           const spot = guardPosition(driver, true, pressure);
-          const back = onBall ? cur[onBall.id]! : null;
+          const back = onBall ? seenRed(onBall.id) : null;
           const recovered =
             !!back &&
             Math.hypot(back.x - spot.x, back.y - spot.y) <= HELP_RECOVERED &&
@@ -350,8 +355,10 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
     for (const r of reds) red[r.id]!.push({ ...cur[r.id]! });
     // 模擬結束時還在協防：協防時間算到最後一格
     if (i === ticks - 1) {
-      for (const h of Object.values(helping)) h.event.delay = t - h.event.t;
-      for (const h of Object.values(driveHelping)) h.event.delay = t - h.event.t;
+      // 最後一格的時間可能比總時長多一點點（格數無條件進位），算到總時長為止
+      const end = Math.min(t, timeline.total);
+      for (const h of Object.values(helping)) h.event.delay = end - h.event.t;
+      for (const h of Object.values(driveHelping)) h.event.delay = end - h.event.t;
     }
     stuck.push(new Set(reds.filter((r) => t < (frozenUntil[r.id] ?? 0)).map((r) => r.id)));
   }

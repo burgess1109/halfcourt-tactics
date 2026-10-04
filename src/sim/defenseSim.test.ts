@@ -334,8 +334,13 @@ describe('內建戰術：沉退與上提的差別', () => {
     expect(grade('Floater', 'drop')).toBeLessThan(grade('Floater', 'hedge') - 0.1);
   });
 
-  it('擋拆外拉：對方沉退時外拉比較空', () => {
-    expect(grade('Pick and Pop', 'drop')).toBeGreaterThan(grade('Pick and Pop', 'hedge'));
+  it('擋拆外拉：對方沉退時外拉的人完全空檔（上提時也不會比較好守）', () => {
+    expect(grade('Pick and Pop', 'drop')).toBeGreaterThanOrEqual(grade('Pick and Pop', 'hedge'));
+    expect(grade('Pick and Pop', 'drop')).toBeGreaterThan(0.6);
+  });
+
+  it('沉退時掩護者順下：協防的人回去盯他，不讓他跑到身後', () => {
+    expect(grade('Pick and Roll', 'drop')).toBeLessThan(0.4);
   });
 });
 
@@ -399,7 +404,7 @@ describe('弱邊補防', () => {
     expect(driveHelpDepth({ x: 3.5, y: 2.5 }, 4.5, driver, 12, spots, 0.2, 0.1)).toBeNull();
   });
 
-  const run = (name: string, opts: Partial<Pick<Tactic, 'screenDefense' | 'pressure' | 'driveHelp'>>) => {
+  const run = (name: string, opts: Partial<Pick<Tactic, 'screenDefense' | 'pressure' | 'driveHelp' | 'pickCoverage'>>) => {
     const base = createDefaultTactic();
     Object.assign(base, opts);
     const t = loadPlay(base, PLAYS.find((p) => p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
@@ -411,9 +416,9 @@ describe('弱邊補防', () => {
     expect(run('Drive to Rim', { screenDefense: 'fight-over' }).sim.defense.events.some((e) => e.type === 'drive-help')).toBe(false);
   });
 
-  it('擋拆切入：弱邊補防擋住切入，原本盯的人空出來', () => {
-    const off = run('Drive to Rim', { screenDefense: 'fight-over' });
-    const on = run('Drive to Rim', { screenDefense: 'fight-over', driveHelp: 'weak-side' });
+  it('擋拆後切入：弱邊補防擋住切入，原本盯的人空出來', () => {
+    const off = run('Hunting the Mismatch', { screenDefense: 'fight-over' });
+    const on = run('Hunting the Mismatch', { screenDefense: 'fight-over', driveHelp: 'weak-side' });
     const help = on.sim.defense.events.find((e) => e.type === 'drive-help')!;
     expect(help).toMatchObject({ handlerId: 'b1' });
     expect(help.type === 'drive-help' && help.leftId).not.toBe('b1');
@@ -447,6 +452,23 @@ describe('補防與擋拆協防（18 套戰術 × 各種設定）', () => {
       return { label: `${play.name} ${JSON.stringify(c)}`, sim, comments: evaluate(t, sim).comments };
     }),
   );
+
+  it('補防不會在開始的同一格就結束（開始與結束都用看到的那一刻的位置比較）', () => {
+    for (const { label, sim } of runs) {
+      for (const d of sim.defense.events.filter((e) => e.type === 'drive-help')) {
+        expect(d.delay, label).toBeGreaterThan(3 / 60);
+      }
+    }
+  });
+
+  it('Pick and Roll（換防、弱邊補防）：一般、緊貼都沒有 0 秒的補防', () => {
+    for (const pressure of ['normal', 'tight'] as const) {
+      const base = createDefaultTactic();
+      Object.assign(base, { screenDefense: 'switch', driveHelp: 'weak-side', pressure });
+      const t = loadPlay(base, PLAYS.find((p) => p.category === '高位擋拆' && p.name === 'Pick and Roll')!, { A: 'b1', B: 'b2', C: 'b3' });
+      for (const d of simulate(t).defense.events.filter((e) => e.type === 'drive-help')) expect(d.delay).toBeGreaterThan(0.1);
+    }
+  });
 
   it('正在補防的人不會被派去擋拆協防', () => {
     for (const { label, sim } of runs) {
