@@ -6,6 +6,7 @@ import type { PickCoverage, Pressure, Tactic, Vec2 } from '../model/types';
 import {
   BODY_DISTANCE,
   DEFENSE_SPEED_FACTOR,
+  DENY_TRIGGER_SPEED,
   DRIVE_HELP_BEATEN,
   DRIVE_HELP_MARGIN,
   DRIVE_HELP_RECOVERED_FRONT,
@@ -256,7 +257,10 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         if (t < (frozenUntil[r.id] ?? 0)) continue;
         const man = assign[r.id]!;
         const seenBall = seenHolder ? seenPos[seenHolder]! : null;
-        denying[r.id] = nextDenyState(denying[r.id] ?? false, outwardSpeedOf(prevPos[man]!, seenPos[man]!, VELOCITY_DT));
+        const outward = outwardSpeedOf(prevPos[man]!, seenPos[man]!, VELOCITY_DT);
+        denying[r.id] = nextDenyState(denying[r.id] ?? false, outward);
+        // 對位者正在往籃框切（例如掩護後順下）
+        const cutting = outward <= -DENY_TRIGGER_SPEED;
         // 看到對位者把球傳出去：往接球者的方向靠一下（傳球飛行中持續延長）
         if (seenPass && seenPass.from === man) {
           jumpUntil[r.id] = seen + JUMP_DURATION;
@@ -309,7 +313,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
           ? driveHelpPosition(seenPos[driveHelping[r.id]!.driver]!, driveHelping[r.id]!.depth)
           : helping[r.id]
           ? pickHelpPosition(tactic.pickCoverage, seenPos[helping[r.id]!.handler]!, pressure)
-          : chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo, pressure);
+          : chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo, pressure, cutting);
         const p = cur[r.id]!;
         const dx = target.x - p.x;
         const dy = target.y - p.y;

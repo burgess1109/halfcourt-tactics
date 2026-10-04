@@ -10,6 +10,7 @@ import {
   DENY_TOWARD_RIM,
   DENY_TRIGGER_SPEED,
   DROP_DEPTH,
+  NEAR_BALL_TOWARD_BALL,
   HELP_SHADE,
   JUMP_TO_BALL,
   MIN_GAP,
@@ -34,20 +35,48 @@ export function guardPosition(man: Vec2, hasBall: boolean, pressure: Pressure = 
 }
 
 /**
+ * 防外圍、離持球者很近的無球者（例如掩護者）：在對位者往「持球者方向」與「籃框方向」的中間方向，
+ * 離對位者 PRESSURE_GAPS[pressure].onBall（和防持球者一樣近）。
+ */
+function nearBallPosition(man: Vec2, toBall: Vec2, ballDist: number, toRim: Vec2, rimDist: number, pressure: Pressure): Vec2 {
+  const dx = (toBall.x / ballDist) * NEAR_BALL_TOWARD_BALL + toRim.x / rimDist;
+  const dy = (toBall.y / ballDist) * NEAR_BALL_TOWARD_BALL + toRim.y / rimDist;
+  const d = Math.hypot(dx, dy);
+  // 持球者剛好在對位者和籃框的反方向：兩個方向抵消，改站在對位者和籃框之間
+  if (d < 1e-6) return guardPosition(man, true, pressure);
+  const gap = PRESSURE_GAPS[pressure].onBall;
+  return { x: man.x + (dx / d) * gap, y: man.y + (dy / d) * gap };
+}
+
+/**
  * 防守者要站的位置（SPEC §6.2）：
  * - 防持球者：在對位者與籃框之間
  * - 防外圍無球的人（離籃框超過 DENY_MIN_RIM_DISTANCE）：
  *   - 平常（包含開局站著不動）：協防站位，在對位者與籃框之間、稍微偏向持球者，守住內切
  *   - deny（對位者往外跑想出來接球，見 nextDenyState）：阻絕，站到傳球路線上
- * - 防籃下附近、或離持球者很近（例如正在掩護）的無球者，或球在空中（ball 為 null）：在對位者與籃框之間
+ * - 防外圍、離持球者很近（例如正在掩護）的無球者：貼在他身邊、靠持球者與籃框那一側（nearBallPosition）
+ * - 防籃下附近的無球者，或球在空中（ball 為 null）：在對位者與籃框之間
  */
-export function defendPosition(man: Vec2, ball: Vec2 | null, hasBall: boolean, deny = false, pressure: Pressure = 'normal'): Vec2 {
+export function defendPosition(
+  man: Vec2,
+  ball: Vec2 | null,
+  hasBall: boolean,
+  deny = false,
+  pressure: Pressure = 'normal',
+  cutting = false,
+): Vec2 {
   if (hasBall || !ball) return guardPosition(man, hasBall, pressure);
   const toRim = { x: RIM.x - man.x, y: RIM.y - man.y };
   const rimDist = Math.hypot(toRim.x, toRim.y);
   const toBall = { x: ball.x - man.x, y: ball.y - man.y };
   const ballDist = Math.hypot(toBall.x, toBall.y);
-  if (rimDist <= DENY_MIN_RIM_DISTANCE || ballDist < DENY_MIN_BALL_DISTANCE) return guardPosition(man, false, pressure);
+  if (rimDist <= DENY_MIN_RIM_DISTANCE) return guardPosition(man, false, pressure);
+  // 對位者在外圍、離持球者很近（例如正在幫持球者掩護）：
+  // - 站著（掩護中）：貼在他身邊、靠持球者與籃框那一側，隨時準備換防或協防；不要退到他身後的禁區裡
+  // - 往籃框切（例如掩護後順下，cutting）：回到他和籃框之間，擋住順下
+  if (ballDist < DENY_MIN_BALL_DISTANCE) {
+    return cutting ? guardPosition(man, false, pressure) : nearBallPosition(man, toBall, ballDist, toRim, rimDist, pressure);
+  }
   // 緊貼：外圍一律阻絕
   if (!deny && !PRESSURE_GAPS[pressure].alwaysDeny) {
     // 協防站位：在對位者與籃框之間，稍微偏向持球者，守住內切
@@ -138,6 +167,7 @@ export function chaseTarget(
   deny = false,
   jumpTo: Vec2 | null = null,
   pressure: Pressure = 'normal',
+  cutting = false,
 ): Vec2 {
   const dx = defender.x - man.x;
   const dy = defender.y - man.y;
@@ -147,7 +177,7 @@ export function chaseTarget(
   const rd = Math.hypot(rx, ry) || 1;
   const behind = (dx * rx + dy * ry) / (d * rd) < BEATEN_COS;
   if (!behind || rimDistance(defender) <= rimDistance(man) + BEATEN_MARGIN) {
-    return jumpTo ? jumpPosition(man, jumpTo) : defendPosition(man, ball, hasBall, deny, pressure);
+    return jumpTo ? jumpPosition(man, jumpTo) : defendPosition(man, ball, hasBall, deny, pressure, cutting);
   }
   return { x: man.x + (dx / d) * BODY_DISTANCE, y: man.y + (dy / d) * BODY_DISTANCE };
 }

@@ -3,7 +3,7 @@ import { simulate } from '../anim/simulation';
 import { buildTimeline, poseAt } from '../anim/timeline';
 import { createDefaultTactic } from '../model/defaults';
 import { insertFrameAfter, syncFrames } from '../model/frames';
-import { putPath } from '../model/paths';
+import { makeShot, putPath } from '../model/paths';
 import type { Tactic } from '../model/types';
 import { SWITCH_DELAY } from './config';
 import { loadPlay } from '../plays/instantiate';
@@ -444,9 +444,9 @@ describe('弱邊補防', () => {
     expect(on.sim.defense.events.some((e) => e.type === 'drive-help')).toBe(false);
   });
 
-  it('補防的代價：緊貼時去補防，順下的人空出來', () => {
-    const off = run('Pick and Roll', { pressure: 'tight' });
-    const on = run('Pick and Roll', { pressure: 'tight', driveHelp: 'weak-side' });
+  it('補防的代價：擠過、緊貼時去補防，順下的人空出來', () => {
+    const off = run('Pick and Roll', { screenDefense: 'fight-over', pressure: 'tight' });
+    const on = run('Pick and Roll', { screenDefense: 'fight-over', pressure: 'tight', driveHelp: 'weak-side' });
     expect(on.points).toBeGreaterThan(off.points + 0.1);
   });
 });
@@ -537,4 +537,35 @@ it('補防中的人，原本盯的人上來擋拆：不會被派去沉退 / 上�
   for (const p of events.filter((e) => e.type === 'drop' || e.type === 'hedge')) {
     expect(drives.some((d) => d.defenderId === p.defenderId && p.t >= d.t && p.t < d.t + d.delay)).toBe(false);
   }
+});
+
+describe('防守掩護者（外圍、離持球者很近的無球者）', () => {
+  const ball = { x: 0, y: 8.6 };
+  const screener = { x: -1, y: 7.1 };
+
+  it('站著掩護時：貼在他身邊（同防持球者的距離），偏向持球者，不退到他身後的禁區', () => {
+    const p = defendPosition(screener, ball, false);
+    expect(dist(p, screener)).toBeCloseTo(1.5);
+    const old = guardPosition(screener, false); // 舊規則：在他和籃框之間 2.0 m
+    expect(dist(p, ball)).toBeLessThan(dist(old, ball));
+  });
+
+  it('往籃框切（掩護後順下）：回到他和籃框之間', () => {
+    expect(defendPosition(screener, ball, false, false, 'normal', true)).toEqual(guardPosition(screener, false));
+  });
+
+  it('掩護後持球者立刻出手：換防還沒完成，但接手的防守者已經比較近（原本 3.7 m）', () => {
+    // 1 號從弧頂往左翼運球，2 號同一個分鏡從左翼跑到對手 1 旁邊掩護；下一個分鏡 1 號直接出手
+    const t = createDefaultTactic();
+    const f0 = t.frames[0]!;
+    putPath(f0, { id: 's', kind: 'screen', actorId: 'b2', points: [f0.start.b2!, { x: -0.96, y: 7.07 }], freehand: false });
+    putPath(f0, { id: 'd', kind: 'dribble', actorId: 'b1', points: [f0.start.b1!, { x: -2.2, y: 7.9 }, { x: -4.08, y: 7.37 }], freehand: false });
+    insertFrameAfter(t, 0);
+    syncFrames(t, true);
+    putPath(t.frames[1]!, makeShot('b1', t.frames[1]!));
+    syncFrames(t, true);
+    const sim = simulate(t);
+    expect(sim.defense.events.some((e) => e.type === 'switch')).toBe(true);
+    expect(evaluate(t, sim).shot.defenderDistance).toBeLessThan(3);
+  });
 });

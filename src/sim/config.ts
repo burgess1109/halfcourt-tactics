@@ -105,8 +105,13 @@ export const DENY_TOWARD_BALL = 1.3;
 export const DENY_TOWARD_RIM = 0.5;
 /** 對位者離籃框超過這個距離（公尺）才阻絕；在籃下附近就站在人和籃框之間 */
 export const DENY_MIN_RIM_DISTANCE = 4.5;
-/** 對位者離持球者這麼近（公尺，例如正在幫持球者掩護）時不阻絕，站在人和籃框之間 */
+/** 對位者離持球者這麼近（公尺，例如正在幫持球者掩護）時不阻絕，改貼在他身邊（見 NEAR_BALL_TOWARD_BALL） */
 export const DENY_MIN_BALL_DISTANCE = 3.5;
+/**
+ * 防外圍、離持球者很近的無球者（例如掩護者）時，貼在他身邊（距離同防持球者），
+ * 方向 = 往籃框 + 往持球者 × 這個權重：以籃框那一側為主（掩護者順下時擋得住），稍微偏向持球者（換防、協防時比較快到）。
+ */
+export const NEAR_BALL_TOWARD_BALL = 0.7;
 
 /**
  * 被甩開：防守者離籃框比對位者還遠超過這個距離（公尺），代表對位者已經切到他前面，
