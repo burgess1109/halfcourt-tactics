@@ -94,6 +94,12 @@ export function attachLibrary(
     });
     body.append(el('ul', { class: 'lib-list lib-list--top' }, el('li', {}, blank)));
 
+    if (!t.autoDefense) {
+      body.append(
+        el('p', { class: 'lib-note' }, '自動防守跑位已關閉：推薦與預期評等仍依自動防守模擬；載入後，每個分鏡的紅隊位置以模擬結果為起點，可以自己拖曳調整。'),
+      );
+    }
+
     if (isBlueComplete(t.players, t.setup.blueSkipped)) {
       const summary = teamSummary(t, ranked);
       const box = el('section', { class: 'lib-summary', 'aria-label': '球隊總評' }, el('h3', { class: 'lib-summary__title' }, '球隊總評'));

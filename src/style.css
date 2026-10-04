@@ -1450,3 +1450,13 @@ body[data-screen='board'] .app {
   background: #22252b;
   font-size: 14px;
 }
+
+.choice__note {
+  margin: 0 8px 4px;
+  color: #ffb74d;
+  font-size: 13px;
+}
+
+.choice:disabled {
+  opacity: 0.45;
+}

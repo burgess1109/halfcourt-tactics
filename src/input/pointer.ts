@@ -80,15 +80,19 @@ export function attachPointer(
     // 2. 球員或球
     const id = hitTest(point, players, frame);
     const isRed = players.find((p) => p.id === id)?.team === 'red';
+    const manualDefense = !state.tactic.autoDefense;
     if (id && isRed && state.tool !== 'move') {
-      notify('紅隊由系統防守，只能畫藍隊的路線');
+      notify(manualDefense ? '紅隊不能畫路線，請用「移動」工具拖曳紅隊的位置' : '紅隊由系統防守，只能畫藍隊的路線');
       return null;
     }
     if (id && state.tool === 'move') {
       const center = id === BALL_ID ? ballPosition(frame) : frame.start[id]!;
-      // 紅隊站位由防守 AI 決定；第 2 個分鏡之後的站位由上一個分鏡推算
+      // 紅隊站位由防守 AI 決定（關閉自動防守時，每個分鏡都可以拖曳紅隊）；
+      // 藍隊與球在第 2 個分鏡之後的站位由上一個分鏡推算
       const locked = isRed
-        ? '紅隊由系統防守，會自動站在對位球員與籃框之間'
+        ? manualDefense
+          ? null
+          : '紅隊由系統防守，會自動站在對位球員與籃框之間（可以在站位與對位的進階設定關閉自動防守跑位）'
         : state.frameIndex > 0
           ? '只能在第 1 個分鏡調整站位；之後的站位由上一個分鏡的路線決定'
           : null;

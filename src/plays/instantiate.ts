@@ -35,6 +35,9 @@ export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment, opts: 
   tactic.name = '';
   tactic.basedOn = { playId: play.id, roles: { ...roles }, modified: false };
   delete tactic.lastResult;
+  // 關閉自動防守時：先用自動防守模擬出每個分鏡的紅隊位置，當成使用者調整的起點
+  const manual = !tactic.autoDefense;
+  tactic.autoDefense = true;
 
   const start: Frame['start'] = {};
   for (const r of ROLES) start[roles[r]] = { ...play.start[r] };
@@ -53,6 +56,7 @@ export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment, opts: 
   // defense: false 時連最後的紅隊位置都不算（只用來評分時，評分會自己跑一次完整模擬）
   const removed = syncFrames(tactic, true, opts);
   if (removed > 0) throw new Error(`戰術 ${play.id} 有 ${removed} 條路線不成立`);
+  tactic.autoDefense = !manual;
   tactic.updatedAt = Date.now();
   return tactic;
 }

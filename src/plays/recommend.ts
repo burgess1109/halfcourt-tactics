@@ -98,9 +98,12 @@ export interface Recommendation {
   grade?: Grade;
 }
 
-/** 用推薦的角色分配實際模擬、評分一次；評分自己跑完整模擬，所以載入時不必先算紅隊位置 */
+/**
+ * 用推薦的角色分配實際模擬、評分一次；評分自己跑完整模擬，所以載入時不必先算紅隊位置。
+ * 一律用自動防守評分（關閉自動防守時紅隊不會動，無法比較戰術的好壞）。
+ */
 export function withSimulation(tactic: Tactic, rec: Recommendation): Recommendation {
-  const loaded = loadPlay(tactic, rec.play, rec.roles, { defense: false });
+  const loaded = loadPlay({ ...tactic, autoDefense: true }, rec.play, rec.roles, { defense: false });
   const e = evaluate(loaded, simulate(loaded));
   // 內建戰術一定有投籃，所以一定有分數
   return { ...rec, expectedPoints: e.expectedPoints ?? 0, grade: e.grade ?? 'D' };

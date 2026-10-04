@@ -90,6 +90,11 @@ export interface Tactic {
   pressure: Pressure;
   /** 持球者切入時：不補防 / 弱邊補防（SPEC §6.2） */
   driveHelp: DriveHelp;
+  /**
+   * 自動防守跑位（SPEC §6.2）。false 時紅隊不會自動移動：每個分鏡開始時的紅隊位置由使用者拖曳決定
+   * （存在 Frame.start），播放時在分鏡之間直線移動。
+   */
+  autoDefense: boolean;
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];

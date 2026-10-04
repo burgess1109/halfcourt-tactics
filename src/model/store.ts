@@ -31,14 +31,19 @@ type Listener = (state: EditorState) => void;
 
 /**
  * 使用者自己畫的部分：第 1 個分鏡的藍隊站位、球與持球者，以及每個分鏡的路線。
- * 紅隊位置與後面分鏡的起始位置都是自動算出來的（改對位、身高、速度、掩護應對時會變），不算在內。
+ * 紅隊位置與後面分鏡的起始位置都是自動算出來的（改對位、身高、速度、掩護應對時會變），不算在內；
+ * 但關閉自動防守時，每個分鏡的紅隊位置是使用者拖曳的，要算在內。
  */
 export function authoredSignature(tactic: Tactic): string {
   const first = tactic.frames[0]!;
   // 依固定順序取值：物件的欄位順序會因為建立方式不同而不同，直接 JSON.stringify 會誤判
   const ids = [...tactic.players.filter((p) => p.team === 'blue').map((p) => p.id)].sort();
   const start = [...ids, BALL_ID].map((id) => [id, first.start[id]]);
-  return JSON.stringify({ start, holder: first.ballHolderId, paths: tactic.frames.map((f) => f.paths) });
+  // 關閉自動防守時，每個分鏡的紅隊位置也是使用者畫的
+  const reds = tactic.autoDefense
+    ? null
+    : tactic.frames.map((f) => tactic.players.filter((p) => p.team === 'red').map((p) => p.id).sort().map((id) => [id, f.start[id]]));
+  return JSON.stringify({ start, holder: first.ballHolderId, paths: tactic.frames.map((f) => f.paths), reds });
 }
 
 export class Store {

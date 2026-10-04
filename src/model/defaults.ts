@@ -28,6 +28,7 @@ export function createDefaultTactic(): Tactic {
     pickCoverage: 'drop',
     pressure: 'normal',
     driveHelp: 'off',
+    autoDefense: true,
     players,
     frames: [frame],
     updatedAt: Date.now(),

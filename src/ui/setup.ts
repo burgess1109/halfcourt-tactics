@@ -75,6 +75,7 @@ export function attachSetup(
   let draftCoverage: PickCoverage = 'drop';
   let draftPressure: Pressure = 'normal';
   let draftDriveHelp: DriveHelp = 'off';
+  let draftAutoDefense = true;
   let draftLineup: Lineup = lineupOf(store.get().tactic);
 
   const tactic = () => store.get().tactic;
@@ -240,8 +241,40 @@ export function attachSetup(
       form.append(reset);
     }
 
-    // 進階設定：紅隊的防守方式（防守距離、切入補防、掩護應對）
+    // 進階設定：紅隊的防守方式（自動防守跑位、防守距離、切入補防、掩護應對）
     form.append(el('h3', { class: 'setup__section' }, '進階設定'));
+
+    // 自動防守跑位：關閉時紅隊不會自動移動，每個分鏡由使用者拖曳；切入補防、掩護應對用不到
+    const auto = el('input', { type: 'checkbox', checked: draftAutoDefense });
+    const autoNote = el('p', { class: 'choice__note' }, '自動防守跑位關閉時，「持球者切入時」與「遇到掩護時」不適用。');
+    const syncAuto = () => {
+      help.disabled = !draftAutoDefense;
+      choice.disabled = !draftAutoDefense;
+      autoNote.hidden = draftAutoDefense;
+    };
+    auto.addEventListener('change', () => {
+      draftAutoDefense = auto.checked;
+      syncAuto();
+    });
+    form.append(
+      el(
+        'fieldset',
+        { class: 'choice' },
+        el('legend', {}, '紅隊的跑位'),
+        el(
+          'label',
+          {},
+          auto,
+          el(
+            'span',
+            {},
+            '啟用自動防守跑位（預設）',
+            el('small', {}, '關閉後，紅隊開局後不會自動移動：每個分鏡由你拖曳紅隊到想要的位置，播放時在分鏡之間直線移動；也不會模擬換防、協防、補防'),
+          ),
+        ),
+        autoNote,
+      ),
+    );
 
     // 防守距離：改了之後重畫，小球場上的紅隊跟著換位置
     const pressure = el('fieldset', { class: 'choice' }, el('legend', {}, '紅隊的防守距離'));
@@ -298,6 +331,7 @@ export function attachSetup(
       coverage,
     );
     form.append(choice);
+    syncAuto();
   };
 
   // ---------- 切換步驟 ----------
@@ -339,6 +373,7 @@ export function attachSetup(
     draftCoverage = t.pickCoverage;
     draftPressure = t.pressure;
     draftDriveHelp = t.driveHelp;
+    draftAutoDefense = t.autoDefense;
     draftLineup = lineupOf(t);
   };
 
@@ -360,9 +395,14 @@ export function attachSetup(
         s.tactic.pickCoverage = draftCoverage;
         s.tactic.pressure = draftPressure;
         s.tactic.driveHelp = draftDriveHelp;
+        s.tactic.autoDefense = draftAutoDefense;
         s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理
-        if (lineupChanged && applyNow) applyLineup(s.tactic.frames[0]!, draftLineup);
+        if (lineupChanged && applyNow) {
+          applyLineup(s.tactic.frames[0]!, draftLineup);
+          // 開局站位換了：紅隊依新的站位重新就位（關閉自動防守時，原本拖過的位置已經不合用）
+          for (const p of s.tactic.players) if (p.team === 'red') delete s.tactic.frames[0]!.start[p.id];
+        }
       });
       if (lineupChanged && !applyNow) notify('目前的戰術已經有路線，新的開局站位會在清空戰術或選空白戰術時生效');
       return true;

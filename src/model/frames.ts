@@ -31,14 +31,20 @@ export function endState(frame: Frame): { start: Record<string, Vec2>; ballHolde
   return { start, ballHolderId };
 }
 
-/** 紅隊站到各自的防守位置（SPEC §6.2，含阻絕）；用於第 1 個分鏡 */
-function placeDefenders(tactic: Tactic, frame: Frame): void {
+/**
+ * 紅隊站到各自的防守位置（SPEC §6.2，含阻絕）；用於第 1 個分鏡。
+ * onlyMissing：只放還沒有位置的人（關閉自動防守時，使用者拖過的位置不動）
+ */
+function placeDefenders(tactic: Tactic, frame: Frame, onlyMissing = false): void {
   for (const [blueId, redId] of Object.entries(tactic.matchups)) {
+    if (onlyMissing && frame.start[redId]) continue;
     const man = frame.start[blueId];
     const ball = frame.ballHolderId ? (frame.start[frame.ballHolderId] ?? null) : null;
     if (man) frame.start[redId] = defendPosition(man, ball, frame.ballHolderId === blueId, false, tactic.pressure);
   }
 }
+
+const redIdsOf = (tactic: Tactic) => tactic.players.filter((p) => p.team === 'red').map((p) => p.id);
 
 /**
  * 依第 1 個分鏡重新推算後面所有分鏡的起始狀態，並放好紅隊。
@@ -47,19 +53,24 @@ function placeDefenders(tactic: Tactic, frame: Frame): void {
  */
 export function syncFrames(tactic: Tactic, prune: boolean, opts: { defense?: boolean } = {}): number {
   let removed = 0;
+  // 關閉自動防守：每個分鏡的紅隊位置由使用者決定，沒有設定過的沿用上一個分鏡（新分鏡）或依對位放好（第 1 個分鏡）
+  const manual = !tactic.autoDefense;
+  const redIds = redIdsOf(tactic);
   tactic.frames.forEach((frame, i) => {
+    const kept = manual ? redIds.filter((id) => frame.start[id]).map((id) => [id, frame.start[id]!] as const) : [];
     if (i > 0) {
       const prev = endState(tactic.frames[i - 1]!);
       frame.start = prev.start;
       frame.ballHolderId = prev.ballHolderId;
     }
-    placeDefenders(tactic, frame);
+    for (const [id, p] of kept) frame.start[id] = p;
+    placeDefenders(tactic, frame, manual);
     if (prune) removed += pruneInvalidPaths(frame, tactic.players);
   });
 
   // 之後的分鏡：紅隊在防守 AI 模擬中、該分鏡開始時的實際位置（可能被甩開或被掩護卡住）。
-  // defense: false 時跳過（例如一次建好多個分鏡時，只在最後算一次）
-  if (tactic.frames.length > 1 && opts.defense !== false) {
+  // defense: false 時跳過（例如一次建好多個分鏡時，只在最後算一次）；關閉自動防守時不模擬
+  if (!manual && tactic.frames.length > 1 && opts.defense !== false) {
     const timeline = buildTimeline(tactic);
     const red = simulateDefense(tactic, timeline);
     tactic.frames.forEach((frame, i) => {
