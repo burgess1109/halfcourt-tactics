@@ -6,6 +6,14 @@ import type { PickCoverage, Tactic, Vec2 } from '../model/types';
 import {
   BODY_DISTANCE,
   DEFENSE_SPEED_FACTOR,
+  DRIVE_HELP_BEATEN,
+  DRIVE_HELP_MARGIN,
+  DRIVE_HELP_RECOVERED_FRONT,
+  DRIVE_HELP_MAX,
+  DRIVE_HELP_MAX_RIM,
+  DRIVE_HELP_MIN_SPEED,
+  DRIVE_HELP_SPOTS,
+  DRIVE_HELP_COOLDOWN,
   DT,
   FIGHT_OVER_DELAY,
   JUMP_DURATION,
@@ -21,13 +29,37 @@ import {
   SWITCH_DELAY,
   VELOCITY_DT,
 } from './config';
-import { chaseTarget, defendPosition, guardPosition, nextDenyState, outwardSpeedOf, pickHelpPosition } from './defense';
+import {
+  chaseTarget,
+  defendPosition,
+  driveHelpDepth,
+  driveHelpPosition,
+  guardPosition,
+  nextDenyState,
+  outwardSpeedOf,
+  pickHelpPosition,
+} from './defense';
 
 // 防守 AI（SPEC §6.2）：人盯人＋阻絕外圍傳球路線，追不上就是追不上；遇到掩護時依設定換防或擠過，
 // 擋拆擠過時，掩護者的防守者沉退或上提。
 // 藍隊的移動不受紅隊影響，所以先用時間軸算出藍隊位置，再一格一格推進紅隊。完全決定性。
 
-export interface DefenseEvent {
+export type DefenseEvent = ScreenEvent | DriveHelpEvent;
+
+/** 弱邊補防：helper（defenderId）補到切入路線上，原本盯的 leftId 沒人管 */
+export interface DriveHelpEvent {
+  t: number;
+  type: 'drive-help';
+  defenderId: string;
+  /** 切入的持球者 */
+  handlerId: string;
+  /** 補防者原本盯的人（補防時沒人管） */
+  leftId: string;
+  /** 補防了多久（秒） */
+  delay: number;
+}
+
+export interface ScreenEvent {
   t: number;
   /** drop / hedge：擋拆擠過時，掩護者的防守者（defenderId）沉退或上提 */
   type: 'fight-over' | 'switch' | PickCoverage;
@@ -133,7 +165,11 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   /** 往球的方向靠時，球要去的地方（接球者） */
   const jumpToward: Record<string, string> = {};
   /** 擋拆擠過時正在協防的人（盯掩護者的防守者）→ 協防的對象、被掩護的隊友、對應的事件 */
-  const helping: Record<string, { handler: string; teammate: string; until: number; event: DefenseEvent }> = {};
+  const helping: Record<string, { handler: string; teammate: string; until: number; event: ScreenEvent }> = {};
+  /** 弱邊補防中的人 → 切入的持球者、補到離籃框多遠、對應的事件 */
+  const driveHelping: Record<string, { driver: string; depth: number; until: number; event: DriveHelpEvent }> = {};
+  /** 補防剛結束時，等一下才能再補（避免同一次切入一直補、放、補） */
+  let driveHelpReadyAt = 0;
 
   // 起始位置：理想位置
   const start = poseAt(tactic, timeline, 0).positions;
@@ -170,6 +206,36 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
       const projected = pendingSwaps.length ? applySwaps(assign, pendingSwaps) : assign;
       const seenPass = passAt(timeline, seen);
 
+      // 弱邊補防：持球者甩開防守者往籃框切，來得及的無球防守者補到切入路線上
+      if (tactic.driveHelp === 'weak-side' && seenHolder && t >= driveHelpReadyAt && Object.keys(driveHelping).length === 0) {
+        const driver = seenPos[seenHolder]!;
+        const before = prevPos[seenHolder]!;
+        const onBall = reds.find((x) => assign[x.id] === seenHolder);
+        // 持球者的防守者在同一個時間點（看到的那一刻）的位置
+        const seenIndex = Math.min(Math.round(seen / DT), i - 1);
+        const onBallAt = onBall ? red[onBall.id]![seenIndex]! : null;
+        const beaten = !onBallAt || rimDistance(onBallAt) > rimDistance(driver) - DRIVE_HELP_BEATEN;
+        const inward = -outwardSpeedOf(before, driver, VELOCITY_DT);
+        if (beaten && inward >= DRIVE_HELP_MIN_SPEED && rimDistance(driver) <= DRIVE_HELP_MAX_RIM) {
+          const driverSpeed = Math.hypot(driver.x - before.x, driver.y - before.y) / VELOCITY_DT;
+          let best: { id: string; depth: number; d: number } | null = null;
+          for (const x of reds) {
+            if (x.id === onBall?.id || t < (frozenUntil[x.id] ?? 0) || helping[x.id]) continue;
+            const depth = driveHelpDepth(cur[x.id]!, speed[x.id]!, driver, driverSpeed, DRIVE_HELP_SPOTS, REACTION_TIME, DRIVE_HELP_MARGIN);
+            if (depth === null) continue;
+            const spot = driveHelpPosition(driver, depth);
+            const d = Math.hypot(spot.x - cur[x.id]!.x, spot.y - cur[x.id]!.y);
+            // 能迎得越前面越好；一樣時離補防點近的人去
+            if (!best || depth > best.depth || (depth === best.depth && d < best.d)) best = { id: x.id, depth, d };
+          }
+          if (best) {
+            const event: DriveHelpEvent = { t, type: 'drive-help', defenderId: best.id, handlerId: seenHolder, leftId: assign[best.id]!, delay: 0 };
+            events.push(event);
+            driveHelping[best.id] = { driver: seenHolder, depth: best.depth, until: t + DRIVE_HELP_MAX, event };
+          }
+        }
+      }
+
       for (const r of reds) {
         if (t < (frozenUntil[r.id] ?? 0)) continue;
         const man = assign[r.id]!;
@@ -199,7 +265,26 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             delete helping[r.id];
           }
         }
-        const target = helping[r.id]
+        // 弱邊補防：持球者把球傳出去、他的防守者追回前面、或時間到，就回去盯自己的人
+        const drive = driveHelping[r.id];
+        if (drive) {
+          const onBall = reds.find((x) => assign[x.id] === drive.driver);
+          const driver = seenPos[drive.driver]!;
+          const spot = guardPosition(driver, true, pressure);
+          const back = onBall ? cur[onBall.id]! : null;
+          const recovered =
+            !!back &&
+            Math.hypot(back.x - spot.x, back.y - spot.y) <= HELP_RECOVERED &&
+            rimDistance(back) <= rimDistance(driver) - DRIVE_HELP_RECOVERED_FRONT;
+          if (pickHelpOver({ start: drive.event.t, until: drive.until, handler: drive.driver }, t, seen, seenHolder, recovered)) {
+            drive.event.delay = t - drive.event.t;
+            delete driveHelping[r.id];
+            driveHelpReadyAt = t + DRIVE_HELP_COOLDOWN;
+          }
+        }
+        const target = driveHelping[r.id]
+          ? driveHelpPosition(seenPos[driveHelping[r.id]!.driver]!, driveHelping[r.id]!.depth)
+          : helping[r.id]
           ? pickHelpPosition(tactic.pickCoverage, seenPos[helping[r.id]!.handler]!, pressure)
           : chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo, pressure);
         const p = cur[r.id]!;
@@ -239,7 +324,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             // 擋拆（被掩護的人盯的是持球者）：盯掩護者的人沉退或上提，等隊友追回來
             const big = reds.find((x) => x.id !== r.id && assign[x.id] === sc.screenerId);
             if (big && ballHolderAt(tactic, timeline, t) === man && !helping[big.id]) {
-              const event: DefenseEvent = { t, type: tactic.pickCoverage, defenderId: big.id, screenerId: sc.screenerId, delay: 0, handlerId: man };
+              const event: ScreenEvent = { t, type: tactic.pickCoverage, defenderId: big.id, screenerId: sc.screenerId, delay: 0, handlerId: man };
               events.push(event);
               helping[big.id] = { handler: man, teammate: r.id, until: t + HELP_MAX, event };
             }
@@ -263,7 +348,10 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
 
     for (const r of reds) red[r.id]!.push({ ...cur[r.id]! });
     // 模擬結束時還在協防：協防時間算到最後一格
-    if (i === ticks - 1) for (const h of Object.values(helping)) h.event.delay = t - h.event.t;
+    if (i === ticks - 1) {
+      for (const h of Object.values(helping)) h.event.delay = t - h.event.t;
+      for (const h of Object.values(driveHelping)) h.event.delay = t - h.event.t;
+    }
     stuck.push(new Set(reds.filter((r) => t < (frozenUntil[r.id] ?? 0)).map((r) => r.id)));
   }
 

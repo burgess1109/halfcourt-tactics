@@ -27,6 +27,7 @@ export function createDefaultTactic(): Tactic {
     screenDefense: 'switch',
     pickCoverage: 'drop',
     pressure: 'normal',
+    driveHelp: 'off',
     players,
     frames: [frame],
     updatedAt: Date.now(),

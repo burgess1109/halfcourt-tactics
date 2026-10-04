@@ -205,6 +205,7 @@ export function parseTactic(data: unknown): ParseResult {
     // 舊資料沒有這個欄位：預設沉退
     pickCoverage: o.pickCoverage === undefined ? 'drop' : oneOf(o.pickCoverage, ['drop', 'hedge'] as const, '擋拆協防'),
     pressure: o.pressure === undefined ? 'normal' : oneOf(o.pressure, ['normal', 'tight'] as const, '防守距離'),
+    driveHelp: o.driveHelp === undefined ? 'off' : oneOf(o.driveHelp, ['off', 'weak-side'] as const, '補防'),
     players,
     frames,
     updatedAt: typeof o.updatedAt === 'number' && Number.isFinite(o.updatedAt) ? o.updatedAt : Date.now(),
@@ -285,6 +286,7 @@ export function compactForShare(tactic: Tactic): object {
     screenDefense: tactic.screenDefense,
     pickCoverage: tactic.pickCoverage,
     pressure: tactic.pressure,
+    driveHelp: tactic.driveHelp,
     ...(tactic.basedOn && { basedOn: tactic.basedOn }),
     players: tactic.players,
     frames: tactic.frames.map((f, i) => ({

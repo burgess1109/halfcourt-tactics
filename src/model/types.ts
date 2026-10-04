@@ -61,6 +61,9 @@ export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 /** 防守距離（SPEC §6.2）：normal = 一般；tight = 緊貼（距離較小、外圍一律阻絕） */
 export type Pressure = 'normal' | 'tight';
 
+/** 持球者切入時（SPEC §6.2）：off = 不補防；weak-side = 來得及的無球防守者補到切入路線上 */
+export type DriveHelp = 'off' | 'weak-side';
+
 /** drop = 沉退：退到球和籃框之間保護籃下；hedge = 上提：踏出去擋在持球者前面 */
 export type PickCoverage = 'drop' | 'hedge';
 
@@ -85,6 +88,8 @@ export interface Tactic {
   pickCoverage: PickCoverage;
   /** 防守距離：一般 / 緊貼（SPEC §6.2） */
   pressure: Pressure;
+  /** 持球者切入時：不補防 / 弱邊補防（SPEC §6.2） */
+  driveHelp: DriveHelp;
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];

@@ -8,6 +8,7 @@ import {
   BODY_DISTANCE,
   CONTESTED_FACTOR,
   CONTEST_SIDE_MARGIN,
+  DRIVE_HELP_COMMENT_MIN,
   GRADE_THRESHOLDS,
   ISO_SEPARATION,
   MID_RATE,
@@ -276,10 +277,19 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     }
   }
 
-  // 4. 掩護成效（只算出手之前的掩護）
+  // 4. 掩護成效與補防（只算出手之前發生的）
   for (const e of defense.events.filter((x) => x.t <= releaseAt)) {
     const fi = frameIndexAt(timeline, e.t);
-    if (e.type === 'fight-over') {
+    if (e.type === 'drive-help') {
+      // 剛補就傳球（例如傳給順下的人）：補防沒有實際作用，不寫評語
+      if (e.delay < DRIVE_HELP_COMMENT_MIN) continue;
+      comments.push({
+        text: `第 ${fi + 1} 分鏡，${name(e.defenderId)} 從弱邊補防 ${name(e.handlerId)} 的切入 ${e.delay.toFixed(1)} 秒，原本盯的 ${name(e.leftId)} 沒人管`,
+        frameIndex: fi,
+        playerIds: [e.defenderId, e.leftId],
+        priority: 4,
+      });
+    } else if (e.type === 'fight-over') {
       comments.push({
         text: `第 ${fi + 1} 分鏡，${name(e.screenerId)} 的掩護擋住 ${name(e.defenderId)} ${e.delay.toFixed(2)} 秒`,
         frameIndex: fi,

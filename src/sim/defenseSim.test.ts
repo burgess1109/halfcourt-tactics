@@ -8,7 +8,7 @@ import type { Tactic } from '../model/types';
 import { SWITCH_DELAY } from './config';
 import { loadPlay } from '../plays/instantiate';
 import { PLAYS } from '../plays/library';
-import { defendPosition, guardPosition, pickHelpPosition } from './defense';
+import { defendPosition, driveHelpDepth, driveHelpPosition, guardPosition, pickHelpPosition } from './defense';
 import { fightOverDelay, pickHelpOver, redAt, simulateDefense } from './defenseSim';
 import { evaluate } from './evaluate';
 
@@ -375,5 +375,59 @@ describe('防守距離：一般 / 緊貼', () => {
 
   it('緊貼的代價：假手遞手接背切，被甩開', () => {
     expect(points('手遞手', 'Fake Hand-Off', 'tight')).toBeGreaterThan(points('手遞手', 'Fake Hand-Off', 'normal') + 0.1);
+  });
+});
+
+describe('弱邊補防', () => {
+  const RIM = { x: 0, y: 1.575 };
+
+  it('driveHelpPosition：在切入路線上、離籃框指定距離；切入者已經更近時，站在他前面 1.5 m', () => {
+    expect(dist(driveHelpPosition({ x: 0, y: 8 }, 3), RIM)).toBeCloseTo(3);
+    const close = { x: 0, y: 4 };
+    expect(dist(driveHelpPosition(close, 3), close)).toBeCloseTo(1.5);
+  });
+
+  it('driveHelpDepth：比切入者早到才補，選離籃框最遠的點；太遠、或切入者太快就不補', () => {
+    const driver = { x: 0, y: 9 }; // 離籃框約 7.4 m
+    const spots = [4, 3, 2];
+    // 站在罰球線附近的人：迎得最前面
+    expect(driveHelpDepth({ x: 1.5, y: 5 }, 4.5, driver, 4, spots, 0.2, 0.1)).toBe(4);
+    // 底角外面的人：來不及
+    expect(driveHelpDepth({ x: 7, y: 1 }, 4.5, driver, 4, spots, 0.2, 0.1)).toBeNull();
+    // 同一個人，切入者快很多：來不及
+    expect(driveHelpDepth({ x: 3.5, y: 2.5 }, 4.5, driver, 4, spots, 0.2, 0.1)).not.toBeNull();
+    expect(driveHelpDepth({ x: 3.5, y: 2.5 }, 4.5, driver, 12, spots, 0.2, 0.1)).toBeNull();
+  });
+
+  const run = (name: string, opts: Partial<Pick<Tactic, 'screenDefense' | 'pressure' | 'driveHelp'>>) => {
+    const base = createDefaultTactic();
+    Object.assign(base, opts);
+    const t = loadPlay(base, PLAYS.find((p) => p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
+    const sim = simulate(t);
+    return { sim, points: evaluate(t, sim).expectedPoints! };
+  };
+
+  it('預設不補防：沒有補防事件', () => {
+    expect(run('Drive to Rim', { screenDefense: 'fight-over' }).sim.defense.events.some((e) => e.type === 'drive-help')).toBe(false);
+  });
+
+  it('擋拆切入：弱邊補防擋住切入，原本盯的人空出來', () => {
+    const off = run('Drive to Rim', { screenDefense: 'fight-over' });
+    const on = run('Drive to Rim', { screenDefense: 'fight-over', driveHelp: 'weak-side' });
+    const help = on.sim.defense.events.find((e) => e.type === 'drive-help')!;
+    expect(help).toMatchObject({ handlerId: 'b1' });
+    expect(help.type === 'drive-help' && help.leftId).not.toBe('b1');
+    expect(on.points).toBeLessThan(off.points - 0.1);
+  });
+
+  it('兩邊拉到底角的單打：弱邊離太遠，來不及補', () => {
+    const on = run('Top Isolation', { driveHelp: 'weak-side' });
+    expect(on.sim.defense.events.some((e) => e.type === 'drive-help')).toBe(false);
+  });
+
+  it('補防的代價：緊貼時去補防，順下的人空出來', () => {
+    const off = run('Pick and Roll', { pressure: 'tight' });
+    const on = run('Pick and Roll', { pressure: 'tight', driveHelp: 'weak-side' });
+    expect(on.points).toBeGreaterThan(off.points + 0.1);
   });
 });

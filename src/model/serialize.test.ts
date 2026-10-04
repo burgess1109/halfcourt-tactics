@@ -95,6 +95,14 @@ describe('JSON 匯出入', () => {
     expect(() => parseTactic({ ...t, pressure: 'zone' })).toThrow(TacticFormatError);
   });
 
+  it('補防：舊資料沒有這個欄位時預設不補防；不認得的值不接受', () => {
+    const t = JSON.parse(toJsonFile(sample())) as Record<string, unknown>;
+    delete t.driveHelp;
+    expect(parseTactic(t).tactic.driveHelp).toBe('off');
+    expect(parseTactic({ ...t, driveHelp: 'weak-side' }).tactic.driveHelp).toBe('weak-side');
+    expect(() => parseTactic({ ...t, driveHelp: 'zone' })).toThrow(TacticFormatError);
+  });
+
   it('座標超出球場時不接受', () => {
     const t = JSON.parse(toJsonFile(sample())) as Tactic;
     t.frames[0]!.start.b1 = { x: 0, y: 99 };
@@ -126,6 +134,7 @@ describe('分享連結', () => {
       t.lastResult = { grade: 'S', expectedPoints: 1.5 };
       t.pickCoverage = i % 2 ? 'hedge' : 'drop';
       t.pressure = i % 3 ? 'normal' : 'tight';
+      t.driveHelp = i % 4 ? 'off' : 'weak-side';
       syncFrames(t, true); // 防守距離會改變紅隊站位
       const hash = await encodeShare(t);
       expect(hash.startsWith(SHARE_PREFIX)).toBe(true);
@@ -137,6 +146,7 @@ describe('分享連結', () => {
       expect(tactic.matchups).toEqual(t.matchups);
       expect(tactic.pickCoverage).toBe(t.pickCoverage);
       expect(tactic.pressure).toBe(t.pressure);
+      expect(tactic.driveHelp).toBe(t.driveHelp);
       expect(tactic.basedOn).toEqual(t.basedOn);
       expect(tactic.name).toBe(t.name);
       expect(tactic.id).not.toBe(t.id);

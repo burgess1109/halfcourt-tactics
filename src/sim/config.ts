@@ -62,6 +62,29 @@ export const HELP_MIN = 1.0;
 export const HELP_FRONT = 0.8;
 export const HELP_MAX = 2.5;
 
+/**
+ * 弱邊補防（SPEC §6.2，設定為「弱邊補防」時）：持球者甩開自己的防守者、往籃框切時，
+ * 另外兩位無球防守者中，來得及的人補到切入路線上。
+ * - 觸發：持球者離籃框 DRIVE_HELP_MAX_RIM 公尺以內、往籃框的速度 ≥ DRIVE_HELP_MIN_SPEED，
+ *   而且他的防守者已經沒有正常擋在前面：離籃框只比持球者近不到 DRIVE_HELP_BEATEN 公尺（正常約 ON_BALL_GAP）。
+ *   等到真的被超過才補就太晚了，切入者領先半步時補防就要啟動。
+ * - 來不來得及：在持球者到籃框的直線上、離籃框 DRIVE_HELP_SPOTS 公尺的點，補防者（反應時間＋距離÷速度）
+ *   要比持球者（距離÷速度）早到 DRIVE_HELP_MARGIN 秒以上；選離籃框最遠的點。都來不及就不補。
+ * - 結束：持球者把球傳出去、他的防守者追回前面（離理想位置 HELP_RECOVERED 以內，而且離籃框比持球者近
+ *   DRIVE_HELP_RECOVERED_FRONT 以上；要比觸發的 DRIVE_HELP_BEATEN 嚴格，否則一補就放）、或滿 DRIVE_HELP_MAX 秒。
+ */
+export const DRIVE_HELP_MAX_RIM = 6.0;
+export const DRIVE_HELP_BEATEN = 1.0;
+export const DRIVE_HELP_RECOVERED_FRONT = 1.3;
+export const DRIVE_HELP_MIN_SPEED = 2.0;
+export const DRIVE_HELP_SPOTS = [4.0, 3.5, 3.0, 2.5, 2.0, 1.5] as const;
+export const DRIVE_HELP_MARGIN = 0.1;
+export const DRIVE_HELP_MAX = 2.0;
+/** 補防不到這麼久（秒，例如剛補就傳球）就不寫評語 */
+export const DRIVE_HELP_COMMENT_MIN = 0.2;
+/** 補防結束後，過這麼久才會再補防（秒） */
+export const DRIVE_HELP_COOLDOWN = 0.5;
+
 /** 換防：兩位防守者交換對位前的反應時間（秒） */
 export const SWITCH_DELAY = 0.3;
 

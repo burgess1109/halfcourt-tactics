@@ -17,6 +17,8 @@ import {
   PRESSURE_GAPS,
 } from './config';
 
+const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);
+
 /**
  * 防守者的理想位置：在對位球員與籃框的連線上，離對位球員 gap 公尺（SPEC §6.2）。
  * 對位球員靠近籃框時，最多退到兩人中間；但至少保持 MIN_GAP，圓標才不會疊在一起。
@@ -74,7 +76,42 @@ export function pickHelpPosition(coverage: PickCoverage, handler: Vec2, pressure
   return { x: RIM.x + (dx / d) * depth, y: RIM.y + (dy / d) * depth };
 }
 
-const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);
+/**
+ * 弱邊補防：在持球者到籃框的直線上、離籃框 depth 公尺的點；
+ * 持球者已經比這個點更靠近籃框時，改站在他和籃框之間、離他 ON_BALL_GAP（最多退到籃框）。
+ */
+export function driveHelpPosition(driver: Vec2, depth: number): Vec2 {
+  const dx = driver.x - RIM.x;
+  const dy = driver.y - RIM.y;
+  const d = Math.hypot(dx, dy);
+  if (d === 0) return { ...RIM };
+  const k = Math.max(0, Math.min(depth, d - ON_BALL_GAP)) / d;
+  return { x: RIM.x + dx * k, y: RIM.y + dy * k };
+}
+
+/**
+ * 弱邊補防來不來得及（SPEC §6.2）：回傳要補到的點離籃框多遠；都來不及回傳 null。
+ * helper / driver 是防守者看到的位置；補防者還要加上反應時間。
+ */
+export function driveHelpDepth(
+  helper: Vec2,
+  helperSpeed: number,
+  driver: Vec2,
+  driverSpeed: number,
+  spots: readonly number[],
+  reaction: number,
+  margin: number,
+): number | null {
+  const d = rimDistance(driver);
+  for (const depth of spots) {
+    if (depth >= d) continue; // 持球者已經過了這個點
+    const spot = driveHelpPosition(driver, depth);
+    const driverTime = (d - depth) / driverSpeed;
+    const helperTime = reaction + Math.hypot(spot.x - helper.x, spot.y - helper.y) / helperSpeed;
+    if (helperTime + margin <= driverTime) return depth;
+  }
+  return null;
+}
 
 /**
  * 防守者這一刻要追的點：平常是 defendPosition；

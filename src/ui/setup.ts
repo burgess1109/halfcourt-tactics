@@ -14,7 +14,7 @@ import {
 } from '../model/physique';
 import { applyPatch, parseTeamForm, type PlayerFormValues } from '../model/playerForm';
 import type { EditorState, Store } from '../model/store';
-import type { PickCoverage, Player, Pressure, Rating, Skills, Tactic, Team } from '../model/types';
+import type { DriveHelp, PickCoverage, Player, Pressure, Rating, Skills, Tactic, Team } from '../model/types';
 
 // 進攻模式的設定流程（SPEC §1.1）：① 藍隊 → ② 紅隊 → ③ 對位 → 戰術面板。
 
@@ -74,6 +74,7 @@ export function attachSetup(
   let draftScreen: Tactic['screenDefense'] = 'switch';
   let draftCoverage: PickCoverage = 'drop';
   let draftPressure: Pressure = 'normal';
+  let draftDriveHelp: DriveHelp = 'off';
   let draftLineup: Lineup = lineupOf(store.get().tactic);
 
   const tactic = () => store.get().tactic;
@@ -255,6 +256,18 @@ export function attachSetup(
     );
     form.append(pressure);
 
+    const help = el('fieldset', { class: 'choice' }, el('legend', {}, '持球者切入時'));
+    const helpOption = (value: DriveHelp, text: string, desc: string) => {
+      const radio = el('input', { type: 'radio', name: 'drive-help', value, checked: draftDriveHelp === value });
+      radio.addEventListener('change', () => (draftDriveHelp = value));
+      return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
+    };
+    help.append(
+      helpOption('off', '不補防（預設）', '持球者甩開防守者也不會有人補，其他人守住自己的人'),
+      helpOption('weak-side', '弱邊補防', '來得及的無球防守者會補到切入路線上；離太遠、來不及就不補。補防時他原本盯的人會空出來'),
+    );
+    form.append(help);
+
     const choice = el('fieldset', { class: 'choice' }, el('legend', {}, '遇到掩護時，紅隊要'));
     // 進階：擠過時，擋拆由掩護者的防守者沉退或上提（換防時用不到，隱藏）
     const coverage = el('fieldset', { class: 'choice choice--sub' }, el('legend', {}, '擋拆時，盯掩護者的防守者要'));
@@ -322,6 +335,7 @@ export function attachSetup(
     draftScreen = t.screenDefense;
     draftCoverage = t.pickCoverage;
     draftPressure = t.pressure;
+    draftDriveHelp = t.driveHelp;
     draftLineup = lineupOf(t);
   };
 
@@ -342,6 +356,7 @@ export function attachSetup(
         s.tactic.screenDefense = draftScreen;
         s.tactic.pickCoverage = draftCoverage;
         s.tactic.pressure = draftPressure;
+        s.tactic.driveHelp = draftDriveHelp;
         s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理
         if (lineupChanged && applyNow) applyLineup(s.tactic.frames[0]!, draftLineup);

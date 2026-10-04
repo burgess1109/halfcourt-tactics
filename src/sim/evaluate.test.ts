@@ -8,6 +8,7 @@ import { PLAYS } from '../plays/library';
 import type { Tactic, Vec2 } from '../model/types';
 import { CONTESTED_FACTOR, PAINT_RATE, THREE_RATE } from './config';
 import { evaluate, gradeOf, shotValue, zoneOf } from './evaluate';
+import type { ScreenEvent } from './defenseSim';
 
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
 
@@ -227,7 +228,7 @@ describe('review 修正', () => {
   it('2. 換防的錯位說明用「那次換防之後」的對位', () => {
     const t = loadPlay(createDefaultTactic(), PLAYS.find((p) => p.id === 'offball-post-split')!, roles);
     const sim = simulate(t);
-    const switches = sim.defense.events.filter((e) => e.type === 'switch');
+    const switches = sim.defense.events.filter((e) => e.type === 'switch') as ScreenEvent[];
     expect(switches.length).toBeGreaterThanOrEqual(2);
     const [first, second] = switches;
     // 第 1 次換防後的對位：只交換第 1 次的兩位防守者
