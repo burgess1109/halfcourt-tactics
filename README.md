@@ -1,5 +1,9 @@
 # 半場戰術板（Halfcourt Tactics）
 
+[![CI](https://github.com/burgess1109/halfcourt-tactics/actions/workflows/ci.yml/badge.svg)](https://github.com/burgess1109/halfcourt-tactics/actions/workflows/ci.yml)
+
+**線上試玩：<https://burgess1109.github.io/halfcourt-tactics/>**
+
 3 對 3 半場籃球戰術 Web 小遊戲。設定你的球隊、選擇或自己畫進攻戰術，系統依對位即時模擬防守，播完後告訴你這一球的預期得分、評等，以及哪裡可以更好。
 
 - 純前端靜態網頁，沒有後端、不需要帳號
@@ -23,7 +27,7 @@
 需要 [Node.js](https://nodejs.org/) **22.12 以上**（Vitest 5 的要求）。
 
 ```bash
-git clone <repo 網址>
+git clone https://github.com/burgess1109/halfcourt-tactics.git
 cd halfcourt-tactics
 npm install
 npm run dev
@@ -43,6 +47,8 @@ npm run dev
 | `npm run plays-doc` | 由戰術資料重新產生 `docs/PLAYS.md` 與分鏡圖 |
 
 ## 部署
+
+推到 `main` 後，GitHub Actions（`.github/workflows/ci.yml`）會自動執行型別檢查、測試、打包，並部署到 GitHub Pages。
 
 `npm run build` 產生的 `dist/` 是純靜態檔案，可以放到任何靜態主機（GitHub Pages、Netlify、Cloudflare Pages 等），放在子目錄也可以。
 
