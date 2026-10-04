@@ -9,6 +9,7 @@ import {
   DENY_TOWARD_BALL,
   DENY_TOWARD_RIM,
   DENY_TRIGGER_SPEED,
+  DEFENDER_SEPARATION,
   DROP_DEPTH,
   NEAR_BALL_TOWARD_BALL,
   HELP_SHADE,
@@ -45,10 +46,26 @@ function nearBallPosition(man: Vec2, toBall: Vec2, ballDist: number, toRim: Vec2
   // 兩個單位向量以 NEAR_BALL_TOWARD_BALL（< 1）和 1 的權重相加，長度至少 1 − 權重，不會是 0
   const dx = (toBall.x / ballDist) * NEAR_BALL_TOWARD_BALL + toRim.x / rimDist;
   const dy = (toBall.y / ballDist) * NEAR_BALL_TOWARD_BALL + toRim.y / rimDist;
-  const d = Math.hypot(dx, dy);
   const gap = PRESSURE_GAPS[pressure].onBall;
-  return { x: man.x + (dx / d) * gap, y: man.y + (dy / d) * gap };
+  // 不要和防持球者的人疊在一起：他站在持球者和籃框之間（guardPosition）。
+  // 太近時沿著「離對位者 gap 的圓」轉到最近的不重疊角度（仍然貼在對位者身邊）
+  const ball = { x: man.x + toBall.x, y: man.y + toBall.y };
+  const onBall = guardPosition(ball, true, pressure);
+  const at = (angle: number) => ({ x: man.x + Math.cos(angle) * gap, y: man.y + Math.sin(angle) * gap });
+  const clear = (p: Vec2) => Math.hypot(p.x - onBall.x, p.y - onBall.y) >= DEFENDER_SEPARATION;
+  const base = Math.atan2(dy, dx);
+  if (clear(at(base))) return at(base);
+  for (let k = 1; k <= 36; k++) {
+    const options = [at(base + k * AVOID_STEP), at(base - k * AVOID_STEP)].filter(clear);
+    if (options.length === 0) continue;
+    // 兩邊都可以時，選離持球者比較近的那一邊（換防、協防時比較快到）
+    return options.sort((p, q) => Math.hypot(p.x - ball.x, p.y - ball.y) - Math.hypot(q.x - ball.x, q.y - ball.y))[0]!;
+  }
+  return guardPosition(man, false, pressure);
 }
+
+/** 避開隊友時，每次轉的角度 */
+const AVOID_STEP = Math.PI / 36;
 
 /**
  * 防守者要站的位置（SPEC §6.2）：

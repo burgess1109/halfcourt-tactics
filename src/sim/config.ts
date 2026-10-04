@@ -9,6 +9,8 @@ export const ON_BALL_GAP = 1.5;
 export const OFF_BALL_GAP = 2.0;
 /** 對位者在籃下時，至少保持這個距離，兩個圓標才不會疊在一起（公尺） */
 export const MIN_GAP = 1.45;
+/** 防守掩護者時，和防持球者的人至少保持這個距離（公尺，約圓標直徑），兩個紅圈才不會疊在一起 */
+export const DEFENDER_SEPARATION = MIN_GAP;
 
 /**
  * 防守距離（SPEC §6.2，站位與對位頁選擇）：

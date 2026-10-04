@@ -550,6 +550,22 @@ describe('防守掩護者（外圍、離持球者很近的無球者）', () => {
     expect(dist(p, ball)).toBeLessThan(dist(old, ball));
   });
 
+  it('不會和防持球者的紅圈疊在一起（至少 1.45 m），仍然貼在對位者身邊', () => {
+    const onBall = guardPosition(ball, true);
+    for (const pressure of ['normal', 'tight'] as const) {
+      // 掩護者在持球者四周不同位置
+      for (let a = 0; a < 360; a += 15) {
+        const man = { x: ball.x + Math.cos((a * Math.PI) / 180) * 2, y: ball.y + Math.sin((a * Math.PI) / 180) * 2 };
+        if (Math.hypot(man.x, man.y - 1.575) <= 4.5) continue; // 籃下附近另有規則
+        const p = defendPosition(man, ball, false, false, pressure);
+        expect(dist(p, guardPosition(ball, true, pressure)), `${pressure} ${a}°`).toBeGreaterThanOrEqual(1.45 - 1e-9);
+        expect(dist(p, man)).toBeLessThanOrEqual(1.5 + 1e-9);
+      }
+    }
+    // 回報的例子：持球者 (0, 8.6)、掩護者 (-1, 7.1)；原本只相距約 0.9 m
+    expect(dist(defendPosition(screener, ball, false), onBall)).toBeGreaterThanOrEqual(1.45 - 1e-9);
+  });
+
   it('和持球者站在同一點：不會算出 NaN，改站在他和籃框之間', () => {
     const p = defendPosition(ball, ball, false);
     expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
@@ -572,6 +588,7 @@ describe('防守掩護者（外圍、離持球者很近的無球者）', () => {
     syncFrames(t, true);
     const sim = simulate(t);
     expect(sim.defense.events.some((e) => e.type === 'switch')).toBe(true);
-    expect(evaluate(t, sim).shot.defenderDistance).toBeLessThan(3);
+    // 原本 3.7 m；防掩護者不能和防持球者的紅圈疊在一起，所以只能拉近到約 3.3 m
+    expect(evaluate(t, sim).shot.defenderDistance).toBeLessThan(3.5);
   });
 });
