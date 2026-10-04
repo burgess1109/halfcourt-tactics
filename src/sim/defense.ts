@@ -39,11 +39,13 @@ export function guardPosition(man: Vec2, hasBall: boolean, pressure: Pressure = 
  * 離對位者 PRESSURE_GAPS[pressure].onBall（和防持球者一樣近）。
  */
 function nearBallPosition(man: Vec2, toBall: Vec2, ballDist: number, toRim: Vec2, rimDist: number, pressure: Pressure): Vec2 {
+  // 和持球者站在同一點：往持球者的方向無法定義，改站在對位者和籃框之間
+  // （rimDist 不會是 0：籃下附近的情況在呼叫前已經處理）
+  if (ballDist < 1e-9) return guardPosition(man, false, pressure);
+  // 兩個單位向量以 NEAR_BALL_TOWARD_BALL（< 1）和 1 的權重相加，長度至少 1 − 權重，不會是 0
   const dx = (toBall.x / ballDist) * NEAR_BALL_TOWARD_BALL + toRim.x / rimDist;
   const dy = (toBall.y / ballDist) * NEAR_BALL_TOWARD_BALL + toRim.y / rimDist;
   const d = Math.hypot(dx, dy);
-  // 持球者剛好在對位者和籃框的反方向：兩個方向抵消，改站在對位者和籃框之間
-  if (d < 1e-6) return guardPosition(man, true, pressure);
   const gap = PRESSURE_GAPS[pressure].onBall;
   return { x: man.x + (dx / d) * gap, y: man.y + (dy / d) * gap };
 }

@@ -550,6 +550,12 @@ describe('防守掩護者（外圍、離持球者很近的無球者）', () => {
     expect(dist(p, ball)).toBeLessThan(dist(old, ball));
   });
 
+  it('和持球者站在同一點：不會算出 NaN，改站在他和籃框之間', () => {
+    const p = defendPosition(ball, ball, false);
+    expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+    expect(p).toEqual(guardPosition(ball, false));
+  });
+
   it('往籃框切（掩護後順下）：回到他和籃框之間', () => {
     expect(defendPosition(screener, ball, false, false, 'normal', true)).toEqual(guardPosition(screener, false));
   });
