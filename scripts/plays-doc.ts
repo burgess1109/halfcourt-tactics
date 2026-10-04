@@ -37,10 +37,12 @@ const CAPTION_H = 26;
 const GAP = 12;
 const COLUMNS = 3;
 
-// 地板與禁區沿用球場的配色（src/render/theme.ts）；SVG 不用漸層，禁區取中間色
+// 地板與禁區沿用球場的配色（src/render/theme.ts）；SVG 不用漸層，禁區用漸層上端（比較亮的那一端）
 const C = {
   floor: theme.floor,
   paint: theme.paintTop,
+  /** 路線底下的淺色外框（同 theme.pathHalo，透明度另外用屬性設定） */
+  halo: '#ffffff',
   line: '#ffffff',
   blue: '#1f56e0',
   red: '#b3232d',
@@ -84,36 +86,55 @@ function court(): string {
   ].join('');
 }
 
-function arrowHead(tip: Vec2, dir: Vec2): string {
+/** 一層路線的畫法：外框（淺色、比較寬）或路線本身 */
+interface Layer {
+  color: string;
+  /** 每邊多出的寬度（SVG 單位） */
+  extra: number;
+  /** 透明度屬性（SVG 不用 rgba，PhpStorm 的檢視器會載入失敗） */
+  opacity: string;
+}
+
+function arrowHead(tip: Vec2, dir: Vec2, layer: Layer): string {
   const n = perp(dir);
   const base = { x: tip.x - dir.x * 0.42, y: tip.y - dir.y * 0.42 };
   const a = { x: base.x + n.x * 0.22, y: base.y + n.y * 0.22 };
   const b = { x: base.x - n.x * 0.22, y: base.y - n.y * 0.22 };
-  return `<polygon points="${poly([tip, a, b])}" fill="${C.path.blue}"/>`;
+  // 外框：同一個三角形加上同色的粗邊
+  const edge = layer.extra > 0 ? ` stroke="${layer.color}" stroke-width="${f(layer.extra * 2)}" stroke-linejoin="round"` : '';
+  return `<polygon points="${poly([tip, a, b])}" fill="${layer.color}"${edge}${layer.opacity}/>`;
 }
 
-function pathSvg(kind: string, controls: Vec2[]): string {
+function pathLayer(kind: string, controls: Vec2[], layer: Layer): string {
   const sampled = sampleSpline(controls);
   const endTrim = kind === 'pass' ? 0.77 : kind === 'shot' ? 0.5 : 0.62;
   const body = trimPolyline(sampled, 0.62, endTrim);
   if (body.length < 2) return '';
   const tip = body.at(-1)!;
   const dir = normalize(sub(tip, body.at(-2)!));
-  const width = kind === 'shot' ? 3.6 : 2.6;
-  const stroke = `fill="none" stroke="${C.path.blue}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"`;
+  const width = (kind === 'shot' ? 3.6 : 2.6) + layer.extra * 2;
+  const stroke = `fill="none" stroke="${layer.color}" stroke-width="${f(width)}" stroke-linecap="round" stroke-linejoin="round"${layer.opacity}`;
   const lineBody = kind === 'screen' || kind === 'shot' ? body : trimPolyline(body, 0, 0.34);
   const shape = kind === 'dribble' ? wave(lineBody) : lineBody;
   const dash = kind === 'pass' ? ' stroke-dasharray="7 6"' : kind === 'shot' ? ' stroke-dasharray="1 6"' : '';
   let out = `<polyline points="${poly(shape)}" ${stroke}${dash}/>`;
   if (kind === 'screen') {
     const n = perp(dir);
-    out += `<line x1="${f(sx(tip.x + n.x * 0.42))}" y1="${f(sy(tip.y + n.y * 0.42))}" x2="${f(sx(tip.x - n.x * 0.42))}" y2="${f(sy(tip.y - n.y * 0.42))}" stroke="${C.path.blue}" stroke-width="4" stroke-linecap="round"/>`;
+    out += `<line x1="${f(sx(tip.x + n.x * 0.42))}" y1="${f(sy(tip.y + n.y * 0.42))}" x2="${f(sx(tip.x - n.x * 0.42))}" y2="${f(sy(tip.y - n.y * 0.42))}" stroke="${layer.color}" stroke-width="${f(4 + layer.extra * 2)}" stroke-linecap="round"${layer.opacity}/>`;
   } else if (kind === 'shot') {
-    out += `<circle cx="${f(sx(RIM.x))}" cy="${f(sy(RIM.y))}" r="${f(0.5 * PX)}" fill="none" stroke="${C.path.blue}" stroke-width="2.6"/>`;
+    out += `<circle cx="${f(sx(RIM.x))}" cy="${f(sy(RIM.y))}" r="${f(0.5 * PX)}" fill="none" stroke="${layer.color}" stroke-width="${f(2.6 + layer.extra * 2)}"${layer.opacity}/>`;
   } else {
-    out += arrowHead(tip, dir);
+    out += arrowHead(tip, dir, layer);
   }
   return out;
+}
+
+/** 路線：先畫淺色外框，再畫路線本身（和遊戲畫面相同，深藍禁區上也看得清楚） */
+function pathSvg(kind: string, controls: Vec2[]): string {
+  return (
+    pathLayer(kind, controls, { color: C.halo, extra: 1.2, opacity: ' stroke-opacity="0.6" fill-opacity="0.6"' }) +
+    pathLayer(kind, controls, { color: C.path.blue, extra: 0, opacity: '' })
+  );
 }
 
 function panel(tactic: Tactic, i: number, roleOf: Map<string, Role>, ox: number, oy: number): string {

@@ -10,6 +10,8 @@ import { toScreen, type Viewport } from './viewport';
 // ctx 使用 CSS px 座標。路線的樣式對應 SPEC §4。
 
 const LINE_PX = 3.5;
+/** 路線外框每邊多出的寬度（CSS px） */
+const HALO_PX = 1.5;
 const ARROW_LEN = 0.42; // 公尺
 const ARROW_HALF_WIDTH = 0.22;
 const SCREEN_BAR_HALF = 0.42;
@@ -87,27 +89,33 @@ export function drawPath(ctx: CanvasRenderingContext2D, vp: Viewport, controls: 
     if (hasArrow) fillArrow(ctx, vp, tip, dir, theme.selection, 0.12);
   }
 
-  ctx.setLineDash(style.kind === 'pass' ? [9, 7] : style.kind === 'shot' ? [1, 8] : []);
-  strokeLine(shape, style.kind === 'shot' ? LINE_PX + 1.5 : LINE_PX, color);
+  const dash = style.kind === 'pass' ? [9, 7] : style.kind === 'shot' ? [1, 8] : [];
+  const width = style.kind === 'shot' ? LINE_PX + 1.5 : LINE_PX;
+  const rimCircle = (lineWidth: number, strokeStyle: string) => {
+    // 籃框外的目標圈
+    const c = toScreen(vp, controls.at(-1)!);
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = strokeStyle;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, SHOT_RING_RADIUS * vp.scale, 0, Math.PI * 2);
+    ctx.stroke();
+  };
+
+  // 外框：先畫一層比較寬的淺色線（虛線也照同樣的間隔），再把路線疊上去
+  ctx.setLineDash(dash);
+  strokeLine(shape, width + HALO_PX * 2, theme.pathHalo);
   ctx.setLineDash([]);
   if (style.kind === 'shot') {
-    // 籃框外的目標圈
-    const rim = controls.at(-1)!;
-    const c = toScreen(vp, rim);
-    const r = SHOT_RING_RADIUS * vp.scale;
-    if (style.selected) {
-      ctx.lineWidth = LINE_PX + 6;
-      ctx.strokeStyle = theme.selection;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.lineWidth = LINE_PX;
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-    ctx.stroke();
+    if (style.selected) rimCircle(LINE_PX + 6, theme.selection);
+    rimCircle(LINE_PX + HALO_PX * 2, theme.pathHalo);
   }
+  for (const d of decorations) strokeLine(d, LINE_PX + 1.5 + HALO_PX * 2, theme.pathHalo);
+  if (hasArrow) fillArrow(ctx, vp, tip, dir, theme.pathHalo, HALO_PX / vp.scale);
+
+  ctx.setLineDash(dash);
+  strokeLine(shape, width, color);
+  ctx.setLineDash([]);
+  if (style.kind === 'shot') rimCircle(LINE_PX, color);
   for (const d of decorations) strokeLine(d, LINE_PX + 1.5, color);
   if (hasArrow) fillArrow(ctx, vp, tip, dir, color, 0);
   ctx.restore();
