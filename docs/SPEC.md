@@ -438,8 +438,8 @@ interface Tactic {
   };
   matchups: Record<string, string>;            // 藍隊 id → 紅隊 id
   screenDefense: 'fight-over' | 'switch';
-  pickCoverage: 'drop' | 'hedge';
-  pressure: 'normal' | 'tight';                // 防守距離：一般 / 緊貼（舊資料沒有這個欄位時當作一般）              // 擠過時擋拆的協防：沉退 / 上提（舊資料沒有這個欄位時當作沉退）
+  pickCoverage: 'drop' | 'hedge';              // 擠過時擋拆的協防：沉退 / 上提（舊資料沒有這個欄位時當作沉退）
+  pressure: 'normal' | 'tight';                // 防守距離：一般 / 緊貼（舊資料沒有這個欄位時當作一般）
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };  // 從戰術庫載入時
   players: Player[];
   frames: Frame[];
