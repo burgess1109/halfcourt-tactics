@@ -80,8 +80,11 @@ export const DRIVE_HELP_MIN_SPEED = 2.0;
 export const DRIVE_HELP_SPOTS = [4.0, 3.5, 3.0, 2.5, 2.0, 1.5] as const;
 export const DRIVE_HELP_MARGIN = 0.1;
 export const DRIVE_HELP_MAX = 2.0;
-/** 補防不到這麼久（秒，例如剛補就傳球）就不寫評語 */
-export const DRIVE_HELP_COMMENT_MIN = 0.2;
+/**
+ * 補防不到這麼久（秒）就不寫評語：剛補就傳球時，補防者要過反應時間（REACTION_TIME = 0.2 秒）才看到傳球，
+ * 所以最短剛好 0.2 秒左右（依格數有浮點誤差）。門檻要明顯高於反應時間，判斷才不會落在邊界上。
+ */
+export const DRIVE_HELP_COMMENT_MIN = 0.3;
 /** 補防結束後，過這麼久才會再補防（秒） */
 export const DRIVE_HELP_COOLDOWN = 0.5;
 

@@ -323,7 +323,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             events.push({ t, type: 'fight-over', defenderId: r.id, screenerId: sc.screenerId, delay });
             // 擋拆（被掩護的人盯的是持球者）：盯掩護者的人沉退或上提，等隊友追回來
             const big = reds.find((x) => x.id !== r.id && assign[x.id] === sc.screenerId);
-            if (big && ballHolderAt(tactic, timeline, t) === man && !helping[big.id]) {
+            // 正在弱邊補防的人不派去擋拆協防（反過來補防也不派正在協防的人）
+            if (big && ballHolderAt(tactic, timeline, t) === man && !helping[big.id] && !driveHelping[big.id]) {
               const event: ScreenEvent = { t, type: tactic.pickCoverage, defenderId: big.id, screenerId: sc.screenerId, delay: 0, handlerId: man };
               events.push(event);
               helping[big.id] = { handler: man, teammate: r.id, until: t + HELP_MAX, event };

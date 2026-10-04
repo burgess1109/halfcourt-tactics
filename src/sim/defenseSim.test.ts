@@ -431,3 +431,66 @@ describe('弱邊補防', () => {
     expect(on.points).toBeGreaterThan(off.points + 0.1);
   });
 });
+
+describe('補防與擋拆協防（18 套戰術 × 各種設定）', () => {
+  const combos = (['switch', 'fight-over'] as const).flatMap((screenDefense) =>
+    (['normal', 'tight'] as const).flatMap((pressure) =>
+      (['drop', 'hedge'] as const).map((pickCoverage) => ({ screenDefense, pressure, pickCoverage, driveHelp: 'weak-side' as const })),
+    ),
+  );
+  const runs = PLAYS.flatMap((play) =>
+    combos.map((c) => {
+      const base = createDefaultTactic();
+      Object.assign(base, c);
+      const t = loadPlay(base, play, { A: 'b1', B: 'b2', C: 'b3' });
+      const sim = simulate(t);
+      return { label: `${play.name} ${JSON.stringify(c)}`, sim, comments: evaluate(t, sim).comments };
+    }),
+  );
+
+  it('正在補防的人不會被派去擋拆協防', () => {
+    for (const { label, sim } of runs) {
+      const drives = sim.defense.events.filter((e) => e.type === 'drive-help');
+      for (const p of sim.defense.events.filter((e) => e.type === 'drop' || e.type === 'hedge')) {
+        const busy = drives.some((d) => d.defenderId === p.defenderId && p.t >= d.t && p.t < d.t + d.delay);
+        expect(busy, label).toBe(false);
+      }
+    }
+  });
+
+  it('剛補就傳球（只有反應時間那麼久）不寫補防評語，不受浮點誤差影響', () => {
+    let momentary = 0;
+    for (const { label, sim, comments } of runs) {
+      const drives = sim.defense.events.filter((e) => e.type === 'drive-help');
+      if (drives.some((d) => d.delay < 0.25)) momentary++;
+      // 有補防評語時，一定是補防超過 0.3 秒的那一次
+      for (const c of comments.filter((x) => x.text.includes('從弱邊補防'))) {
+        expect(drives.some((d) => d.delay >= 0.3 && c.text.includes(`${d.delay.toFixed(1)} 秒`)), label).toBe(true);
+      }
+    }
+    expect(momentary).toBeGreaterThan(0); // 確實有這種情況
+  });
+});
+
+it('補防中的人，原本盯的人上來擋拆：不會被派去沉退 / 上提', () => {
+  // 1 號往籃下運球，3 號的防守者紅 3 從弱邊補防；3 號同時到 (1, 4) 幫 1 號擋拆
+  const t = createDefaultTactic();
+  t.screenDefense = 'fight-over';
+  t.driveHelp = 'weak-side';
+  const f0 = t.frames[0]!;
+  f0.start.b3 = { x: 3.5, y: 4.5 };
+  syncFrames(t, false);
+  putPath(f0, { id: 'd', kind: 'dribble', actorId: 'b1', points: [f0.start.b1!, { x: -1, y: 4.2 }], freehand: false });
+  putPath(f0, { id: 's', kind: 'screen', actorId: 'b3', points: [f0.start.b3!, { x: 1, y: 4 }], freehand: false });
+  insertFrameAfter(t, 0);
+  const f1 = t.frames[1]!;
+  putPath(f1, { id: 'd2', kind: 'dribble', actorId: 'b1', points: [f1.start.b1!, { x: 0, y: 2.6 }], freehand: false });
+  syncFrames(t, true);
+  const events = simulateDefense(t, buildTimeline(t)).events;
+  const drives = events.filter((e) => e.type === 'drive-help');
+  expect(drives.length).toBeGreaterThan(0);
+  expect(events.some((e) => e.type === 'fight-over' && e.screenerId === 'b3')).toBe(true);
+  for (const p of events.filter((e) => e.type === 'drop' || e.type === 'hedge')) {
+    expect(drives.some((d) => d.defenderId === p.defenderId && p.t >= d.t && p.t < d.t + d.delay)).toBe(false);
+  }
+});
