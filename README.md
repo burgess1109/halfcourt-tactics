@@ -96,7 +96,7 @@ docs/      規格、規劃、戰術說明
 1. `npm run typecheck` 與 `npm test` 都通過；邏輯變更請補單元測試
 2. 模擬與評分維持完全決定性（不要使用 `Math.random`），新的係數放在 `src/sim/config.ts`
 3. 行為改變時同步更新 `docs/SPEC.md`，並在 `docs/PLANNING.md` 的決策紀錄加一列
-4. 改了內建戰術（`src/plays/library.ts`）要執行 `npm run plays-doc`
+4. 改了內建戰術（`src/plays/library.ts`）、防守模擬（`src/sim/`）或配色後，要執行 `npm run plays-doc` 重新產生分鏡圖（測試會檢查是否一致）
 5. 介面文字用繁體中文；註解、文件、commit message 用繁體中文或英文皆可
 
 更多慣例見 [`CLAUDE.md`](CLAUDE.md)。

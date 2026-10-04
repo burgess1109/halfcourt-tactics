@@ -18,7 +18,7 @@
 |---|---|
 | `docs/SPEC.md` | 產品規格書。§1 流程、§3 球員資料、§4 路線、§5 分鏡與播放、§6 模擬引擎（防守 AI、戰術庫、評分）、§7 能力模型、§11 資料模型。**只描述目前實作的規格**，不放歷史與規劃 |
 | `docs/PLANNING.md` | 專案規劃：§1 里程碑（M1–M8 已完成，M9 GitHub CI/CD、M10 英文語系、M11 防守模式暫緩）、§2 決策紀錄、§3 待確認清單 |
-| `docs/PLAYS.md`、`docs/plays/*.svg` | 18 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：改 `src/plays/library.ts` 後執行 `npm run plays-doc` |
+| `docs/PLAYS.md`、`docs/plays/*.svg` | 18 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：紅隊用防守模擬畫，所以改了戰術資料（`src/plays/library.ts`）、防守站位或模擬（`src/sim/`）、配色後，都要執行 `npm run plays-doc`；`scripts/plays-doc.test.ts` 會檢查是否和程式產生的一致 |
 
 - 行為改變時，要同步更新 `docs/SPEC.md`（直接改成新的規格，不寫「原本…改成…」），並在 `docs/PLANNING.md` 的決策紀錄加一列（被取代的舊決策用 `~~刪除線~~` 標註，不要直接刪掉）。
 - 里程碑的內容或順序改變時，更新 `docs/PLANNING.md` 的里程碑，也在決策紀錄加一列。
@@ -94,7 +94,7 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 
 ## Code review 重點
 
-- 行為改變是否同步更新 `docs/SPEC.md` 與 `docs/PLANNING.md` 的決策紀錄；戰術資料改變後是否重跑 `npm run plays-doc`。
+- 行為改變是否同步更新 `docs/SPEC.md` 與 `docs/PLANNING.md` 的決策紀錄；戰術資料、防守模擬或配色改變後是否重跑 `npm run plays-doc`（測試會抓到沒重跑的情況）。
 - 模擬是否仍然決定性；新增的係數是否放進 config。
 - 路線與分鏡規則（每人每分鏡一條路線、持球限制、投籃只在最後一個分鏡、分鏡串接後的 prune）是否被破壞。
 - 內建戰術：載入不能改到 `PLAYS` 本身；每個掩護都要真的擋到防守者；出手說明的分數要和實際位置一致（`plays.test.ts` 有檢查）。

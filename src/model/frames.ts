@@ -1,5 +1,6 @@
 import { BALL_HOLD_OFFSET, ballPosition } from './entities';
 import { buildTimeline } from '../anim/timeline';
+import { MIN_RED_PATH } from '../sim/config';
 import { defendPosition } from '../sim/defense';
 import { redAt, simulateDefense } from '../sim/defenseSim';
 import { RIM, endPosition, hasShot, pathOf, pruneInvalidPaths } from './paths';
@@ -52,8 +53,6 @@ function placeDefenders(tactic: Tactic, frame: Frame): void {
 
 const redIdsOf = (tactic: Tactic) => tactic.players.filter((p) => p.team === 'red').map((p) => p.id);
 
-/** 紅隊跑位路線短於這個長度（公尺）就不畫（自動模擬中幾乎沒動） */
-const MIN_RED_PATH = 0.3;
 
 /**
  * 從自動防守改成手動時（SPEC §6.2）：把目前自動模擬出的紅隊移動，變成每個分鏡一條直線的紅隊跑位，

@@ -11,6 +11,10 @@ export const OFF_BALL_GAP = 2.0;
 export const MIN_GAP = 1.45;
 /** 防守掩護者時，和防持球者的人至少保持這個距離（公尺，約圓標直徑），兩個紅圈才不會疊在一起 */
 export const DEFENDER_SEPARATION = MIN_GAP;
+/** 防掩護者的站位太靠近防持球者時，沿著對位者周圍的圓每次轉這麼多（弧度，5°） */
+export const AVOID_STEP = Math.PI / 36;
+/** 從自動防守改成手動時，紅隊在一個分鏡裡移動不到這個距離（公尺）就不產生紅隊跑位路線 */
+export const MIN_RED_PATH = 0.3;
 
 /**
  * 防守距離（SPEC §6.2，站位與對位頁選擇）：

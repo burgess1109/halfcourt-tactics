@@ -9,6 +9,7 @@ import {
   DENY_TOWARD_BALL,
   DENY_TOWARD_RIM,
   DENY_TRIGGER_SPEED,
+  AVOID_STEP,
   DEFENDER_SEPARATION,
   DROP_DEPTH,
   NEAR_BALL_TOWARD_BALL,
@@ -64,8 +65,6 @@ function nearBallPosition(man: Vec2, toBall: Vec2, ballDist: number, toRim: Vec2
   return guardPosition(man, false, pressure);
 }
 
-/** 避開隊友時，每次轉的角度 */
-const AVOID_STEP = Math.PI / 36;
 
 /**
  * 防守者要站的位置（SPEC §6.2）：
