@@ -15,7 +15,7 @@
 | M6 | 戰術庫 18 套（已交戰術說明 `docs/PLAYS.md`）、角色分配、推薦演算法、點擊載入並自動播放 | ✅ 完成 |
 | M7 | 評估、評等、戰術評價 | ✅ 完成 |
 | M8 | 命名、localStorage、JSON、分享連結、PWA | ✅ 完成 |
-| M9 | GitHub CI/CD：自動測試、打包、部署到 GitHub Pages | 未開始 |
+| M9 | GitHub CI/CD：自動測試、打包、部署到 GitHub Pages | 進行中：workflow 已完成（`.github/workflows/ci.yml`），等建立 repo、推送、打開 Pages |
 | M10 | 英文語系 | 未開始 |
 | M11 | 防守模式 | 暫緩 |
 
@@ -31,6 +31,7 @@
 
 - **CI**：push 與 pull request 時執行型別檢查、單元測試、打包（`npm run typecheck`、`npm test`、`npm run build`），任何一步失敗就標示失敗。
 - **CD**：推到 `main` 且 CI 通過後，把 `dist/` 部署到 GitHub Pages（Settings → Pages 的 Source 選 GitHub Actions）。
+- workflow：`.github/workflows/ci.yml`，`build`（型別檢查、測試、打包）＋ `deploy`（只在 main）。Node.js 24。pull request 有新的 push 會取消舊的檢查；main 不取消，避免部署做到一半被中斷。
 - 前置作業（使用者操作）：建立 GitHub repo（免費方案需為 public）、設定 remote 並推送、打開 Pages。
 - **可驗收**：推一個 commit 到 `main`，幾分鐘內 `https://<帳號>.github.io/<repo>/` 更新；可以離線使用、加到主畫面；分享連結在部署的網址上能正確還原。測試失敗的 commit 不會被部署。
 
