@@ -461,6 +461,14 @@ describe('補防與擋拆協防（18 套戰術 × 各種設定）', () => {
     }
   });
 
+  it('擋拆協防（沉退 / 上提）不會一開始就結束：一般、緊貼、高位、低位都一樣', () => {
+    for (const { label, sim } of runs) {
+      for (const p of sim.defense.events.filter((e) => e.type === 'drop' || e.type === 'hedge')) {
+        expect(p.delay, label).toBeGreaterThanOrEqual(0.2);
+      }
+    }
+  });
+
   it('Pick and Roll（換防、弱邊補防）：一般、緊貼都沒有 0 秒的補防', () => {
     for (const pressure of ['normal', 'tight'] as const) {
       const base = createDefaultTactic();

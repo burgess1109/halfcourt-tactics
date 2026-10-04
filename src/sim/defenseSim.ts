@@ -14,7 +14,9 @@ import {
   DRIVE_HELP_MIN_SPEED,
   DRIVE_HELP_SPOTS,
   DRIVE_HELP_COOLDOWN,
+  DROP_DEPTH,
   DROP_PICKUP,
+  DROP_ROLL_SPEED,
   DT,
   FIGHT_OVER_DELAY,
   JUMP_DURATION,
@@ -264,7 +266,13 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
             t >= (frozenUntil[help.teammate] ?? 0) &&
             Math.hypot(mate.x - spot.x, mate.y - spot.y) <= HELP_RECOVERED &&
             rimDistance(mate) <= rimDistance(handler) - HELP_FRONT;
-          const rolled = tactic.pickCoverage === 'drop' && rimDistance(seenPos[man]!) <= rimDistance(cur[r.id]!) + DROP_PICKUP;
+          // 順下：掩護者真的在往籃框移動，而且已經到沉退位置附近（都用看到的那一刻的位置）。
+          // 只算協防開始之後的移動：看到的那一刻掩護者可能還在跑去設掩護的路上，那不是順下
+          const rolled =
+            tactic.pickCoverage === 'drop' &&
+            seen - VELOCITY_DT >= help.event.t &&
+            -outwardSpeedOf(prevPos[man]!, seenPos[man]!, VELOCITY_DT) >= DROP_ROLL_SPEED &&
+            rimDistance(seenPos[man]!) <= DROP_DEPTH + DROP_PICKUP;
           if (rolled || pickHelpOver({ start: help.event.t, until: help.until, handler: help.handler }, t, seen, seenHolder, recovered)) {
             help.event.delay = t - help.event.t;
             delete helping[r.id];
