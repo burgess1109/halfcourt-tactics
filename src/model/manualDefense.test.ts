@@ -245,4 +245,20 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
     removeFrame(t, 0);
     expect(t.redStarts).toBeUndefined();
   });
+
+  it('轉成紅隊路線時，小幅移動累積起來也會補上路線，每個分鏡的誤差都在 0.3 m 內', () => {
+    const t = createDefaultTactic();
+    for (let i = 0; i < 4; i++) insertFrameAfter(t, i);
+    // 自動模擬裡紅 1 每個分鏡只往右移 0.25 m（例如弱邊防守者微調站位）
+    const x0 = t.frames[0]!.start.r1!.x;
+    t.frames.forEach((f, i) => {
+      f.start.r1 = { x: x0 + 0.25 * i, y: f.start.r1!.y };
+    });
+    const auto = t.frames.map((f) => ({ ...f.start.r1! }));
+    freezeDefenseAsPaths(t);
+    t.autoDefense = false;
+    syncFrames(t, true);
+    t.frames.forEach((f, i) => expect(dist(f.start.r1!, auto[i]!), `第 ${i + 1} 個分鏡`).toBeLessThan(0.3));
+    expect(t.frames.some((f) => f.paths.some((p) => p.actorId === 'r1'))).toBe(true);
+  });
 });

@@ -60,15 +60,19 @@ const redIdsOf = (tactic: Tactic) => tactic.players.filter((p) => p.team === 're
  */
 export function freezeDefenseAsPaths(tactic: Tactic): void {
   const reds = redIdsOf(tactic);
+  // 紅隊轉成手動後實際會在的位置：跳過小幅移動時留在原地，所以要拿它（不是自動模擬的位置）和下一個目標比較，
+  // 差距累積到 MIN_RED_PATH 就補一條路線，誤差才不會越積越大
+  const at: Record<string, Vec2 | undefined> = Object.fromEntries(reds.map((id) => [id, tactic.frames[0]?.start[id]]));
   tactic.frames.forEach((frame, i) => {
     frame.paths = frame.paths.filter((p) => !reds.includes(p.actorId));
     const next = tactic.frames[i + 1];
     if (!next) return; // 最後一個分鏡停在原地
     for (const id of reds) {
-      const from = frame.start[id];
+      const from = at[id];
       const to = next.start[id];
       if (!from || !to || Math.hypot(to.x - from.x, to.y - from.y) < MIN_RED_PATH) continue;
       frame.paths.push({ id: newId(), kind: 'cut', actorId: id, points: [{ ...from }, { ...to }], freehand: false });
+      at[id] = to;
     }
   });
 }
