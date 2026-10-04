@@ -319,3 +319,12 @@ describe('「都追在身後」只在所有防守者都在身後時才說', () =
     expect(v.defenderDistance).toBeCloseTo(1.5);
   });
 });
+
+describe('評語裡的距離', () => {
+  it('用圓標邊緣到邊緣的距離（中心距離扣掉圓標直徑 1.44 m），最小 0', async () => {
+    const { edgeGap } = await import('./evaluate');
+    expect(edgeGap(3.5)).toBe('2.1');
+    expect(edgeGap(1.44)).toBe('0.0');
+    expect(edgeGap(1.3)).toBe('0.0'); // 貼身時圓標略為重疊，顯示 0
+  });
+});

@@ -1,6 +1,7 @@
 import { fullPoseAt, type Simulation } from '../anim/simulation';
 import { SHOT_CLOCK_SECONDS, possessionSeconds, type Timeline } from '../anim/timeline';
 import { BASKET_Y, PAINT_DEPTH, PAINT_HALF_WIDTH, isBeyondArc } from '../court/fiba';
+import { PLAYER_RADIUS } from '../model/entities';
 import { RATING_LABEL, heightOf, skillsOf, speedOf } from '../model/physique';
 import type { Grade, Player, Tactic, Vec2 } from '../model/types';
 import {
@@ -166,6 +167,12 @@ function frameIndexAt(timeline: Timeline, t: number): number {
   return i === -1 ? timeline.frames.length - 1 : i;
 }
 
+/**
+ * 評語裡的距離：兩人圓標邊緣到邊緣（中心距離扣掉兩個半徑，最小 0），比較符合實際的認知。
+ * 模擬與評分的規則（貼身 1.3 m、完全空檔 3.0 m…）仍然用中心距離，只有顯示換算。
+ */
+export const edgeGap = (centerDistance: number) => Math.max(0, centerDistance - 2 * PLAYER_RADIUS).toFixed(1);
+
 const label = (players: readonly Player[], id: string) => {
   const p = players.find((x) => x.id === id)!;
   return `${p.number} 號 ${p.name}`;
@@ -223,10 +230,10 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   const fmt = (v: number) => v.toFixed(2);
 
   // 1. 出手
-  const space = shot.allBehind ? `甩開防守者，對方都追在身後（最近 ${shot.defenderDistance.toFixed(1)} m），沒有人干擾`
-    : shot.openness >= 1 ? `完全空檔（最近的防守者 ${shot.defenderDistance.toFixed(1)} m）`
+  const space = shot.allBehind ? `甩開防守者，對方都追在身後（最近 ${edgeGap(shot.defenderDistance)} m），沒有人干擾`
+    : shot.openness >= 1 ? `完全空檔（最近的防守者 ${edgeGap(shot.defenderDistance)} m）`
     : shot.openness <= 0.2 ? `被 ${name(shot.defenderId)} 貼身干擾`
-    : `${name(shot.defenderId)} 在 ${shot.defenderDistance.toFixed(1)} m 外干擾`;
+    : `${name(shot.defenderId)} 在 ${edgeGap(shot.defenderDistance)} m 外干擾`;
   if (shotPath) {
     comments.push({
       text: `第 ${releaseFrame + 1} 分鏡，${name(shot.playerId)} 在${ZONE_LABEL[shot.zone]}出手（${shot.points} 分），${space}，預期得分 ${fmt(shot.expectedPoints)}`,
@@ -269,7 +276,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
       .sort((a, b) => b.expectedPoints - a.expectedPoints)[0];
     if (better) {
       comments.push({
-        text: `其實 ${name(better.playerId)} 在${ZONE_LABEL[better.zone]}更空（${better.allBehind ? '防守者都在身後' : `最近的防守者 ${better.defenderDistance.toFixed(1)} m`}），傳給他預期得分 ${fmt(better.expectedPoints)}`,
+        text: `其實 ${name(better.playerId)} 在${ZONE_LABEL[better.zone]}更空（${better.allBehind ? '防守者都在身後' : `最近的防守者 ${edgeGap(better.defenderDistance)} m`}），傳給他預期得分 ${fmt(better.expectedPoints)}`,
         frameIndex: releaseFrame,
         playerIds: [better.playerId],
         priority: 3,
@@ -347,7 +354,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
       const d = dist(pose.positions[a]!, pose.positions[b]!);
       if (d < SPACING_DISTANCE) {
         comments.push({
-          text: `第 ${releaseFrame + 1} 分鏡，${name(a)} 和 ${name(b)} 只距離 ${d.toFixed(1)} m，空間太擠，一個防守者就能同時照顧兩人`,
+          text: `第 ${releaseFrame + 1} 分鏡，${name(a)} 和 ${name(b)} 只距離 ${edgeGap(d)} m，空間太擠，一個防守者就能同時照顧兩人`,
           frameIndex: releaseFrame,
           playerIds: [a, b],
           priority: 5,
