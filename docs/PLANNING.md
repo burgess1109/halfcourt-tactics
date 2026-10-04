@@ -130,7 +130,7 @@
 | 62 | 里程碑 | ~~里程碑移到 `docs/MILESTONES.md`~~（檔名由 #63 取代）；新增 M9 GitHub CI/CD、M10 英文語系，防守模式改為 M11（暫緩） |
 | 63 | 文件分工 | `docs/SPEC.md` 只放目前實作的規格；里程碑、決策紀錄、待確認清單移到 `docs/PLANNING.md`（原 `docs/MILESTONES.md`） |
 | 64 | 防守模式的草稿 | 防守模式的設計與評等門檻草稿（未實作、未校正）從 SPEC 移到 M11，SPEC 的評等表只留已實作的進攻模式 |
-| 65 | 授權與參考圖 | 採 MIT 授權；移除參考截圖 `example.jpg`（不改寫 git 歷史），SPEC 的視覺說明改成文字描述 |
+| 65 | 授權 | 採 MIT 授權 |
 | 66 | 球場配色 | ~~橘色地板＋藍綠禁區~~ 改成原木色地板＋深藍禁區（比較過橘色、原木、深色戰術板、戶外綠色四種）；戰術說明的分鏡圖沿用同一組顏色 |
 | 67 | 按鈕圖示 | 改用 Phosphor Icons Bold（比較過 Phosphor Bold / Fill / Duotone、Material Symbols Rounded）；籃球專用圖示自己畫、線條配合；第三方授權聲明放在 `public/THIRD_PARTY_NOTICES.txt`，隨網站部署 |
 
