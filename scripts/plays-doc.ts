@@ -27,6 +27,7 @@ import type { Tactic, Vec2 } from '../src/model/types';
 import { wave } from '../src/render/paths';
 import { PLAYS, ROLES, type Role, type RoleWeights } from '../src/plays/library';
 import { loadPlay } from '../src/plays/instantiate';
+import { theme } from '../src/render/theme';
 
 const PX = 20; // 每公尺幾個 SVG 單位
 const VIEW = { minX: -7.9, maxX: 7.9, minY: -0.6, maxY: 11.2 };
@@ -36,9 +37,10 @@ const CAPTION_H = 26;
 const GAP = 12;
 const COLUMNS = 3;
 
+// 地板與禁區沿用球場的配色（src/render/theme.ts）；SVG 不用漸層，禁區取中間色
 const C = {
-  floor: '#f7902b',
-  paint: '#4f8fa8',
+  floor: theme.floor,
+  paint: theme.paintTop,
   line: '#ffffff',
   blue: '#1f56e0',
   red: '#b3232d',

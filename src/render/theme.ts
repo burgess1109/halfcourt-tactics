@@ -1,9 +1,9 @@
 // 視覺風格（SPEC §10.2）
 export const theme = {
-  floor: '#f7902b',
+  floor: '#d9a86c',
   line: '#ffffff',
-  paintTop: '#6fa8bd',
-  paintBottom: '#34758f',
+  paintTop: '#2f4f7a',
+  paintBottom: '#1d3557',
   blue: { light: '#5b93ff', dark: '#1f56e0' },
   red: { light: '#e2555c', dark: '#b3232d' },
   ring: '#f4f4f4',
