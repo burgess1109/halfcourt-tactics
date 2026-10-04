@@ -39,10 +39,9 @@ export function authoredSignature(tactic: Tactic): string {
   // 依固定順序取值：物件的欄位順序會因為建立方式不同而不同，直接 JSON.stringify 會誤判
   const ids = [...tactic.players.filter((p) => p.team === 'blue').map((p) => p.id)].sort();
   const start = [...ids, BALL_ID].map((id) => [id, first.start[id]]);
-  // 關閉自動防守時，第 1 個分鏡的紅隊位置也是使用者擺的（紅隊路線已經包含在 paths 裡）
-  const reds = tactic.autoDefense
-    ? null
-    : tactic.players.filter((p) => p.team === 'red').map((p) => p.id).sort().map((id) => [id, first.start[id]]);
+  // 關閉自動防守時，拖過的紅隊開局位置也是使用者擺的（紅隊路線已經包含在 paths 裡）
+  const red = tactic.autoDefense ? undefined : tactic.redStarts;
+  const reds = red ? Object.keys(red).sort().map((id) => [id, red[id]]) : [];
   return JSON.stringify({ start, holder: first.ballHolderId, paths: tactic.frames.map((f) => f.paths), reds });
 }
 
@@ -103,7 +102,13 @@ export class Store {
     if (p && JSON.stringify(this.state.tactic) !== p.json) {
       const t = this.state.tactic;
       // 從內建戰術載入後，動到使用者畫的部分才算「已修改」（SPEC §6.3：不會改寫內建戰術）
-      if (t.basedOn && t.id === p.snapshot.id && authoredSignature(t) !== authoredSignature(p.snapshot)) {
+      // 只切換自動防守開關不算修改（開關會產生或移除紅隊路線，但那不是使用者畫的）
+      if (
+        t.basedOn &&
+        t.id === p.snapshot.id &&
+        t.autoDefense === p.snapshot.autoDefense &&
+        authoredSignature(t) !== authoredSignature(p.snapshot)
+      ) {
         t.basedOn.modified = true;
       }
       // 同一份戰術被修改了，上次的評分已經不準（M8 存檔、分享時不能帶出舊評等）。

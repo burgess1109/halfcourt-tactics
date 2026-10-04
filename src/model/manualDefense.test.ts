@@ -40,7 +40,7 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
 
   it('第 1 個分鏡拖過的紅隊位置在重新推算後保留', () => {
     const t = manualTactic();
-    t.frames[0]!.start.r2 = { x: -4, y: 6 };
+    t.redStarts = { r2: { x: -4, y: 6 } };
     syncFrames(t, true);
     expect(t.frames[0]!.start.r2).toEqual({ x: -4, y: 6 });
     expect(t.frames[1]!.start.r2).toEqual({ x: -4, y: 6 });
@@ -111,10 +111,9 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
     const t = loadPlay(createDefaultTactic(), play, roles);
     t.autoDefense = false;
     clearRedPaths(t);
-    t.frames[0]!.start.r1 = { x: -7, y: 13 };
-    t.frames[0]!.start.r2 = { x: 0, y: 13.5 };
-    t.frames[0]!.start.r3 = { x: 7, y: 13 };
+    t.redStarts = { r1: { x: -7, y: 13 }, r2: { x: 0, y: 13.5 }, r3: { x: 7, y: 13 } };
     syncFrames(t, true);
+    expect(t.frames[0]!.start.r1).toEqual({ x: -7, y: 13 });
     const sim = simulate(t);
     expect(sim.defense.events).toEqual([]);
     const e = evaluate(t, sim);
@@ -126,17 +125,17 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
   it('移動紅隊的開局位置算修改；啟用自動防守時紅隊位置不算', () => {
     const t = manualTactic();
     const sig = authoredSignature(t);
-    t.frames[0]!.start.r3 = { x: 5, y: 5 };
+    t.redStarts = { r3: { x: 5, y: 5 } };
     expect(authoredSignature(t)).not.toBe(sig);
     t.autoDefense = true;
     const autoSig = authoredSignature(t);
-    t.frames[0]!.start.r3 = { x: 4, y: 4 };
+    t.redStarts = { r3: { x: 4, y: 4 } };
     expect(authoredSignature(t)).toBe(autoSig);
   });
 
   it('JSON 與分享連結保留紅隊開局位置與紅隊路線；啟用自動防守時紅隊路線讀進來會移除', async () => {
     const t = manualTactic();
-    t.frames[0]!.start.r3 = { x: 4.5, y: 4.5 };
+    t.redStarts = { r3: { x: 4.5, y: 4.5 } };
     syncFrames(t, true);
     const json = fromJsonFile(toJsonFile(t)).tactic;
     expect(json.autoDefense).toBe(false);
@@ -156,5 +155,53 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
     const old = JSON.parse(toJsonFile(createDefaultTactic())) as Record<string, unknown>;
     delete old.autoDefense;
     expect(parseTactic(old).tactic.autoDefense).toBe(true);
+  });
+
+  it('沒拖過的紅隊會依對位重新站位：拖藍隊、改對位、改防守距離都會跟著動；拖過的紅隊固定', () => {
+    const t = manualTactic();
+    t.redStarts = { r3: { x: 4, y: 4 } };
+    syncFrames(t, true);
+    const before = { ...t.frames[0]!.start };
+    t.frames[0]!.start.b2 = { x: -6.6, y: 1.2 }; // 拖藍 2 到底角
+    syncFrames(t, true);
+    expect(t.frames[0]!.start.r2).not.toEqual(before.r2); // 紅 2 跟著 2 號走
+    expect(t.frames[0]!.start.r3).toEqual({ x: 4, y: 4 }); // 紅 3 拖過，固定
+    t.pressure = 'tight';
+    const normal = { ...t.frames[0]!.start };
+    syncFrames(t, true);
+    expect(t.frames[0]!.start.r2).not.toEqual(normal.r2);
+  });
+
+  it('只有拖過紅隊時，空白戰術也不算空白（可以清空，讓紅隊回到依對位站位）', async () => {
+    const { isBlankTactic } = await import('./lineup');
+    const { createBlankTactic } = await import('./defaults');
+    const t = createDefaultTactic();
+    t.autoDefense = false;
+    syncFrames(t, true);
+    expect(isBlankTactic(t)).toBe(true);
+    t.redStarts = { r1: { x: 1, y: 5 } };
+    syncFrames(t, true);
+    expect(isBlankTactic(t)).toBe(false);
+    const blank = createBlankTactic(t);
+    expect(blank.redStarts).toBeUndefined();
+    expect(isBlankTactic(blank)).toBe(true);
+  });
+
+  it('只切換自動防守開關，內建戰術不會被標成已修改', async () => {
+    const { Store } = await import('./store');
+    const store = new Store();
+    store.load(loadPlay(createDefaultTactic(), play, roles));
+    store.commit((s) => {
+      s.tactic.autoDefense = true;
+      syncFrames(s.tactic, false);
+      freezeDefenseAsPaths(s.tactic);
+      s.tactic.autoDefense = false;
+    });
+    expect(store.get().tactic.basedOn!.modified).toBe(false);
+    store.commit((s) => {
+      clearRedPaths(s.tactic);
+      s.tactic.autoDefense = true;
+    });
+    expect(store.get().tactic.basedOn!.modified).toBe(false);
   });
 });

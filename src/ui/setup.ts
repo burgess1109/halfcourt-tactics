@@ -390,6 +390,8 @@ export function attachSetup(
       const lineupChanged = JSON.stringify(draftLineup) !== JSON.stringify(lineupOf(t));
       const applyNow = canApplyLineupNow(t);
       store.commit((s) => {
+        // 對位換了：拖過的紅隊開局位置是照舊對位擺的，清掉讓紅隊依新對位站好
+        if (JSON.stringify(s.tactic.matchups) !== JSON.stringify(draftMatchups)) delete s.tactic.redStarts;
         s.tactic.matchups = { ...draftMatchups };
         s.tactic.setup.matchupsCustomized = draftCustomized;
         s.tactic.screenDefense = draftScreen;
@@ -403,7 +405,7 @@ export function attachSetup(
         if (lineupChanged && applyNow) {
           applyLineup(s.tactic.frames[0]!, draftLineup);
           // 開局站位換了：紅隊依新的站位重新就位（關閉自動防守時，原本拖過的位置已經不合用）
-          for (const p of s.tactic.players) if (p.team === 'red') delete s.tactic.frames[0]!.start[p.id];
+          delete s.tactic.redStarts;
         }
         if (!draftAutoDefense) {
           if (wasAuto) {

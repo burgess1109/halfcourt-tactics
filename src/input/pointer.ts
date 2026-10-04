@@ -187,6 +187,10 @@ export function attachPointer(
       const next = clampToView({ x: point.x + g.grabOffset.x, y: point.y + g.grabOffset.y }, radius);
       store.update((s) => {
         s.tactic.frames[s.frameIndex]!.start[g.id] = next;
+        // 關閉自動防守時拖過的紅隊：記下來，之後不再依對位重新站位
+        if (s.tactic.players.find((p) => p.id === g.id)?.team === 'red') {
+          s.tactic.redStarts = { ...s.tactic.redStarts, [g.id]: next };
+        }
       });
     } else if (g.type === 'draw') {
       const p = clampToView(point, 0);

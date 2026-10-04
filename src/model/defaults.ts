@@ -52,6 +52,7 @@ export function createBlankTactic(base: Tactic): Tactic {
   };
   delete tactic.basedOn;
   delete tactic.lastResult;
+  delete tactic.redStarts; // 紅隊回到依對位站位
   syncFrames(tactic, true);
   return tactic;
 }

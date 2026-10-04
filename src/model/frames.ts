@@ -34,11 +34,16 @@ export function endState(frame: Frame): { start: Record<string, Vec2>; ballHolde
 
 /**
  * 紅隊站到各自的防守位置（SPEC §6.2，含阻絕）；用於第 1 個分鏡。
- * onlyMissing：只放還沒有位置的人（關閉自動防守時，使用者拖過的位置不動）
+ * 關閉自動防守時，使用者拖過的紅隊（tactic.redStarts）站在拖過的位置。
  */
-function placeDefenders(tactic: Tactic, frame: Frame, onlyMissing = false): void {
+function placeDefenders(tactic: Tactic, frame: Frame): void {
+  const pinned = tactic.autoDefense ? undefined : tactic.redStarts;
   for (const [blueId, redId] of Object.entries(tactic.matchups)) {
-    if (onlyMissing && frame.start[redId]) continue;
+    const at = pinned?.[redId];
+    if (at) {
+      frame.start[redId] = { ...at };
+      continue;
+    }
     const man = frame.start[blueId];
     const ball = frame.ballHolderId ? (frame.start[frame.ballHolderId] ?? null) : null;
     if (man) frame.start[redId] = defendPosition(man, ball, frame.ballHolderId === blueId, false, tactic.pressure);
@@ -91,7 +96,7 @@ export function syncFrames(tactic: Tactic, prune: boolean, opts: { defense?: boo
       frame.start = prev.start;
       frame.ballHolderId = prev.ballHolderId;
     }
-    if (!manual || i === 0) placeDefenders(tactic, frame, manual);
+    if (!manual || i === 0) placeDefenders(tactic, frame);
     if (prune) removed += pruneInvalidPaths(frame, tactic.players);
   });
 

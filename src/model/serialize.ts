@@ -119,6 +119,13 @@ function parsePath(v: unknown, frameNo: number): TacticPath {
   };
 }
 
+function parseRedStarts(v: unknown): Record<string, Vec2> {
+  const o = obj(v, '紅隊開局位置');
+  const out: Record<string, Vec2> = {};
+  for (const [k, p] of Object.entries(o)) out[oneOf(k, RED_IDS, '紅隊開局位置')] = vec(p, '紅隊開局位置');
+  return out;
+}
+
 export interface ParseResult {
   tactic: Tactic;
   /** 不成立、被移除的路線數量（例如持球者不對的運球） */
@@ -191,11 +198,6 @@ export function parseTactic(data: unknown): ParseResult {
     if (new Set(actors).size !== actors.length) fail(`第 ${i + 1} 個分鏡同一位球員有兩條路線`);
     if (i < framesIn.length - 1 && paths.some((p) => p.kind === 'shot')) fail('投籃只能在最後一個分鏡');
     const frame: Frame = i === 0 ? { start, ballHolderId: holder, paths } : { start: {}, ballHolderId: null, paths };
-    // 關閉自動防守：第 1 個分鏡的紅隊位置是使用者擺的（之後的分鏡由紅隊跑位推算）
-    if (!autoDefense && i === 0 && fo.start !== undefined) {
-      const fs = obj(fo.start, `第 ${i + 1} 個分鏡的站位`);
-      for (const r of RED_IDS) if (fs[r] !== undefined) frame.start[r] = vec(fs[r], `第 ${i + 1} 個分鏡的紅隊站位`);
-    }
     return frame;
   });
   if (holder && !start[BALL_ID]) {
@@ -216,6 +218,8 @@ export function parseTactic(data: unknown): ParseResult {
     pressure: o.pressure === undefined ? 'normal' : oneOf(o.pressure, ['normal', 'tight'] as const, '防守距離'),
     driveHelp: o.driveHelp === undefined ? 'off' : oneOf(o.driveHelp, ['off', 'weak-side'] as const, '補防'),
     autoDefense,
+    // 關閉自動防守時，使用者拖過的紅隊開局位置（之後的分鏡由紅隊跑位推算）
+    ...(o.redStarts !== undefined && !autoDefense && { redStarts: parseRedStarts(o.redStarts) }),
     players,
     frames,
     updatedAt: typeof o.updatedAt === 'number' && Number.isFinite(o.updatedAt) ? o.updatedAt : Date.now(),
@@ -307,10 +311,11 @@ export function compactForShare(tactic: Tactic): object {
     pressure: tactic.pressure,
     driveHelp: tactic.driveHelp,
     autoDefense: tactic.autoDefense,
+    ...(!tactic.autoDefense && tactic.redStarts && { redStarts: roundRecord(tactic.redStarts) }),
     ...(tactic.basedOn && { basedOn: tactic.basedOn }),
     players: tactic.players,
     frames: tactic.frames.map((f, i) => ({
-      ...(i === 0 && { start: { ...start, ...manualReds(tactic, f) }, ballHolderId: first.ballHolderId }),
+      ...(i === 0 && { start, ballHolderId: first.ballHolderId }),
       paths: f.paths.map((p) => ({
         kind: p.kind,
         actorId: p.actorId,
@@ -322,11 +327,7 @@ export function compactForShare(tactic: Tactic): object {
   };
 }
 
-/** 關閉自動防守時，第 1 個分鏡使用者擺的紅隊位置（四捨五入到公分）；啟用時不需要（開啟時重新模擬） */
-function manualReds(tactic: Tactic, frame: Frame): Record<string, Vec2> {
-  if (tactic.autoDefense) return {};
-  return Object.fromEntries(RED_IDS.filter((id) => frame.start[id]).map((id) => [id, roundVec(frame.start[id]!)]));
-}
+const roundRecord = (r: Record<string, Vec2>) => Object.fromEntries(Object.entries(r).map(([k, p]) => [k, roundVec(p)]));
 
 function toBase64Url(bytes: Uint8Array): string {
   let bin = '';

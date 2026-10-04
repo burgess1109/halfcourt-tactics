@@ -110,6 +110,8 @@ const samePoint = (a: Vec2 | undefined, b: Vec2) => !!a && Math.abs(a.x - b.x) <
  */
 export function isBlankTactic(tactic: Tactic): boolean {
   if (tactic.basedOn || !canApplyLineupNow(tactic)) return false;
+  // 關閉自動防守時拖過紅隊的開局位置，也算使用者編輯過
+  if (!tactic.autoDefense && tactic.redStarts && Object.keys(tactic.redStarts).length > 0) return false;
   const lineup = lineupOf(tactic);
   const frame = tactic.frames[0]!;
   if (frame.ballHolderId !== lineup.holder) return false;

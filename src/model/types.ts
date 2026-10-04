@@ -95,6 +95,11 @@ export interface Tactic {
    * （存在 Frame.start），播放時在分鏡之間直線移動。
    */
   autoDefense: boolean;
+  /**
+   * 關閉自動防守時，使用者在第 1 個分鏡拖過的紅隊開局位置（紅隊 id → 位置）。
+   * 沒拖過的紅隊每次都依對位、防守距離重新站位；改對位、清空戰術、載入內建戰術時清空。
+   */
+  redStarts?: Record<string, Vec2>;
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];

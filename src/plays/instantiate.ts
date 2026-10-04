@@ -35,6 +35,7 @@ export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment, opts: 
   tactic.name = '';
   tactic.basedOn = { playId: play.id, roles: { ...roles }, modified: false };
   delete tactic.lastResult;
+  delete tactic.redStarts; // 開局站位由戰術決定，紅隊依對位站好
   // 關閉自動防守時：先用自動防守模擬出每個分鏡的紅隊位置，當成使用者調整的起點
   const manual = !tactic.autoDefense;
   tactic.autoDefense = true;
