@@ -124,7 +124,14 @@ export function attachPointer(
       }
       const isLastFrame = state.frameIndex === state.tactic.frames.length - 1;
       const reason = cannotStart(kind, actorId, frame, players, isLastFrame);
-      if (reason) return { type: 'blocked', id: id === BALL_ID ? null : id, reason, downAt: local(e), moved: false };
+      if (reason) {
+        // 投籃是點一下就建立，不會拖動：不能投籃的原因要立刻提示（不改成打開球員設定）
+        if (kind === 'shot') {
+          notify(reason);
+          return null;
+        }
+        return { type: 'blocked', id: id === BALL_ID ? null : id, reason, downAt: local(e), moved: false };
+      }
       if (kind === 'shot') {
         // 投籃不用拖線，點一下就建立
         store.commit((s) => {
@@ -246,8 +253,9 @@ export function attachPointer(
       if (!g.moved && !cancelled && g.id !== BALL_ID) onTapPlayer(g.id);
     } else if (g.type === 'blocked') {
       if (cancelled) return;
-      if (g.moved) notify(g.reason);
-      else if (g.id) onTapPlayer(g.id); // 點一下球員：打開球員設定（任何工具、任何分鏡都可以）
+      // 點一下球員：打開球員設定（任何工具、任何分鏡都可以）；拖動、或點的是球（沒有設定可開）時提示原因
+      if (!g.moved && g.id) onTapPlayer(g.id);
+      else notify(g.reason);
     } else if (g.type === 'draw') {
       if (!g.moved && g.tapId && !cancelled) {
         // 沒有拖動：不是畫線，是點一下球員，打開球員設定

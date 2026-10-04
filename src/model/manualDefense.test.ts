@@ -204,4 +204,24 @@ describe('關閉自動防守跑位：紅隊用跑位路線移動', () => {
     });
     expect(store.get().tactic.basedOn!.modified).toBe(false);
   });
+
+  it('關閉自動防守時只改對位：紅隊路線換人接手，內建戰術不會被標成已修改（和啟用時一致）', async () => {
+    const { Store } = await import('./store');
+    const { assignMatchup, setMatchups } = await import('./matchups');
+    const base = createDefaultTactic();
+    base.autoDefense = false;
+    const store = new Store();
+    store.load(loadPlay(base, play, roles));
+    store.commit((s) => {
+      setMatchups(s.tactic, assignMatchup(s.tactic.matchups, 'b1', 'r2'));
+    });
+    expect(store.get().tactic.matchups.b1).toBe('r2');
+    expect(store.get().tactic.basedOn!.modified).toBe(false);
+    // 真的改了紅隊路線才算修改
+    store.commit((s) => {
+      const path = s.tactic.frames[0]!.paths.find((p) => REDS.includes(p.actorId))!;
+      path.points = [path.points[0]!, { x: 0, y: 3 }];
+    });
+    expect(store.get().tactic.basedOn!.modified).toBe(true);
+  });
 });

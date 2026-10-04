@@ -2,6 +2,7 @@ import { createDefaultTactic } from './defaults';
 import { syncFrames } from './frames';
 import { sameData } from './equal';
 import { History } from './history';
+import { defenderAssignments } from './matchups';
 import type { Draft } from './paths';
 import { BALL_ID, type Frame, type PathKind, type Tactic } from './types';
 
@@ -42,7 +43,12 @@ export function authoredSignature(tactic: Tactic): string {
   // 關閉自動防守時，拖過的紅隊開局位置也是使用者擺的（紅隊路線已經包含在 paths 裡）
   const red = tactic.autoDefense ? undefined : tactic.redStarts;
   const reds = red ? Object.keys(red).sort().map((id) => [id, red[id]]) : [];
-  return JSON.stringify({ start, holder: first.ballHolderId, paths: tactic.frames.map((f) => f.paths), reds });
+  // 紅隊路線用「防的是哪位藍隊」記，不記紅隊編號：改對位時路線改由新的對位者接手（setMatchups），內容沒變
+  const guards = defenderAssignments(tactic.matchups);
+  const paths = tactic.frames.map((f) =>
+    f.paths.map((p) => (guards[p.actorId] ? { ...p, actorId: `vs:${guards[p.actorId]}` } : p)),
+  );
+  return JSON.stringify({ start, holder: first.ballHolderId, paths, reds });
 }
 
 export class Store {
