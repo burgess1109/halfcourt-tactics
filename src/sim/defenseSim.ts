@@ -2,7 +2,7 @@ import { ballHolderAt, passAt, poseAt, screensOf, type Timeline } from '../anim/
 import { defenderAssignments } from '../model/matchups';
 import { RIM } from '../model/paths';
 import { heightOf, speedOf } from '../model/physique';
-import type { PickCoverage, Tactic, Vec2 } from '../model/types';
+import type { PickCoverage, Pressure, Tactic, Vec2 } from '../model/types';
 import {
   BODY_DISTANCE,
   DEFENSE_SPEED_FACTOR,
@@ -14,7 +14,6 @@ import {
   DRIVE_HELP_MIN_SPEED,
   DRIVE_HELP_SPOTS,
   DRIVE_HELP_COOLDOWN,
-  DROP_DEPTH,
   DROP_PICKUP,
   DROP_ROLL_SPEED,
   DT,
@@ -126,6 +125,18 @@ export function fightOverDelay(screenerCm: number, defenderCm: number): number {
 }
 
 const rimDistance = (p: Vec2) => Math.hypot(p.x - RIM.x, p.y - RIM.y);
+
+/**
+ * 沉退時，掩護者是不是順下、快要超過協防的人（SPEC §6.2）：往籃框移動 ≥ DROP_ROLL_SPEED，
+ * 而且離籃框不到「這一刻的沉退位置 + DROP_PICKUP」。沉退位置會隨持球者靠近籃框而變深
+ * （pickHelpPosition），門檻跟著變；固定用 DROP_DEPTH 的話，持球者已經切到籃下時會太早放掉他。
+ * 位置都用防守者看到的那一刻。
+ */
+export function rollingPastDrop(handler: Vec2, screenerBefore: Vec2, screener: Vec2, pressure: Pressure): boolean {
+  const inward = -outwardSpeedOf(screenerBefore, screener, VELOCITY_DT);
+  const drop = pickHelpPosition('drop', handler, pressure);
+  return inward >= DROP_ROLL_SPEED && rimDistance(screener) <= rimDistance(drop) + DROP_PICKUP;
+}
 
 /**
  * 擋拆的協防是否結束（SPEC §6.2）：隊友追回來（recovered，已含至少協防 HELP_MIN 秒）、時間到、或持球者把球傳出去。
@@ -271,8 +282,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
           const rolled =
             tactic.pickCoverage === 'drop' &&
             seen - VELOCITY_DT >= help.event.t &&
-            -outwardSpeedOf(prevPos[man]!, seenPos[man]!, VELOCITY_DT) >= DROP_ROLL_SPEED &&
-            rimDistance(seenPos[man]!) <= DROP_DEPTH + DROP_PICKUP;
+            rollingPastDrop(handler, prevPos[man]!, seenPos[man]!, pressure);
           if (rolled || pickHelpOver({ start: help.event.t, until: help.until, handler: help.handler }, t, seen, seenHolder, recovered)) {
             help.event.delay = t - help.event.t;
             delete helping[r.id];

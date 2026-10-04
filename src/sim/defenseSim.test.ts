@@ -9,7 +9,7 @@ import { SWITCH_DELAY } from './config';
 import { loadPlay } from '../plays/instantiate';
 import { PLAYS } from '../plays/library';
 import { defendPosition, driveHelpDepth, driveHelpPosition, guardPosition, pickHelpPosition } from './defense';
-import { fightOverDelay, pickHelpOver, redAt, simulateDefense } from './defenseSim';
+import { fightOverDelay, pickHelpOver, redAt, rollingPastDrop, simulateDefense } from './defenseSim';
 import { evaluate } from './evaluate';
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -307,6 +307,20 @@ describe('擋拆擠過時的沉退 / 上提', () => {
     expect(pickHelpOver(help, 4.2, 4.0, 'b1', true)).toBe(true);
     expect(pickHelpOver(help, 5.5, 5.3, 'b1', false)).toBe(true);
     expect(pickHelpOver(help, 4.2, 4.0, 'b1', false)).toBe(false);
+  });
+
+  it('rollingPastDrop：門檻跟著這一刻的沉退位置（持球者切到籃下時，沉退位置變深，門檻也變小）', () => {
+    // 掩護者 0.1 秒往籃框移動 0.5 m（5 m/s）
+    const roll = (y: number) => [{ x: 0, y: y + 0.5 }, { x: 0, y }] as const;
+    // 持球者在外面（離籃框約 7.4 m）：沉退位置 3.0 m，門檻 4.5 m
+    const far = { x: 3, y: 8.3 };
+    expect(rollingPastDrop(far, ...roll(1.575 + 4.3), 'normal')).toBe(true);
+    // 持球者切到離籃框 3 m：沉退位置約 1.5 m，門檻約 3.0 m；掩護者在 4.3 m 還在後面
+    const near = { x: 0, y: 1.575 + 3 };
+    expect(rollingPastDrop(near, ...roll(1.575 + 4.3), 'normal')).toBe(false);
+    expect(rollingPastDrop(near, ...roll(1.575 + 2.8), 'normal')).toBe(true);
+    // 沒在移動就不算順下
+    expect(rollingPastDrop(far, { x: 0, y: 4 }, { x: 0, y: 4 }, 'normal')).toBe(false);
   });
 
   it('pickHelpPosition：沉退最深到離籃框 3 m，持球者靠近籃框時最多到離他 1.5 m', () => {
