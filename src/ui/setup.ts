@@ -240,6 +240,9 @@ export function attachSetup(
       form.append(reset);
     }
 
+    // 進階設定：紅隊的防守方式（防守距離、切入補防、掩護應對）
+    form.append(el('h3', { class: 'setup__section' }, '進階設定'));
+
     // 防守距離：改了之後重畫，小球場上的紅隊跟著換位置
     const pressure = el('fieldset', { class: 'choice' }, el('legend', {}, '紅隊的防守距離'));
     const pressureOption = (value: Pressure, text: string, desc: string) => {
