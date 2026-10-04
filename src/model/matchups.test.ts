@@ -91,3 +91,26 @@ describe('setMatchups', () => {
     expect(t.matchups).toEqual({ b1: 'r2', b2: 'r1', b3: 'r3' });
   });
 });
+
+describe('關閉自動防守時改對位：紅隊路線跟著對位走', () => {
+  it('紅 1、紅 2 交換對位後，原本跟著 1 號跑的路線改由紅 2 接手；播放與評分的對位一致', async () => {
+    const { loadPlay } = await import('../plays/instantiate');
+    const { PLAYS } = await import('../plays/library');
+    const { syncFrames } = await import('./frames');
+    const { simulate } = await import('../anim/simulation');
+    const base = createDefaultTactic();
+    base.autoDefense = false;
+    const t = loadPlay(base, PLAYS.find((p) => p.category === '高位擋拆' && p.name === 'Pick and Roll')!, { A: 'b1', B: 'b2', C: 'b3' });
+    // 每個分鏡：紅隊在分鏡結束時離自己盯的人多遠
+    const gaps = () =>
+      t.frames.slice(1).flatMap((f) => Object.entries(t.matchups).map(([b, r]) => Math.hypot(f.start[r]!.x - f.start[b]!.x, f.start[r]!.y - f.start[b]!.y)));
+    const before = gaps();
+    const r1Paths = t.frames.map((f) => f.paths.filter((p) => p.actorId === 'r1').length);
+    setMatchups(t, assignMatchup(t.matchups, 'b1', 'r2'));
+    syncFrames(t, true);
+    expect(t.frames.map((f) => f.paths.filter((p) => p.actorId === 'r2').length)).toEqual(r1Paths);
+    // 交換後每位紅隊仍然跟在自己盯的人身邊（和交換前一樣近），不會斜跨半場跑回舊對位的人
+    gaps().forEach((g, i) => expect(g).toBeCloseTo(before[i]!, 0));
+    expect(simulate(t).defense.finalAssignments).toEqual({ r2: 'b1', r1: 'b2', r3: 'b3' });
+  });
+});

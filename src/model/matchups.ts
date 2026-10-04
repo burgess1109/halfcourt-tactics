@@ -38,9 +38,20 @@ export function defenderAssignments(matchups: Record<string, string>): Record<st
 
 /**
  * 改對位（所有改對位的地方都用這個）：內容真的變了才清掉手動防守時拖過的紅隊開局位置（redStarts），
- * 那些位置是照舊對位擺的。用 sameData 比對，不受欄位順序影響（預設對位依身高排序，欄位順序可能不同）。
+ * 那些位置是照舊對位擺的；紅隊路線則改由新的對位者接手。用 sameData 比對，不受欄位順序影響（預設對位依身高排序，欄位順序可能不同）。
  */
 export function setMatchups(tactic: Tactic, next: Record<string, string>): void {
-  if (!sameData(tactic.matchups, next)) delete tactic.redStarts;
+  if (!sameData(tactic.matchups, next)) {
+    delete tactic.redStarts;
+    // 關閉自動防守時，紅隊路線跟著對位走：原本防某位藍隊的路線，改由現在防他的紅隊接手
+    // （路線是照著盯的人畫的；不換的話，紅隊會從新位置跑回舊對位的人身邊）
+    const oldDefenderOf = defenderAssignments(tactic.matchups); // 紅 → 藍
+    for (const frame of tactic.frames) {
+      for (const path of frame.paths) {
+        const man = oldDefenderOf[path.actorId];
+        if (man && next[man]) path.actorId = next[man]!;
+      }
+    }
+  }
   tactic.matchups = { ...next };
 }

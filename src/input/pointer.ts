@@ -32,7 +32,10 @@ type Gesture =
       /** 不能拖曳時的原因 */
       locked: string | null;
     }
-  | { type: 'draw' }
+  /** 畫線；tapId：從球員身上開始（不是球），沒拖動就放開時改成打開球員設定 */
+  | { type: 'draw'; tapId: string | null; downAt: { x: number; y: number }; moved: boolean }
+  /** 不能做的操作（例如紅隊畫運球）：點一下打開球員設定，拖動時才提示原因 */
+  | { type: 'blocked'; id: string | null; reason: string; downAt: { x: number; y: number }; moved: boolean }
   | { type: 'handle'; pathId: string; handle: Handle; downAt: { x: number; y: number }; moved: boolean };
 
 /** 手指移動超過這個距離（CSS px）才算拖曳，否則算點一下 */
@@ -83,8 +86,8 @@ export function attachPointer(
     const manualDefense = !state.tactic.autoDefense;
     // 紅隊：啟用自動防守時由系統防守；關閉時可以畫跑位（其他路線不行）
     if (id && isRed && state.tool !== 'move' && !(manualDefense && state.tool === 'cut')) {
-      notify(manualDefense ? '紅隊只能畫跑位路線' : '紅隊由系統防守，只能畫藍隊的路線（可以在站位與對位的進階設定關閉自動防守跑位）');
-      return null;
+      const reason = manualDefense ? '紅隊只能畫跑位路線' : '紅隊由系統防守，只能畫藍隊的路線（可以在站位與對位的進階設定關閉自動防守跑位）';
+      return { type: 'blocked', id, reason, downAt: local(e), moved: false };
     }
     if (id && state.tool === 'move') {
       const center = id === BALL_ID ? ballPosition(frame) : frame.start[id]!;
@@ -121,10 +124,7 @@ export function attachPointer(
       }
       const isLastFrame = state.frameIndex === state.tactic.frames.length - 1;
       const reason = cannotStart(kind, actorId, frame, players, isLastFrame);
-      if (reason) {
-        notify(reason);
-        return null;
-      }
+      if (reason) return { type: 'blocked', id: id === BALL_ID ? null : id, reason, downAt: local(e), moved: false };
       if (kind === 'shot') {
         // 投籃不用拖線，點一下就建立
         store.commit((s) => {
@@ -138,7 +138,7 @@ export function attachPointer(
         s.selectedPathId = null;
         s.draft = { kind, actorId, freehand: s.freehand, points: [{ ...frame.start[actorId]! }] };
       });
-      return { type: 'draw' };
+      return { type: 'draw', tapId: id === BALL_ID ? null : id, downAt: local(e), moved: false };
     }
 
     // 3. 點到路線就選取，點到空白處就取消選取
@@ -192,7 +192,12 @@ export function attachPointer(
           s.tactic.redStarts = { ...s.tactic.redStarts, [g.id]: next };
         }
       });
+    } else if (g.type === 'blocked') {
+      const at = local(e);
+      if (Math.hypot(at.x - g.downAt.x, at.y - g.downAt.y) >= TAP_SLOP_PX) g.moved = true;
     } else if (g.type === 'draw') {
+      const at = local(e);
+      if (Math.hypot(at.x - g.downAt.x, at.y - g.downAt.y) >= TAP_SLOP_PX) g.moved = true;
       const p = clampToView(point, 0);
       store.update((s) => {
         const d = s.draft!;
@@ -239,7 +244,19 @@ export function attachPointer(
         store.end(); // 由 store 統一移除不成立的路線並提示
       }
       if (!g.moved && !cancelled && g.id !== BALL_ID) onTapPlayer(g.id);
+    } else if (g.type === 'blocked') {
+      if (cancelled) return;
+      if (g.moved) notify(g.reason);
+      else if (g.id) onTapPlayer(g.id); // 點一下球員：打開球員設定（任何工具、任何分鏡都可以）
     } else if (g.type === 'draw') {
+      if (!g.moved && g.tapId && !cancelled) {
+        // 沒有拖動：不是畫線，是點一下球員，打開球員設定
+        store.update((s) => {
+          s.draft = null;
+        });
+        onTapPlayer(g.tapId);
+        return;
+      }
       const state = store.get();
       const draft = state.draft!;
       const result = cancelled ? { error: null } : finalizeDraft(draft, store.currentFrame(), state.tactic.players);
