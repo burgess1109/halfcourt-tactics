@@ -58,6 +58,9 @@ export interface Frame {
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 
+/** 防守距離（SPEC §6.2）：normal = 一般；tight = 緊貼（距離較小、外圍一律阻絕） */
+export type Pressure = 'normal' | 'tight';
+
 /** drop = 沉退：退到球和籃框之間保護籃下；hedge = 上提：踏出去擋在持球者前面 */
 export type PickCoverage = 'drop' | 'hedge';
 
@@ -80,6 +83,8 @@ export interface Tactic {
   screenDefense: 'switch' | 'fight-over';
   /** 擠過時，擋拆（掩護持球者的防守者）由掩護者的防守者沉退或上提（SPEC §6.2） */
   pickCoverage: PickCoverage;
+  /** 防守距離：一般 / 緊貼（SPEC §6.2） */
+  pressure: Pressure;
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];

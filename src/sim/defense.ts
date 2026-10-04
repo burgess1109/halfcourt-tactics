@@ -1,5 +1,5 @@
 import { RIM } from '../model/paths';
-import type { PickCoverage, Vec2 } from '../model/types';
+import type { PickCoverage, Pressure, Vec2 } from '../model/types';
 import {
   BEATEN_COS,
   BEATEN_MARGIN,
@@ -13,20 +13,21 @@ import {
   HELP_SHADE,
   JUMP_TO_BALL,
   MIN_GAP,
-  OFF_BALL_GAP,
   ON_BALL_GAP,
+  PRESSURE_GAPS,
 } from './config';
 
 /**
  * 防守者的理想位置：在對位球員與籃框的連線上，離對位球員 gap 公尺（SPEC §6.2）。
  * 對位球員靠近籃框時，最多退到兩人中間；但至少保持 MIN_GAP，圓標才不會疊在一起。
  */
-export function guardPosition(man: Vec2, hasBall: boolean): Vec2 {
+export function guardPosition(man: Vec2, hasBall: boolean, pressure: Pressure = 'normal'): Vec2 {
   const dx = RIM.x - man.x;
   const dy = RIM.y - man.y;
   const d = Math.hypot(dx, dy);
   if (d === 0) return { ...man };
-  const gap = Math.min(hasBall ? ON_BALL_GAP : OFF_BALL_GAP, Math.max(d / 2, MIN_GAP));
+  const gaps = PRESSURE_GAPS[pressure];
+  const gap = Math.min(hasBall ? gaps.onBall : gaps.offBall, Math.max(d / 2, MIN_GAP));
   return { x: man.x + (dx / d) * gap, y: man.y + (dy / d) * gap };
 }
 
@@ -38,16 +39,17 @@ export function guardPosition(man: Vec2, hasBall: boolean): Vec2 {
  *   - deny（對位者往外跑想出來接球，見 nextDenyState）：阻絕，站到傳球路線上
  * - 防籃下附近、或離持球者很近（例如正在掩護）的無球者，或球在空中（ball 為 null）：在對位者與籃框之間
  */
-export function defendPosition(man: Vec2, ball: Vec2 | null, hasBall: boolean, deny = false): Vec2 {
-  if (hasBall || !ball) return guardPosition(man, hasBall);
+export function defendPosition(man: Vec2, ball: Vec2 | null, hasBall: boolean, deny = false, pressure: Pressure = 'normal'): Vec2 {
+  if (hasBall || !ball) return guardPosition(man, hasBall, pressure);
   const toRim = { x: RIM.x - man.x, y: RIM.y - man.y };
   const rimDist = Math.hypot(toRim.x, toRim.y);
   const toBall = { x: ball.x - man.x, y: ball.y - man.y };
   const ballDist = Math.hypot(toBall.x, toBall.y);
-  if (rimDist <= DENY_MIN_RIM_DISTANCE || ballDist < DENY_MIN_BALL_DISTANCE) return guardPosition(man, false);
-  if (!deny) {
+  if (rimDist <= DENY_MIN_RIM_DISTANCE || ballDist < DENY_MIN_BALL_DISTANCE) return guardPosition(man, false, pressure);
+  // 緊貼：外圍一律阻絕
+  if (!deny && !PRESSURE_GAPS[pressure].alwaysDeny) {
     // 協防站位：在對位者與籃框之間，稍微偏向持球者，守住內切
-    const g = guardPosition(man, false);
+    const g = guardPosition(man, false, pressure);
     return { x: g.x + (toBall.x / ballDist) * HELP_SHADE, y: g.y + (toBall.y / ballDist) * HELP_SHADE };
   }
   // 阻絕：對位者往外跑想接球時，站到傳球路線上
@@ -62,8 +64,8 @@ export function defendPosition(man: Vec2, ball: Vec2 | null, hasBall: boolean, d
  * 沉退 = 持球者和籃框連線上、離籃框 DROP_DEPTH（持球者很近籃框時最多到離他 ON_BALL_GAP）；
  * 上提 = 和防持球者相同，站在持球者和籃框之間、離他 ON_BALL_GAP。
  */
-export function pickHelpPosition(coverage: PickCoverage, handler: Vec2): Vec2 {
-  if (coverage === 'hedge') return guardPosition(handler, true);
+export function pickHelpPosition(coverage: PickCoverage, handler: Vec2, pressure: Pressure = 'normal'): Vec2 {
+  if (coverage === 'hedge') return guardPosition(handler, true, pressure);
   const dx = handler.x - RIM.x;
   const dy = handler.y - RIM.y;
   const d = Math.hypot(dx, dy);
@@ -98,6 +100,7 @@ export function chaseTarget(
   hasBall: boolean,
   deny = false,
   jumpTo: Vec2 | null = null,
+  pressure: Pressure = 'normal',
 ): Vec2 {
   const dx = defender.x - man.x;
   const dy = defender.y - man.y;
@@ -107,7 +110,7 @@ export function chaseTarget(
   const rd = Math.hypot(rx, ry) || 1;
   const behind = (dx * rx + dy * ry) / (d * rd) < BEATEN_COS;
   if (!behind || rimDistance(defender) <= rimDistance(man) + BEATEN_MARGIN) {
-    return jumpTo ? jumpPosition(man, jumpTo) : defendPosition(man, ball, hasBall, deny);
+    return jumpTo ? jumpPosition(man, jumpTo) : defendPosition(man, ball, hasBall, deny, pressure);
   }
   return { x: man.x + (dx / d) * BODY_DISTANCE, y: man.y + (dy / d) * BODY_DISTANCE };
 }

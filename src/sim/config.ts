@@ -11,6 +11,17 @@ export const OFF_BALL_GAP = 2.0;
 export const MIN_GAP = 1.45;
 
 /**
+ * 防守距離（SPEC §6.2，站位與對位頁選擇）：
+ * - 一般：上面的 ON_BALL_GAP / OFF_BALL_GAP，外圍無球者平常協防站位，對位者往外跑才阻絕。
+ * - 緊貼：距離縮小（持球者貼到圓標不重疊的極限），外圍無球者一律阻絕傳球路線。
+ *   出手時干擾比較大、外圍不好接球；代價是持球者切入、無球者背切時比較容易被甩到身後。
+ */
+export const PRESSURE_GAPS = {
+  normal: { onBall: ON_BALL_GAP, offBall: OFF_BALL_GAP, alwaysDeny: false },
+  tight: { onBall: MIN_GAP, offBall: 1.5, alwaysDeny: true },
+} as const;
+
+/**
  * 防守移動係數：防守者面對對位者側滑、倒退，比往前衝刺慢。
  * 讓防運球者時只能慢慢追回（掩護才有效果），防空切時會被甩開。
  */

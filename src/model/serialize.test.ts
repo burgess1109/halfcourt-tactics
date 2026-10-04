@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadPlay } from '../plays/instantiate';
 import { PLAYS } from '../plays/library';
 import { createDefaultTactic } from './defaults';
+import { syncFrames } from './frames';
 import { SavedTactics, STORAGE_KEY, copyName, type KeyValueStorage } from './savedTactics';
 import {
   SHARE_PREFIX,
@@ -86,6 +87,14 @@ describe('JSON 匯出入', () => {
     expect(() => parseTactic({ ...t, pickCoverage: 'blitz' })).toThrow(TacticFormatError);
   });
 
+  it('防守距離：舊資料沒有這個欄位時預設一般；不認得的值不接受', () => {
+    const t = JSON.parse(toJsonFile(sample())) as Record<string, unknown>;
+    delete t.pressure;
+    expect(parseTactic(t).tactic.pressure).toBe('normal');
+    expect(parseTactic({ ...t, pressure: 'tight' }).tactic.pressure).toBe('tight');
+    expect(() => parseTactic({ ...t, pressure: 'zone' })).toThrow(TacticFormatError);
+  });
+
   it('座標超出球場時不接受', () => {
     const t = JSON.parse(toJsonFile(sample())) as Tactic;
     t.frames[0]!.start.b1 = { x: 0, y: 99 };
@@ -116,6 +125,8 @@ describe('分享連結', () => {
       const t = sample(i);
       t.lastResult = { grade: 'S', expectedPoints: 1.5 };
       t.pickCoverage = i % 2 ? 'hedge' : 'drop';
+      t.pressure = i % 3 ? 'normal' : 'tight';
+      syncFrames(t, true); // 防守距離會改變紅隊站位
       const hash = await encodeShare(t);
       expect(hash.startsWith(SHARE_PREFIX)).toBe(true);
       expect(hash).toMatch(/^#p=[A-Za-z0-9_-]+$/);
@@ -125,6 +136,7 @@ describe('分享連結', () => {
       expect(tactic.players).toEqual(t.players);
       expect(tactic.matchups).toEqual(t.matchups);
       expect(tactic.pickCoverage).toBe(t.pickCoverage);
+      expect(tactic.pressure).toBe(t.pressure);
       expect(tactic.basedOn).toEqual(t.basedOn);
       expect(tactic.name).toBe(t.name);
       expect(tactic.id).not.toBe(t.id);

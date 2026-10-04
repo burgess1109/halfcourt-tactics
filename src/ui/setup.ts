@@ -14,7 +14,7 @@ import {
 } from '../model/physique';
 import { applyPatch, parseTeamForm, type PlayerFormValues } from '../model/playerForm';
 import type { EditorState, Store } from '../model/store';
-import type { PickCoverage, Player, Rating, Skills, Tactic, Team } from '../model/types';
+import type { PickCoverage, Player, Pressure, Rating, Skills, Tactic, Team } from '../model/types';
 
 // 進攻模式的設定流程（SPEC §1.1）：① 藍隊 → ② 紅隊 → ③ 對位 → 戰術面板。
 
@@ -73,6 +73,7 @@ export function attachSetup(
   let draftCustomized = false;
   let draftScreen: Tactic['screenDefense'] = 'switch';
   let draftCoverage: PickCoverage = 'drop';
+  let draftPressure: Pressure = 'normal';
   let draftLineup: Lineup = lineupOf(store.get().tactic);
 
   const tactic = () => store.get().tactic;
@@ -187,6 +188,7 @@ export function attachSetup(
       createLineupEditor({
         players,
         matchups: draftMatchups,
+        pressure: draftPressure,
         lineup: draftLineup,
         onChange: (next) => {
           draftLineup = next;
@@ -236,6 +238,22 @@ export function attachSetup(
       });
       form.append(reset);
     }
+
+    // 防守距離：改了之後重畫，小球場上的紅隊跟著換位置
+    const pressure = el('fieldset', { class: 'choice' }, el('legend', {}, '紅隊的防守距離'));
+    const pressureOption = (value: Pressure, text: string, desc: string) => {
+      const radio = el('input', { type: 'radio', name: 'pressure', value, checked: draftPressure === value });
+      radio.addEventListener('change', () => {
+        draftPressure = value;
+        renderMatchups();
+      });
+      return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
+    };
+    pressure.append(
+      pressureOption('normal', '一般（預設）', '防持球者 1.5 m、防無球者 2.0 m，外圍無球者平常守在內側，對方往外跑才阻絕'),
+      pressureOption('tight', '緊貼', '貼近對位者，外圍一律阻絕傳球路線：出手和外圍接球比較難，但切入、背切比較容易甩開防守者'),
+    );
+    form.append(pressure);
 
     const choice = el('fieldset', { class: 'choice' }, el('legend', {}, '遇到掩護時，紅隊要'));
     // 進階：擠過時，擋拆由掩護者的防守者沉退或上提（換防時用不到，隱藏）
@@ -303,6 +321,7 @@ export function attachSetup(
     draftMatchups = draftCustomized ? { ...t.matchups } : defaultMatchups(t.players);
     draftScreen = t.screenDefense;
     draftCoverage = t.pickCoverage;
+    draftPressure = t.pressure;
     draftLineup = lineupOf(t);
   };
 
@@ -322,6 +341,7 @@ export function attachSetup(
         s.tactic.setup.matchupsCustomized = draftCustomized;
         s.tactic.screenDefense = draftScreen;
         s.tactic.pickCoverage = draftCoverage;
+        s.tactic.pressure = draftPressure;
         s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理
         if (lineupChanged && applyNow) applyLineup(s.tactic.frames[0]!, draftLineup);

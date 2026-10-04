@@ -140,7 +140,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
   const holder0 = ballHolderAt(tactic, timeline, 0);
   const cur: Record<string, Vec2> = {};
   const ball0 = holder0 ? start[holder0]! : null;
-  for (const r of reds) cur[r.id] = defendPosition(start[assign[r.id]!]!, ball0, holder0 === assign[r.id]);
+  const { pressure } = tactic;
+  for (const r of reds) cur[r.id] = defendPosition(start[assign[r.id]!]!, ball0, holder0 === assign[r.id], false, pressure);
 
   for (let i = 0; i < ticks; i++) {
     const t = i * DT;
@@ -187,7 +188,7 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
         if (help) {
           const mate = cur[help.teammate]!;
           const handler = seenPos[help.handler]!;
-          const spot = guardPosition(handler, true);
+          const spot = guardPosition(handler, true, pressure);
           const recovered =
             t >= help.event.t + HELP_MIN &&
             t >= (frozenUntil[help.teammate] ?? 0) &&
@@ -199,8 +200,8 @@ export function simulateDefense(tactic: Tactic, timeline: Timeline): DefenseResu
           }
         }
         const target = helping[r.id]
-          ? pickHelpPosition(tactic.pickCoverage, seenPos[helping[r.id]!.handler]!)
-          : chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo);
+          ? pickHelpPosition(tactic.pickCoverage, seenPos[helping[r.id]!.handler]!, pressure)
+          : chaseTarget(cur[r.id]!, seenPos[man]!, seenBall, seenHolder === man, denying[r.id], jumpTo, pressure);
         const p = cur[r.id]!;
         const dx = target.x - p.x;
         const dy = target.y - p.y;

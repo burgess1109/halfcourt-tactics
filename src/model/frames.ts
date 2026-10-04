@@ -36,7 +36,7 @@ function placeDefenders(tactic: Tactic, frame: Frame): void {
   for (const [blueId, redId] of Object.entries(tactic.matchups)) {
     const man = frame.start[blueId];
     const ball = frame.ballHolderId ? (frame.start[frame.ballHolderId] ?? null) : null;
-    if (man) frame.start[redId] = defendPosition(man, ball, frame.ballHolderId === blueId);
+    if (man) frame.start[redId] = defendPosition(man, ball, frame.ballHolderId === blueId, false, tactic.pressure);
   }
 }
 

@@ -1,6 +1,6 @@
 import { PLAYER_RADIUS } from '../model/entities';
 import { FORMATIONS, applyFormation, lineupBall, moveInLineup, setHolder, type Lineup } from '../model/lineup';
-import type { Player, Vec2 } from '../model/types';
+import type { Player, Pressure, Vec2 } from '../model/types';
 import { drawCourt } from '../render/court';
 import { drawBall, drawPlayer, drawPlayerLabel } from '../render/entities';
 import type { Viewport } from '../render/viewport';
@@ -26,6 +26,8 @@ export interface LineupEditorOptions {
   players: readonly Player[];
   /** 藍隊 id → 紅隊 id */
   matchups: Record<string, string>;
+  /** 防守距離：紅隊依這個設定站位 */
+  pressure: Pressure;
   lineup: Lineup;
   onChange: (lineup: Lineup) => void;
 }
@@ -102,7 +104,7 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
     const redPos = new Map<string, Vec2>();
     for (const b of blues) {
       const redId = opts.matchups[b.id];
-      if (redId) redPos.set(redId, defendPosition(lineup.positions[b.id]!, ball, b.id === lineup.holder));
+      if (redId) redPos.set(redId, defendPosition(lineup.positions[b.id]!, ball, b.id === lineup.holder, false, opts.pressure));
     }
     for (const r of reds) {
       const p = redPos.get(r.id);

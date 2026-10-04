@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { simulate } from '../anim/simulation';
 import { buildTimeline, poseAt } from '../anim/timeline';
 import { createDefaultTactic } from '../model/defaults';
-import { insertFrameAfter } from '../model/frames';
+import { insertFrameAfter, syncFrames } from '../model/frames';
 import { putPath } from '../model/paths';
 import type { Tactic } from '../model/types';
 import { SWITCH_DELAY } from './config';
@@ -336,5 +336,44 @@ describe('內建戰術：沉退與上提的差別', () => {
 
   it('擋拆外拉：對方沉退時外拉比較空', () => {
     expect(grade('Pick and Pop', 'drop')).toBeGreaterThan(grade('Pick and Pop', 'hedge'));
+  });
+});
+
+describe('防守距離：一般 / 緊貼', () => {
+  it('緊貼：防持球者、防籃下附近的無球者時距離比較小', () => {
+    const handler = { x: 0, y: 8.6 };
+    expect(dist(guardPosition(handler, true, 'tight'), handler)).toBeLessThan(dist(guardPosition(handler, true), handler));
+    const post = { x: 3.0, y: 4.5 }; // 離籃框約 4.2 m：在阻絕範圍內側，又不會用到最小距離
+    expect(dist(defendPosition(post, handler, false, false, 'tight'), post)).toBeLessThan(dist(defendPosition(post, handler, false), post));
+  });
+
+  it('緊貼：外圍無球者就算沒往外跑，也站在傳球路線上阻絕', () => {
+    const wing = { x: -5.4, y: 6.0 };
+    const ball = { x: 0, y: 8.6 };
+    expect(defendPosition(wing, ball, false, false, 'tight')).toEqual(defendPosition(wing, ball, false, true));
+    expect(defendPosition(wing, ball, false, false)).not.toEqual(defendPosition(wing, ball, false, true));
+  });
+
+  it('開局站位也依防守距離', () => {
+    const t = createDefaultTactic();
+    const normal = { ...t.frames[0]!.start };
+    t.pressure = 'tight';
+    syncFrames(t, false);
+    expect(dist(t.frames[0]!.start.r2!, t.frames[0]!.start.b2!)).toBeLessThan(dist(normal.r2!, normal.b2!));
+  });
+
+  const points = (category: string, name: string, pressure: 'normal' | 'tight') => {
+    const base = createDefaultTactic();
+    base.pressure = pressure;
+    const t = loadPlay(base, PLAYS.find((p) => p.category === category && p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
+    return evaluate(t, simulate(t)).expectedPoints!;
+  };
+
+  it('緊貼的好處：擋拆外拉不容易空檔', () => {
+    expect(points('高位擋拆', 'Pick and Pop', 'tight')).toBeLessThan(points('高位擋拆', 'Pick and Pop', 'normal'));
+  });
+
+  it('緊貼的代價：假手遞手接背切，被甩開', () => {
+    expect(points('手遞手', 'Fake Hand-Off', 'tight')).toBeGreaterThan(points('手遞手', 'Fake Hand-Off', 'normal') + 0.1);
   });
 });
