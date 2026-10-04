@@ -89,7 +89,9 @@ docs/      規格、規劃、戰術說明
 
 ## 參與開發
 
-歡迎回報問題或送 pull request。送出前請確認：
+有問題、建議或想討論戰術，歡迎到 [GitHub Discussions](https://github.com/burgess1109/halfcourt-tactics/discussions) 回報（遊戲首頁與戰術面板左下角的「問題回報」也會開到這裡）。
+
+也歡迎送 pull request，送出前請確認：
 
 1. `npm run typecheck` 與 `npm test` 都通過；邏輯變更請補單元測試
 2. 模擬與評分維持完全決定性（不要使用 `Math.random`），新的係數放在 `src/sim/config.ts`

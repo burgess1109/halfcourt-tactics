@@ -1410,9 +1410,37 @@ body[data-screen='board'] .app {
   gap: 6px;
 }
 
-.home__saved {
+/* 首頁下方的「開啟已存的戰術」「問題回報」：同樣大小，置中 */
+.home__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   align-self: center;
+  width: 220px;
   margin-top: 4px;
+  text-decoration: none;
+}
+
+.home__link + .home__link {
+  margin-top: 0;
+}
+
+/* 戰術面板左下的「問題回報」：疊在球場上，評分卡片在下方時跟著往上讓位 */
+.report-link {
+  position: absolute;
+  left: 8px;
+  bottom: calc(8px + var(--reserve-bottom, 0px));
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.report-link:hover,
+.report-link:focus-visible {
+  background: rgba(0, 0, 0, 0.75);
 }
 
 /* 擠過底下的進階選項（沉退 / 上提） */
