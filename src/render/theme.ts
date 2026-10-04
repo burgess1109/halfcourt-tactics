@@ -1,4 +1,4 @@
-// 視覺風格，照 example.jpg（SPEC §10.2）
+// 視覺風格（SPEC §10.2）
 export const theme = {
   floor: '#f7902b',
   line: '#ffffff',
