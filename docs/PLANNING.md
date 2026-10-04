@@ -15,7 +15,7 @@
 | M6 | 戰術庫 18 套（已交戰術說明 `docs/PLAYS.md`）、角色分配、推薦演算法、點擊載入並自動播放 | ✅ 完成 |
 | M7 | 評估、評等、戰術評價 | ✅ 完成 |
 | M8 | 命名、localStorage、JSON、分享連結、PWA | ✅ 完成 |
-| M9 | GitHub CI/CD：自動測試、打包、部署到 GitHub Pages | 進行中：workflow 已完成（`.github/workflows/ci.yml`），等建立 repo、推送、打開 Pages |
+| M9 | GitHub CI/CD：自動測試、打包、部署到 GitHub Pages | 進行中：workflow 已完成（`.github/workflows/ci.yml`）；repo 已建立（<https://github.com/burgess1109/halfcourt-tactics>），等打開 Pages、推送 workflow、確認部署後的網站 |
 | M10 | 英文語系 | 未開始 |
 | M11 | 防守模式 | 暫緩 |
 
