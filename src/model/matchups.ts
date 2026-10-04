@@ -1,5 +1,6 @@
+import { sameData } from './equal';
 import { heightOf } from './physique';
-import type { Player } from './types';
+import type { Player, Tactic } from './types';
 
 // 對位，對應 SPEC §6.2。
 
@@ -33,4 +34,13 @@ export function assignMatchup(matchups: Record<string, string>, blueId: string, 
 /** 紅隊 id → 對位的藍隊 id */
 export function defenderAssignments(matchups: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(matchups).map(([b, r]) => [r, b]));
+}
+
+/**
+ * 改對位（所有改對位的地方都用這個）：內容真的變了才清掉手動防守時拖過的紅隊開局位置（redStarts），
+ * 那些位置是照舊對位擺的。用 sameData 比對，不受欄位順序影響（預設對位依身高排序，欄位順序可能不同）。
+ */
+export function setMatchups(tactic: Tactic, next: Record<string, string>): void {
+  if (!sameData(tactic.matchups, next)) delete tactic.redStarts;
+  tactic.matchups = { ...next };
 }

@@ -1,5 +1,5 @@
 import { defaultPlayer } from '../model/defaults';
-import { assignMatchup, defaultMatchups } from '../model/matchups';
+import { assignMatchup, defaultMatchups, setMatchups } from '../model/matchups';
 import { clearRedPaths, freezeDefenseAsPaths, syncFrames } from '../model/frames';
 import { applyLineup, canApplyLineupNow, lineupOf, type Lineup } from '../model/lineup';
 import { createLineupEditor } from './lineupEditor';
@@ -380,7 +380,7 @@ export function attachSetup(
 
   /** 寫回球員後，若沒改過對位就跟著更新預設對位 */
   const refreshDefaultMatchups = (s: EditorState) => {
-    if (!s.tactic.setup.matchupsCustomized) s.tactic.matchups = defaultMatchups(s.tactic.players);
+    if (!s.tactic.setup.matchupsCustomized) setMatchups(s.tactic, defaultMatchups(s.tactic.players));
   };
 
   /** 驗證並寫回目前這一步；失敗時顯示錯誤並回傳 false */
@@ -391,14 +391,15 @@ export function attachSetup(
       const applyNow = canApplyLineupNow(t);
       store.commit((s) => {
         // 對位換了：拖過的紅隊開局位置是照舊對位擺的，清掉讓紅隊依新對位站好
-        if (JSON.stringify(s.tactic.matchups) !== JSON.stringify(draftMatchups)) delete s.tactic.redStarts;
-        s.tactic.matchups = { ...draftMatchups };
+        setMatchups(s.tactic, draftMatchups);
         s.tactic.setup.matchupsCustomized = draftCustomized;
         s.tactic.screenDefense = draftScreen;
         s.tactic.pickCoverage = draftCoverage;
         s.tactic.pressure = draftPressure;
         s.tactic.driveHelp = draftDriveHelp;
         const wasAuto = s.tactic.autoDefense;
+        // 切換自動防守開關：手動的紅隊開局位置從頭開始（改成手動時以自動模擬為起點；改回自動時用不到）
+        if (wasAuto !== draftAutoDefense) delete s.tactic.redStarts;
         s.tactic.autoDefense = true; // 先用新的設定自動模擬，切換手動時才有正確的起點
         s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理

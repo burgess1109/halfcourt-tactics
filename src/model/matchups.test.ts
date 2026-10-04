@@ -3,7 +3,7 @@ import { defendPosition, guardPosition } from '../sim/defense';
 import { MIN_GAP, OFF_BALL_GAP, ON_BALL_GAP } from '../sim/config';
 import { createDefaultTactic } from './defaults';
 import { insertFrameAfter, syncFrames } from './frames';
-import { assignMatchup, defaultMatchups } from './matchups';
+import { assignMatchup, defaultMatchups, setMatchups } from './matchups';
 import { RIM, putPath } from './paths';
 
 describe('預設對位', () => {
@@ -70,5 +70,24 @@ describe('紅隊站位', () => {
     const f = t.frames[0]!;
     expect(f.start.r3).toEqual(guardPosition(f.start.b1!, true));
     expect(f.start.r1).toEqual(defendPosition(f.start.b3!, f.start.b1!, false));
+  });
+});
+
+describe('setMatchups', () => {
+  it('對位內容相同（只是欄位順序不同）時，保留手動防守拖過的紅隊位置', () => {
+    const t = createDefaultTactic();
+    t.matchups = { b1: 'r1', b2: 'r2', b3: 'r3' };
+    t.redStarts = { r1: { x: 1, y: 5 } };
+    setMatchups(t, { b3: 'r3', b1: 'r1', b2: 'r2' });
+    expect(t.redStarts).toEqual({ r1: { x: 1, y: 5 } });
+  });
+
+  it('對位真的改了才清掉', () => {
+    const t = createDefaultTactic();
+    t.matchups = { b1: 'r1', b2: 'r2', b3: 'r3' };
+    t.redStarts = { r1: { x: 1, y: 5 } };
+    setMatchups(t, { b1: 'r2', b2: 'r1', b3: 'r3' });
+    expect(t.redStarts).toBeUndefined();
+    expect(t.matchups).toEqual({ b1: 'r2', b2: 'r1', b3: 'r3' });
   });
 });
