@@ -3,6 +3,7 @@ import { buildTimeline } from '../anim/timeline';
 import { defendPosition } from '../sim/defense';
 import { redAt, simulateDefense } from '../sim/defenseSim';
 import { RIM, endPosition, hasShot, pathOf, pruneInvalidPaths } from './paths';
+import { newId } from './id';
 import { BALL_ID, type Frame, type Tactic, type Vec2 } from './types';
 
 // 分鏡串接，對應 SPEC §5：下一個分鏡的起始狀態 = 上一個分鏡結束時的狀態。
@@ -46,6 +47,34 @@ function placeDefenders(tactic: Tactic, frame: Frame, onlyMissing = false): void
 
 const redIdsOf = (tactic: Tactic) => tactic.players.filter((p) => p.team === 'red').map((p) => p.id);
 
+/** 紅隊跑位路線短於這個長度（公尺）就不畫（自動模擬中幾乎沒動） */
+const MIN_RED_PATH = 0.3;
+
+/**
+ * 從自動防守改成手動時（SPEC §6.2）：把目前自動模擬出的紅隊移動，變成每個分鏡一條直線的紅隊跑位，
+ * 當成使用者編輯的起點。呼叫前 frames 的紅隊位置要是自動防守算好的（syncFrames 啟用自動防守時）。
+ */
+export function freezeDefenseAsPaths(tactic: Tactic): void {
+  const reds = redIdsOf(tactic);
+  tactic.frames.forEach((frame, i) => {
+    frame.paths = frame.paths.filter((p) => !reds.includes(p.actorId));
+    const next = tactic.frames[i + 1];
+    if (!next) return; // 最後一個分鏡停在原地
+    for (const id of reds) {
+      const from = frame.start[id];
+      const to = next.start[id];
+      if (!from || !to || Math.hypot(to.x - from.x, to.y - from.y) < MIN_RED_PATH) continue;
+      frame.paths.push({ id: newId(), kind: 'cut', actorId: id, points: [{ ...from }, { ...to }], freehand: false });
+    }
+  });
+}
+
+/** 改回自動防守時：紅隊跑位路線用不到了，移除 */
+export function clearRedPaths(tactic: Tactic): void {
+  const reds = redIdsOf(tactic);
+  for (const frame of tactic.frames) frame.paths = frame.paths.filter((p) => !reds.includes(p.actorId));
+}
+
 /**
  * 依第 1 個分鏡重新推算後面所有分鏡的起始狀態，並放好紅隊。
  * prune = true 時，一併移除不再成立的路線（例如球換人之後的運球），回傳移除數量。
@@ -53,18 +82,16 @@ const redIdsOf = (tactic: Tactic) => tactic.players.filter((p) => p.team === 're
  */
 export function syncFrames(tactic: Tactic, prune: boolean, opts: { defense?: boolean } = {}): number {
   let removed = 0;
-  // 關閉自動防守：每個分鏡的紅隊位置由使用者決定，沒有設定過的沿用上一個分鏡（新分鏡）或依對位放好（第 1 個分鏡）
+  // 關閉自動防守：紅隊和藍隊規則一樣，第 1 個分鏡的位置由使用者拖曳（沒拖過的依對位放好），
+  // 之後的分鏡由上一個分鏡的紅隊跑位路線推算（endState）
   const manual = !tactic.autoDefense;
-  const redIds = redIdsOf(tactic);
   tactic.frames.forEach((frame, i) => {
-    const kept = manual ? redIds.filter((id) => frame.start[id]).map((id) => [id, frame.start[id]!] as const) : [];
     if (i > 0) {
       const prev = endState(tactic.frames[i - 1]!);
       frame.start = prev.start;
       frame.ballHolderId = prev.ballHolderId;
     }
-    for (const [id, p] of kept) frame.start[id] = p;
-    placeDefenders(tactic, frame, manual);
+    if (!manual || i === 0) placeDefenders(tactic, frame, manual);
     if (prune) removed += pruneInvalidPaths(frame, tactic.players);
   });
 

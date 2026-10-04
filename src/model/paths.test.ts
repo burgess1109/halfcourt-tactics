@@ -29,7 +29,13 @@ describe('路線規則', () => {
     expect(cannotStart('pass', 'b2', f, players, true)).toMatch('持球者');
     expect(cannotStart('dribble', 'b1', f, players, true)).toBeNull();
     expect(cannotStart('cut', 'b2', f, players, true)).toBeNull();
-    expect(cannotStart('screen', 'r1', f, players, true)).toBeNull();
+  });
+
+  it('紅隊（關閉自動防守時）只能畫跑位', () => {
+    const { f, players } = setup();
+    expect(cannotStart('cut', 'r1', f, players, true)).toBeNull();
+    expect(cannotStart('screen', 'r1', f, players, true)).toMatch('只能畫跑位');
+    expect(cannotStart('dribble', 'r1', f, players, true)).toMatch('只能畫跑位');
   });
 
   it('平滑模式只保留起點與終點', () => {

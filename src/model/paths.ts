@@ -89,6 +89,8 @@ export function cannotStart(
   players: readonly Player[],
   isLastFrame: boolean,
 ): string | null {
+  // 紅隊（關閉自動防守時）只能畫跑位
+  if (players.find((p) => p.id === actorId)?.team === 'red' && kind !== 'cut') return '紅隊只能畫跑位路線';
   if (needsBall(kind) && frame.ballHolderId !== actorId) {
     return `只有持球者可以${PATH_KIND_LABEL[kind]}`;
   }

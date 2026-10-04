@@ -98,7 +98,8 @@ function parsePath(v: unknown, frameNo: number): TacticPath {
   const what = `第 ${frameNo} 個分鏡的路線`;
   const o = obj(v, what);
   const kind = oneOf(o.kind, PATH_KINDS, what);
-  const actorId = oneOf(o.actorId, BLUE_IDS, what);
+  // 紅隊只有跑位（關閉自動防守時才用得到；啟用時讀進來後會移除）
+  const actorId = oneOf(o.actorId, kind === 'cut' ? [...BLUE_IDS, ...RED_IDS] : BLUE_IDS, what);
   // 投籃弧線由出手位置自動產生（resolvePoints），分享連結不帶控制點，還原後再補上
   const points = kind === 'shot' && o.points === undefined ? [] : arr(o.points, what).map((p) => vec(p, what));
   if ((kind !== 'shot' || points.length > 0) && (points.length < 2 || points.length > 200)) fail(what);
@@ -190,7 +191,8 @@ export function parseTactic(data: unknown): ParseResult {
     if (new Set(actors).size !== actors.length) fail(`第 ${i + 1} 個分鏡同一位球員有兩條路線`);
     if (i < framesIn.length - 1 && paths.some((p) => p.kind === 'shot')) fail('投籃只能在最後一個分鏡');
     const frame: Frame = i === 0 ? { start, ballHolderId: holder, paths } : { start: {}, ballHolderId: null, paths };
-    if (!autoDefense && fo.start !== undefined) {
+    // 關閉自動防守：第 1 個分鏡的紅隊位置是使用者擺的（之後的分鏡由紅隊跑位推算）
+    if (!autoDefense && i === 0 && fo.start !== undefined) {
       const fs = obj(fo.start, `第 ${i + 1} 個分鏡的站位`);
       for (const r of RED_IDS) if (fs[r] !== undefined) frame.start[r] = vec(fs[r], `第 ${i + 1} 個分鏡的紅隊站位`);
     }
@@ -233,7 +235,16 @@ export function parseTactic(data: unknown): ParseResult {
     tactic.lastResult = { grade: oneOf(r.grade, GRADES, '評分'), expectedPoints: ep as number };
   }
 
-  const removed = syncFrames(tactic, true);
+  // 啟用自動防守時紅隊路線用不到，移除並算進不成立的路線
+  let redPaths = 0;
+  if (autoDefense) {
+    for (const f of tactic.frames) {
+      const before = f.paths.length;
+      f.paths = f.paths.filter((p) => !(RED_IDS as readonly string[]).includes(p.actorId));
+      redPaths += before - f.paths.length;
+    }
+  }
+  const removed = syncFrames(tactic, true) + redPaths;
   for (const f of tactic.frames) {
     for (const p of f.paths) if (p.kind === 'shot' && p.points.length === 0) p.points = shotControls(f.start[p.actorId]!);
   }
@@ -300,7 +311,6 @@ export function compactForShare(tactic: Tactic): object {
     players: tactic.players,
     frames: tactic.frames.map((f, i) => ({
       ...(i === 0 && { start: { ...start, ...manualReds(tactic, f) }, ballHolderId: first.ballHolderId }),
-      ...(i > 0 && !tactic.autoDefense && { start: manualReds(tactic, f) }),
       paths: f.paths.map((p) => ({
         kind: p.kind,
         actorId: p.actorId,
@@ -312,7 +322,7 @@ export function compactForShare(tactic: Tactic): object {
   };
 }
 
-/** 關閉自動防守時，這個分鏡使用者設定的紅隊位置（四捨五入到公分）；啟用時不需要（開啟時重新模擬） */
+/** 關閉自動防守時，第 1 個分鏡使用者擺的紅隊位置（四捨五入到公分）；啟用時不需要（開啟時重新模擬） */
 function manualReds(tactic: Tactic, frame: Frame): Record<string, Vec2> {
   if (tactic.autoDefense) return {};
   return Object.fromEntries(RED_IDS.filter((id) => frame.start[id]).map((id) => [id, roundVec(frame.start[id]!)]));

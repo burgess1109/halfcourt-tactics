@@ -1,4 +1,4 @@
-import { insertFrameAfter, syncFrames } from '../model/frames';
+import { freezeDefenseAsPaths, insertFrameAfter, syncFrames } from '../model/frames';
 import { endPosition, makeShot, putPath } from '../model/paths';
 import { newId } from '../model/id';
 import { BALL_HOLD_OFFSET } from '../model/entities';
@@ -56,7 +56,14 @@ export function loadPlay(base: Tactic, play: Play, roles: RoleAssignment, opts: 
   // defense: false 時連最後的紅隊位置都不算（只用來評分時，評分會自己跑一次完整模擬）
   const removed = syncFrames(tactic, true, opts);
   if (removed > 0) throw new Error(`戰術 ${play.id} 有 ${removed} 條路線不成立`);
-  tactic.autoDefense = !manual;
+  if (manual && opts.defense !== false) {
+    // 自動模擬的紅隊移動變成紅隊跑位路線，之後使用者可以自己改
+    freezeDefenseAsPaths(tactic);
+    tactic.autoDefense = false;
+    syncFrames(tactic, true);
+  } else {
+    tactic.autoDefense = !manual;
+  }
   tactic.updatedAt = Date.now();
   return tactic;
 }

@@ -1,5 +1,6 @@
 import { defaultPlayer } from '../model/defaults';
 import { assignMatchup, defaultMatchups } from '../model/matchups';
+import { clearRedPaths, freezeDefenseAsPaths, syncFrames } from '../model/frames';
 import { applyLineup, canApplyLineupNow, lineupOf, type Lineup } from '../model/lineup';
 import { createLineupEditor } from './lineupEditor';
 import {
@@ -269,7 +270,7 @@ export function attachSetup(
             'span',
             {},
             '啟用自動防守跑位（預設）',
-            el('small', {}, '關閉後，紅隊開局後不會自動移動：每個分鏡由你拖曳紅隊到想要的位置，播放時在分鏡之間直線移動；也不會模擬換防、協防、補防'),
+            el('small', {}, '關閉後，紅隊開局後不會自動移動，改由你操作：用「跑位」工具畫紅隊的移動路線，在第 1 個分鏡拖曳紅隊的開局位置；不會模擬換防、協防、補防'),
           ),
         ),
         autoNote,
@@ -395,13 +396,25 @@ export function attachSetup(
         s.tactic.pickCoverage = draftCoverage;
         s.tactic.pressure = draftPressure;
         s.tactic.driveHelp = draftDriveHelp;
-        s.tactic.autoDefense = draftAutoDefense;
+        const wasAuto = s.tactic.autoDefense;
+        s.tactic.autoDefense = true; // 先用新的設定自動模擬，切換手動時才有正確的起點
         s.tactic.setup.lineup = structuredClone(draftLineup);
         // 還沒畫路線就直接套用；已經有路線時不動目前的戰術，避免路線變得不合理
         if (lineupChanged && applyNow) {
           applyLineup(s.tactic.frames[0]!, draftLineup);
           // 開局站位換了：紅隊依新的站位重新就位（關閉自動防守時，原本拖過的位置已經不合用）
           for (const p of s.tactic.players) if (p.team === 'red') delete s.tactic.frames[0]!.start[p.id];
+        }
+        if (!draftAutoDefense) {
+          if (wasAuto) {
+            // 改成手動：目前自動模擬的紅隊移動變成紅隊跑位路線，當成編輯的起點
+            syncFrames(s.tactic, false);
+            freezeDefenseAsPaths(s.tactic);
+          }
+          s.tactic.autoDefense = false;
+        } else if (!wasAuto) {
+          // 改回自動：紅隊路線用不到了
+          clearRedPaths(s.tactic);
         }
       });
       if (lineupChanged && !applyNow) notify('目前的戰術已經有路線，新的開局站位會在清空戰術或選空白戰術時生效');

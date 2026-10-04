@@ -94,6 +94,8 @@ function timeFrame(tactic: Tactic, frame: Frame, prev: Frame | undefined, start:
   const tracks = new Map<string, Track>();
   let duration = 0;
   for (const player of tactic.players) {
+    // 紅隊只有在關閉自動防守時才照自己的跑位路線移動（啟用時由防守模擬決定）
+    if (player.team === 'red' && tactic.autoDefense) continue;
     const path = pathOf(frame, player.id);
     if (!path || !isMovement(path.kind)) continue;
     const held = prev && pathOf(prev, player.id)?.kind === 'screen' ? SCREEN_HOLD_SECONDS : 0;

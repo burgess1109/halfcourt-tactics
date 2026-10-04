@@ -156,25 +156,16 @@ export function pickHelpOver(
 }
 
 /**
- * 關閉自動防守時（SPEC §6.2）：紅隊在每個分鏡裡，從這個分鏡開始時的位置直線移動到下一個分鏡開始時的位置；
- * 最後一個分鏡停在原地。不模擬掩護、換防、協防，沒有事件。
+ * 關閉自動防守時（SPEC §6.2）：紅隊和藍隊一樣，沿著使用者畫的跑位路線、依自己的速度移動（時間軸已經算好），
+ * 沒畫路線就站在原地。不模擬掩護、換防、協防，沒有事件。
  */
 export function manualDefense(tactic: Tactic, timeline: Timeline): DefenseResult {
   const reds = tactic.players.filter((p) => p.team === 'red');
   const ticks = Math.max(1, Math.ceil(timeline.total / DT) + 1);
   const red: Record<string, Vec2[]> = Object.fromEntries(reds.map((r) => [r.id, []]));
-  const last = tactic.frames.length - 1;
   for (let i = 0; i < ticks; i++) {
-    const t = i * DT;
-    let k = timeline.frames.findIndex((f) => t < f.start + f.duration);
-    if (k === -1) k = last;
-    const timing = timeline.frames[k]!;
-    const u = k < last && timing.duration > 0 ? Math.min(1, Math.max(0, (t - timing.start) / timing.duration)) : 0;
-    for (const r of reds) {
-      const from = tactic.frames[k]!.start[r.id]!;
-      const to = k < last ? tactic.frames[k + 1]!.start[r.id]! : from;
-      red[r.id]!.push({ x: from.x + (to.x - from.x) * u, y: from.y + (to.y - from.y) * u });
-    }
+    const positions = poseAt(tactic, timeline, i * DT).positions;
+    for (const r of reds) red[r.id]!.push({ ...positions[r.id]! });
   }
   return { ticks, red, stuck: Array.from({ length: ticks }, () => new Set<string>()), events: [], finalAssignments: defenderAssignments(tactic.matchups) };
 }

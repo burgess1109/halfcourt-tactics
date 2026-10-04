@@ -96,7 +96,7 @@ export function attachLibrary(
 
     if (!t.autoDefense) {
       body.append(
-        el('p', { class: 'lib-note' }, '自動防守跑位已關閉：推薦與預期評等仍依自動防守模擬；載入後，每個分鏡的紅隊位置以模擬結果為起點，可以自己拖曳調整。'),
+        el('p', { class: 'lib-note' }, '自動防守跑位已關閉：推薦與預期評等仍依自動防守模擬；載入後，紅隊跑位路線以模擬結果為起點，可以自己修改。'),
       );
     }
 
