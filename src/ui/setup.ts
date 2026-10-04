@@ -250,7 +250,7 @@ export function attachSetup(
       return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
     };
     pressure.append(
-      pressureOption('normal', '一般（預設）', '防持球者 1.5 m、防無球者 2.0 m，外圍無球者平常守在內側，對方往外跑才阻絕'),
+      pressureOption('normal', '一般（預設）', '貼近持球者、防無球者保持一小段距離，外圍無球者平常守在內側，對方往外跑才阻絕'),
       pressureOption('tight', '緊貼', '貼近對位者，外圍一律阻絕傳球路線：出手和外圍接球比較難，但切入、背切比較容易甩開防守者'),
     );
     form.append(pressure);
