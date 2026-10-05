@@ -15,7 +15,7 @@
 | M6 | 戰術庫 18 套（已交戰術說明 `docs/PLAYS.md`）、角色分配、推薦演算法、點擊載入並自動播放 | ✅ 完成 |
 | M7 | 評估、評等、戰術評價 | ✅ 完成 |
 | M8 | 命名、localStorage、JSON、分享連結、PWA | ✅ 完成 |
-| M9 | GitHub CI/CD：自動測試、打包、部署到 GitHub Pages | 進行中：workflow 已完成（`.github/workflows/ci.yml`）；repo 已建立（<https://github.com/burgess1109/halfcourt-tactics>），等打開 Pages、推送 workflow、確認部署後的網站 |
+| M9 | GitHub CI/CD：自動測試、打包、部署到 GitHub Pages | ✅ 完成（<https://burgess1109.github.io/halfcourt-tactics/>） |
 | M10 | 英文語系 | 未開始 |
 | M11 | 防守模式 | 暫緩 |
 
@@ -150,6 +150,7 @@
 | 81 | 分鏡圖與程式一致 | 加測試：`docs/PLAYS.md` 與 `docs/plays/*.svg` 必須和程式產生的結果相同（防守站位改了卻沒重跑 plays-doc 時會失敗） |
 | 82 | 手動防守時刪掉第 1 個分鏡 | 紅隊和藍隊一樣留在原本第 2 個分鏡開始時的位置（記成 `redStarts`），不再跳回被刪掉分鏡裡的開局位置 |
 | 83 | 轉成紅隊路線的誤差 | 比較紅隊在手動模式下實際會在的位置（不是自動模擬的上一個位置），小幅移動累積到 0.3 m 就補路線，誤差不會越積越大 |
+| 84 | M9 完成 | GitHub Actions 推到 main 時自動測試、打包並部署到 GitHub Pages；已確認部署後的網站可以離線使用、分享連結能正確還原 |
 
 ## 3. 待確認清單
 
