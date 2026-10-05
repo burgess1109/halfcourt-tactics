@@ -162,7 +162,7 @@ export interface Evaluation {
   shot: ShotValue;
   /** 使用者有畫投籃 */
   hasShot: boolean;
-  /** 出手時間超過 12 秒（違例，預期得分記 0） */
+  /** 出手時間超過進攻時限（依計分規則 12 或 24 秒，shotClockOf；違例，預期得分記 0） */
   violation: boolean;
   releaseAt: number;
   comments: Comment[];

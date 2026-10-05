@@ -121,7 +121,7 @@ describe('整套戰術的評分', () => {
     expect(e.comments.slice(1).some((c) => /預期得分|命中率/.test(c.text))).toBe(false);
   });
 
-  it('出手超過 12 秒：違例，預期得分 0、評等 D', () => {
+  it('出手超過 12 秒（FIBA 3x3 的進攻時限）：違例，預期得分 0、評等 D', () => {
     const t = createDefaultTactic();
     for (let i = 0; i < 11; i++) {
       const f = t.frames[t.frames.length - 1]!;
