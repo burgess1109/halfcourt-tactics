@@ -12,9 +12,9 @@ import { loadPlay } from './instantiate';
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
 
 describe('內建戰術庫', () => {
-  it('共 18 套，id 不重複', () => {
-    expect(PLAYS).toHaveLength(18);
-    expect(new Set(PLAYS.map((p) => p.id)).size).toBe(18);
+  it('共 22 套，id 不重複', () => {
+    expect(PLAYS).toHaveLength(22);
+    expect(new Set(PLAYS.map((p) => p.id)).size).toBe(22);
   });
 
   // 跳投戰術的兩個出手點都要檢查
@@ -73,7 +73,17 @@ describe('內建戰術庫', () => {
 
   it('跳投戰術有兩個出手點（中距離、弧外），終結者的投射權重跟著出手點；切入戰術只有一個', () => {
     const jumpers = PLAYS.filter((p) => p.alt);
-    expect(jumpers.map((p) => p.id).sort()).toEqual(['dho-shoot', 'high-pnr-pop', 'high-pnr-pullup', 'offball-down', 'offball-post-split']);
+    expect(jumpers.map((p) => p.id).sort()).toEqual([
+      'dho-chicago',
+      'dho-shoot',
+      'high-pnr-pop',
+      'high-pnr-pullup',
+      'high-pnr-spain',
+      'iso-kick',
+      'offball-down',
+      'offball-flare',
+      'offball-post-split',
+    ]);
     for (const play of jumpers) {
       const [a, b] = playVariants(play);
       expect(new Set([a!.shot, b!.shot])).toEqual(new Set(['mid', 'three']));

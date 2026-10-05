@@ -276,6 +276,55 @@ export const PLAYS: readonly Play[] = [
     weights: { A: { iso: 1 }, B: { finishing: 3, height: 2 }, C: { threePoint: 1 } },
   },
   {
+    id: 'high-pnr-spain',
+    category: '高位擋拆',
+    name: 'Spain Pick and Roll',
+    summary: '高位擋拆後掩護者下順，第三人對下順者的防守者做背掩護，再外拉接球投籃。',
+    roles: { A: '持球者', B: '掩護者（下順）', C: '背掩護後外拉投籃' },
+    start: { A: TOP, B: { x: 4.4, y: 6.8 }, C: { x: -4.6, y: 6.8 } },
+    ball: 'A',
+    frames: [
+      {
+        note: 'B 上提到 A 的防守者右側設掩護；C 從左翼移到罰球線左側，準備背掩護。',
+        paths: [
+          { kind: 'screen', actor: 'B', to: { x: 1.1, y: 7.2 } },
+          { kind: 'cut', actor: 'C', to: { x: -1.4, y: 6.6 } },
+        ],
+      },
+      {
+        note: 'A 從 B 外側繞過掩護往右運球；B 先站住擋人，再往籃下順；C 往下對 B 的防守者做背掩護。',
+        paths: [
+          { kind: 'dribble', actor: 'A', to: { x: 3.4, y: 5.6 }, via: [AROUND_SCREEN] },
+          { kind: 'cut', actor: 'B', to: { x: 0.6, y: 2.8 } },
+          { kind: 'screen', actor: 'C', to: { x: 0.2, y: 5.4 } },
+        ],
+      },
+      {
+        note: 'C 背掩護後外拉到弧頂左側，A 傳給 C（B 下順是第二選擇）。',
+        paths: [
+          { kind: 'cut', actor: 'C', to: { x: -2.8, y: 8.2 } },
+          { kind: 'pass', actor: 'A', target: 'C' },
+        ],
+      },
+      { note: 'C 弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
+    ],
+    finisher: 'C',
+    finish: 'C 背掩護後外拉接球投籃（B 下順是第二選擇）',
+    weights: { A: { iso: 1 }, B: { finishing: 2, height: 1 }, C: { threePoint: 3 } },
+    shot: 'three',
+    alt: {
+      shot: 'mid',
+      frame: 2,
+      to: { x: -2.2, y: 6.6 },
+      notes: {
+        2: 'C 背掩護後外拉到罰球線左側，A 傳給 C（B 下順是第二選擇）。',
+        3: 'C 在罰球線左側中距離投籃（1 分）。',
+      },
+      summary: '高位擋拆後掩護者下順，第三人對下順者的防守者做背掩護，再外拉到罰球線附近投中距離。',
+      finish: 'C 背掩護後外拉到中距離接球投籃（B 下順是第二選擇）',
+    },
+  },
+  {
     id: 'low-pnr-paint',
     category: '低位擋拆',
     name: 'Paint Shot',
@@ -490,6 +539,46 @@ export const PLAYS: readonly Play[] = [
     },
   },
   {
+    id: 'offball-flare',
+    category: '無球掩護',
+    name: 'Flare Screen',
+    summary: '持球者在一側時，弱邊的隊友幫射手設反向掩護，射手往遠離球的方向外拉接球投籃。',
+    roles: { A: '持球者', B: '反向掩護者', C: '外拉投籃' },
+    start: { A: { x: 4.6, y: 7.0 }, B: { x: -2.6, y: 3.0 }, C: { x: -0.8, y: 7.8 } },
+    ball: 'A',
+    frames: [
+      {
+        note: 'B 從左側低位上提，到 C 的防守者左側（遠離球的那側）設反向掩護。',
+        paths: [{ kind: 'screen', actor: 'B', to: { x: -2.0, y: 6.2 } }],
+      },
+      {
+        note: 'C 從 B 上方繞過掩護，往遠離球的方向外拉到左翼弧外，A 配合時機傳球；B 先站住擋人，再往禁區走。',
+        paths: [
+          { kind: 'cut', actor: 'C', to: { x: -5.8, y: 6.8 }, via: [{ x: -2.6, y: 8.0 }] },
+          { kind: 'cut', actor: 'B', to: { x: -0.8, y: 3.2 } },
+          { kind: 'pass', actor: 'A', target: 'C' },
+        ],
+      },
+      { note: 'C 弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
+    ],
+    finisher: 'C',
+    finish: 'C 利用反向掩護外拉接球投籃',
+    weights: { A: {}, B: { height: 1 }, C: { threePoint: 3, speed: 1 } },
+    shot: 'three',
+    alt: {
+      shot: 'mid',
+      frame: 1,
+      to: { x: -4.2, y: 5.4 },
+      via: [{ x: -2.6, y: 8.0 }],
+      notes: {
+        1: 'C 從 B 上方繞過掩護，往遠離球的方向外拉到左側罰球線延伸處，A 配合時機傳球；B 先站住擋人，再往禁區走。',
+        2: 'C 在罰球線延伸處中距離投籃（1 分）。',
+      },
+      summary: '持球者在一側時，弱邊的隊友幫射手設反向掩護，射手外拉到罰球線延伸處接球投中距離。',
+      finish: 'C 利用反向掩護外拉到中距離接球投籃',
+    },
+  },
+  {
     id: 'dho-drive',
     category: '手遞手',
     name: 'DHO to Drive',
@@ -592,6 +681,54 @@ export const PLAYS: readonly Play[] = [
     weights: { A: { iso: 3, finishing: 2, speed: 1 }, B: { speed: 1 }, C: { threePoint: 1 } },
   },
   {
+    id: 'dho-chicago',
+    category: '手遞手',
+    name: 'Chicago',
+    summary: '底角的射手先利用下掩護往上跑，再接持球者的手遞手，連續兩個掩護後投籃。',
+    roles: { A: '手遞手給球者', B: '下掩護者', C: '連續利用掩護投籃' },
+    start: { A: TOP, B: { x: -4.4, y: 5.6 }, C: LC },
+    ball: 'A',
+    frames: [
+      {
+        note: 'B 從左翼往下，到 C 的防守者上方設下掩護。',
+        paths: [{ kind: 'screen', actor: 'B', to: { x: -4.6, y: 2.8 } }],
+      },
+      {
+        note: 'C 繞過下掩護往上跑到左翼；A 往左運球迎向 C；B 先站住擋人，再往禁區走。',
+        paths: [
+          { kind: 'cut', actor: 'C', to: { x: -4.6, y: 6.6 }, via: [{ x: -5.8, y: 3.6 }] },
+          { kind: 'dribble', actor: 'A', to: { x: -2.6, y: 7.6 } },
+          { kind: 'cut', actor: 'B', to: { x: -0.8, y: 3.2 } },
+        ],
+      },
+      { note: 'A 把球遞給 C（手遞手）。', paths: [{ kind: 'pass', actor: 'A', target: 'C' }] },
+      {
+        note: 'C 從 A 的外側（靠中場那側）繞過去，運球到弧頂；A 擋住追過來的防守者。',
+        paths: [
+          { kind: 'dribble', actor: 'C', to: { x: -0.6, y: 8.8 }, via: [{ x: -3.6, y: 8.8 }] },
+          { kind: 'screen', actor: 'A', to: { x: -3.0, y: 6.4 } },
+        ],
+      },
+      { note: 'C 在弧頂的弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
+    ],
+    finisher: 'C',
+    finish: 'C 連續利用下掩護與手遞手後投籃',
+    weights: { A: { height: 1 }, B: { height: 1 }, C: { threePoint: 3, speed: 1 } },
+    shot: 'three',
+    alt: {
+      shot: 'mid',
+      frame: 3,
+      to: { x: -1.0, y: 6.6 },
+      via: [{ x: -3.6, y: 8.4 }],
+      notes: {
+        3: 'C 從 A 的外側（靠中場那側）繞過去，往罰球線運球；A 擋住追過來的防守者。',
+        4: 'C 在罰球線附近中距離投籃（1 分）。',
+      },
+      summary: '底角的射手先利用下掩護往上跑，再接持球者的手遞手，運到罰球線附近投中距離。',
+      finish: 'C 連續利用下掩護與手遞手後運到罰球線投籃',
+    },
+  },
+  {
     id: 'iso-top',
     category: '單打',
     name: 'Top Isolation',
@@ -670,5 +807,41 @@ export const PLAYS: readonly Play[] = [
     finisher: 'A',
     finish: 'A 換防後對錯位的防守者切入',
     weights: { A: { iso: 3, speed: 2, finishing: 1 }, B: { height: 1 }, C: { threePoint: 1 } },
+  },
+  {
+    id: 'iso-kick',
+    category: '單打',
+    name: 'Drive and Kick',
+    summary: '持球者往籃下切入，吸引防守收縮，再分給往底角移動的射手投籃。',
+    roles: { A: '切入後分球', B: '拉開空間', C: '底角接球投籃' },
+    start: { A: TOP, B: { x: 6.9, y: 1.3 }, C: { x: -5.8, y: 4.0 } },
+    ball: 'A',
+    frames: [
+      {
+        note: 'A 從弧頂往籃下運球切入；C 從左翼往底角移動（跟著切入的方向找空檔）。',
+        paths: [
+          { kind: 'dribble', actor: 'A', to: { x: 0.6, y: 4.0 } },
+          { kind: 'cut', actor: 'C', to: { x: -6.9, y: 1.3 } },
+        ],
+      },
+      { note: 'A 把球分給底角的 C。', paths: [{ kind: 'pass', actor: 'A', target: 'C' }] },
+      { note: 'C 底角弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
+    ],
+    finisher: 'C',
+    finish: 'C 接切入分球後底角投籃',
+    weights: { A: { speed: 2, iso: 2 }, B: { threePoint: 1 }, C: { threePoint: 3 } },
+    shot: 'three',
+    alt: {
+      shot: 'mid',
+      frame: 0,
+      to: { x: -4.4, y: 2.2 },
+      notes: {
+        0: 'A 從弧頂往籃下運球切入；C 從左翼往底線的短角移動（跟著切入的方向找空檔）。',
+        1: 'A 把球分給短角的 C。',
+        2: 'C 在短角中距離投籃（1 分）。',
+      },
+      summary: '持球者往籃下切入，吸引防守收縮，再分給移到短角的隊友投中距離。',
+      finish: 'C 接切入分球後短角投籃',
+    },
   },
 ];
