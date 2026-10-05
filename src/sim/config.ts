@@ -137,7 +137,7 @@ export const BEATEN_COS = -0.5;
  * 兩端由使用者指定；中間依一般業餘球員空檔出手的水準估計（弧外多數人集中在 30% 上下）。
  */
 export const PAINT_RATE = [0.5, 0.6, 0.68, 0.77, 0.85] as const; // 禁區（禁區終結）
-export const MID_RATE = [0.35, 0.43, 0.5, 0.58, 0.65] as const; // 中距離（中距離投射）
+export const MID_RATE = [0.3, 0.4, 0.5, 0.6, 0.7] as const; // 中距離（中距離投射），每級差 10%
 export const THREE_RATE = [0.1, 0.22, 0.32, 0.39, 0.45] as const; // 弧外（弧外投射）
 
 /**

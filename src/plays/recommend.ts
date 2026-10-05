@@ -211,14 +211,17 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
   const keys: WeightKey[] = ['threePoint', 'midRange', 'finishing', 'iso', 'speed', 'height'];
   const strengths: Strength[] = [];
 
-  // 找例子時，跳投戰術的另一個出手點也算（ranked 裡每套只放分數高的版本，另一個在 alternatives）
-  const candidates = ranked.flatMap((r) => [r, ...(r.alternatives ?? []).filter((a) => a.play.shot !== r.play.shot)]);
+  // 找例子：照推薦順序一套一套看，每套最多一個例子（先看推薦的版本，不符合才看另一個出手點）。
+  // 這樣同一套戰術的兩個出手點不會同時佔掉例子名額，順序也和推薦一致。
+  const versionsOf = (r: Recommendation) => [r, ...(r.alternatives ?? []).filter((a) => a.play.shot !== r.play.shot)];
   for (const blue of tactic.players.filter((p) => p.team === 'blue')) {
     for (const key of keys) {
       const score = attributeScore(tactic, blue, key);
       if (score < STRENGTH_SCORE) continue;
-      const examples = candidates
-        .filter((r) => r.roles[r.play.finisher] === blue.id && (r.play.weights[r.play.finisher][key] ?? 0) > 0)
+      const fits = (r: Recommendation) => r.roles[r.play.finisher] === blue.id && (r.play.weights[r.play.finisher][key] ?? 0) > 0;
+      const examples = ranked
+        .map((r) => versionsOf(r).find(fits))
+        .filter((r): r is Recommendation => !!r)
         .slice(0, 2)
         .map((r) => r.play);
       strengths.push({ playerId: blue.id, key, score, label: strengthLabel(tactic, blue, key), style: STYLE[key], examples });

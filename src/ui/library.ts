@@ -150,7 +150,12 @@ export function attachLibrary(
           const mine = summary.strengths.filter((st) => st.playerId === id);
           const labels = mine.map((st) => st.label).join('、');
           const styles = [...new Set(mine.map((st) => st.style))].join('、');
-          const examples = [...new Set(mine.flatMap((st) => st.examples))].slice(0, 3).map(playTitle);
+          // 例子去掉重複：同一套戰術只列一次（不同強項可能各自用到同一套的不同出手點）
+          const examples = mine
+            .flatMap((st) => st.examples)
+            .filter((p, i, all) => all.findIndex((q) => q.id === p.id) === i)
+            .slice(0, 3)
+            .map(playTitle);
           const tail = examples.length ? `，例如 ${examples.join('、')}` : '';
           list.append(el('li', {}, el('strong', {}, nameOf(t.players, id)), `：${labels} → 適合${styles}的戰術${tail}`));
         }

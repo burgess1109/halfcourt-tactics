@@ -337,3 +337,20 @@ describe('球隊總評：跳投戰術的另一個出手點也能當例子', () =
     }
   });
 });
+
+describe('球隊總評的例子不重複', () => {
+  it('同一套戰術的兩個出手點不會同時佔掉例子名額，例子順序和推薦一致', async () => {
+    const { teamSummary, rankBySimulation } = await import('./recommend');
+    for (const skills of [{ iso: 4, threePoint: 4 }, { speed: 4, threePoint: 4 }] as const) {
+      const t = team({ b1: skills }, { b1: 180, b2: 185, b3: 190 });
+      const ranked = rankBySimulation(t);
+      const s = teamSummary(t, ranked);
+      for (const st of s.strengths.filter((x) => x.playerId === 'b1')) {
+        const ids = st.examples.map((p) => p.id);
+        expect(new Set(ids).size, `${st.key}：${ids.join(', ')}`).toBe(ids.length);
+        const order = ids.map((id) => ranked.findIndex((r) => r.play.id === id));
+        expect(order, st.key).toEqual([...order].sort((a, b) => a - b));
+      }
+    }
+  });
+});
