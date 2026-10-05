@@ -11,11 +11,11 @@ export type Mode = 'offense' | 'defense';
 export type Rating = 0 | 1 | 2 | 3 | 4;
 
 export interface Skills {
+  speed: Rating; // 速度
+  iso: Rating; // 單打
+  finishing: Rating; // 禁區終結
   midRange: Rating; // 中距離投射（弧內、禁區外的跳投）
   threePoint: Rating; // 弧外投射
-  speed: Rating; // 速度
-  finishing: Rating; // 禁區終結
-  iso: Rating; // 單打
 }
 
 export interface Vec2 {

@@ -7,15 +7,15 @@ export const RATINGS: readonly Rating[] = [4, 3, 2, 1, 0];
 export const RATING_LABEL: Record<Rating, string> = { 4: '優勢', 3: '稍強', 2: '平均', 1: '稍弱', 0: '劣勢' };
 
 export const SKILL_LABEL: Record<keyof Skills, string> = {
+  speed: '速度',
+  iso: '單打',
+  finishing: '禁區終結',
   midRange: '中距離投射',
   threePoint: '弧外投射',
-  speed: '速度',
-  finishing: '禁區終結',
-  iso: '單打',
 };
 export const SKILL_KEYS = Object.keys(SKILL_LABEL) as (keyof Skills)[];
 
-export const DEFAULT_SKILLS: Skills = { midRange: 2, threePoint: 2, speed: 2, finishing: 2, iso: 2 };
+export const DEFAULT_SKILLS: Skills = { speed: 2, iso: 2, finishing: 2, midRange: 2, threePoint: 2 };
 
 export const HEIGHT_RANGE = { min: 150, max: 230 } as const;
 /** 沒填身高時使用的值；也是速度公式的身高基準（這個身高 = 基準速度） */
