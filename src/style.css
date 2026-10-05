@@ -1048,11 +1048,12 @@ body[data-screen='board'] .app {
   font-weight: 800;
 }
 
-.result__grade[data-grade='S'] { --grade: #ffd54f; }
-.result__grade[data-grade='A'] { --grade: #81c784; }
-.result__grade[data-grade='B'] { --grade: #64b5f6; }
-.result__grade[data-grade='C'] { --grade: #ffb74d; }
-.result__grade[data-grade='D'] { --grade: #e57373; }
+/* 評等顏色（評分卡片與推薦卡片共用）：S 金、A 綠、B 藍為不錯，C 灰為普通，D 紅為不好 */
+[data-grade='S'] { --grade: #ffd54f; }
+[data-grade='A'] { --grade: #81c784; }
+[data-grade='B'] { --grade: #64b5f6; }
+[data-grade='C'] { --grade: #b0bec5; }
+[data-grade='D'] { --grade: #e57373; }
 
 .result__summary {
   flex: 1;
@@ -1179,12 +1180,6 @@ body[data-screen='board'] .app {
   font-weight: 700;
   vertical-align: 2px;
 }
-
-.play-item__grade[data-grade='S'] { --grade: #ffd54f; }
-.play-item__grade[data-grade='A'] { --grade: #81c784; }
-.play-item__grade[data-grade='B'] { --grade: #64b5f6; }
-.play-item__grade[data-grade='C'] { --grade: #ffb74d; }
-.play-item__grade[data-grade='D'] { --grade: #e57373; }
 
 /* 開局站位小球場 */
 .lineup {
