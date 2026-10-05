@@ -1,4 +1,4 @@
-// 產生 docs/PLAYS.md 與 docs/plays/*.svg：用遊戲本身的路線與防守 AI 畫出 15 套內建戰術的分鏡圖。
+// 產生 docs/PLAYS.md 與 docs/plays/*.svg：用遊戲本身的路線與防守 AI 畫出所有內建戰術的分鏡圖。
 // 由 scripts/build-plays-doc.mjs 透過 Vite 載入執行。
 
 import { buildTimeline, possessionSeconds } from '../src/anim/timeline';
