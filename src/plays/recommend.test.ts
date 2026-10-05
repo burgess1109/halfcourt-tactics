@@ -321,3 +321,19 @@ describe('跳投戰術的出手點（中距離 / 弧外）', () => {
     expect(playTitle(alt)).toBe('高位擋拆-Pick and Pop（中距離）');
   });
 });
+
+describe('球隊總評：跳投戰術的另一個出手點也能當例子', () => {
+  it('中距離強項的人，即使五套跳投戰術都選了弧外版，也找得到中距離版的例子', async () => {
+    const { teamSummary, rankBySimulation } = await import('./recommend');
+    const { playTitle } = await import('../ui/library');
+    const t = team({ b1: { midRange: 4, threePoint: 2 }, b3: { threePoint: 4, midRange: 2 } }, { b1: 180, b2: 185, b3: 190 });
+    const ranked = rankBySimulation(t);
+    const s = teamSummary(t, ranked);
+    const mid = s.strengths.find((x) => x.playerId === 'b1' && x.key === 'midRange')!;
+    expect(mid.examples.length).toBeGreaterThan(0);
+    for (const p of mid.examples) {
+      expect(p.shot).toBe('mid');
+      expect(playTitle(p)).toContain('（中距離）');
+    }
+  });
+});

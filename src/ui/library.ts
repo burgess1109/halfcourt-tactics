@@ -2,7 +2,7 @@ import { isBlueComplete } from '../model/playerForm';
 import type { Store } from '../model/store';
 import type { Player } from '../model/types';
 import { loadPlay, type RoleAssignment } from '../plays/instantiate';
-import { PLAYS, ROLES, SHOT_LABEL, type Play } from '../plays/library';
+import { PLAYS, ROLES, SHOT_LABEL, basePlay, type Play } from '../plays/library';
 import { createBlankTactic } from '../model/defaults';
 import {
   bestAssignment,
@@ -59,11 +59,17 @@ export function attachLibrary(
   };
 
   /** text：說明文字（推薦清單用推薦理由、全部清單用戰術簡介），切換出手點時跟著換 */
+  /** 目前戰術載入的出手點；舊存檔沒有記錄時，改版前載入的一定是原本的出手點 */
+  const loadedShot = (playId: string) => {
+    const based = store.get().tactic.basedOn;
+    return based?.playId === playId ? (based.shot ?? basePlay(playId)?.shot) : undefined;
+  };
+
   const item = (rec: Recommendation, textOf: (r: Recommendation) => string, rank?: number): HTMLLIElement => {
     const { play, roles } = rec;
     const text = textOf(rec);
-    const based = store.get().tactic.basedOn;
-    const current = based?.playId === play.id && (based.shot ?? null) === (play.shot ?? null);
+    // 卡片代表整套戰術：同一套就是目前的戰術（不管顯示的是哪個出手點）
+    const current = store.get().tactic.basedOn?.playId === play.id;
     const expected = rec.grade
       ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, `預期 ${rec.grade} ${Math.round(rec.gradeScore!)} 分`)]
       : [];
@@ -99,6 +105,13 @@ export function attachLibrary(
       li.append(shots);
     }
     return li;
+  };
+
+  /** 目前戰術用的就是這套跳投戰術時，卡片預設顯示載入的那個出手點（不是分數比較高的那個） */
+  const showLoaded = (rec: Recommendation): Recommendation => {
+    const shot = loadedShot(rec.play.id);
+    const alt = shot && rec.alternatives?.find((a) => a.play.shot === shot);
+    return alt ? { ...alt, alternatives: rec.alternatives } : rec;
   };
 
   const render = (ranked: readonly Recommendation[]) => {
@@ -148,7 +161,7 @@ export function attachLibrary(
 
       body.append(el('h3', { class: 'lib-section' }, '推薦給你的球隊'));
       const list = el('ol', { class: 'lib-list' });
-      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(rec, (r) => r.reason, i + 1)));
+      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(showLoaded(rec), (r) => r.reason, i + 1)));
       body.append(list);
     } else {
       const go = el('button', { type: 'button', class: 'btn' }, '去填身高');
@@ -164,7 +177,7 @@ export function attachLibrary(
       body.append(el('h3', { class: 'lib-section' }, category));
       const list = el('ul', { class: 'lib-list' });
       for (const play of PLAYS.filter((p) => p.category === category)) {
-        list.append(item(byPlay.get(play.id) ?? bestAssignment(t, play), (r) => r.play.summary));
+        list.append(item(showLoaded(byPlay.get(play.id) ?? bestAssignment(t, play)), (r) => r.play.summary));
       }
       body.append(list);
     }

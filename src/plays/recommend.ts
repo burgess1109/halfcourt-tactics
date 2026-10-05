@@ -211,11 +211,13 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
   const keys: WeightKey[] = ['threePoint', 'midRange', 'finishing', 'iso', 'speed', 'height'];
   const strengths: Strength[] = [];
 
+  // 找例子時，跳投戰術的另一個出手點也算（ranked 裡每套只放分數高的版本，另一個在 alternatives）
+  const candidates = ranked.flatMap((r) => [r, ...(r.alternatives ?? []).filter((a) => a.play.shot !== r.play.shot)]);
   for (const blue of tactic.players.filter((p) => p.team === 'blue')) {
     for (const key of keys) {
       const score = attributeScore(tactic, blue, key);
       if (score < STRENGTH_SCORE) continue;
-      const examples = ranked
+      const examples = candidates
         .filter((r) => r.roles[r.play.finisher] === blue.id && (r.play.weights[r.play.finisher][key] ?? 0) > 0)
         .slice(0, 2)
         .map((r) => r.play);
@@ -223,7 +225,8 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
     }
   }
   // 越強的排越前面；同分時，對應戰術在推薦裡排越前面的優先（總評才會跟推薦清單一致）
-  const rankOf = (s: Strength) => (s.examples[0] ? ranked.findIndex((r) => r.play === s.examples[0]) : ranked.length);
+  // 依戰術 id 比對：例子可能是另一個出手點的版本（不在 ranked 裡）
+  const rankOf = (s: Strength) => (s.examples[0] ? ranked.findIndex((r) => r.play.id === s.examples[0]!.id) : ranked.length);
   strengths.sort((a, b) => b.score - a.score || rankOf(a) - rankOf(b));
 
   const top = ranked[0]!;
