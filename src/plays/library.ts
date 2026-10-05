@@ -808,40 +808,4 @@ export const PLAYS: readonly Play[] = [
     finish: 'A 換防後對錯位的防守者切入',
     weights: { A: { iso: 3, speed: 2, finishing: 1 }, B: { height: 1 }, C: { threePoint: 1 } },
   },
-  {
-    id: 'iso-kick',
-    category: '單打',
-    name: 'Drive and Kick',
-    summary: '持球者往籃下切入，吸引防守收縮，再分給往底角移動的射手投籃。',
-    roles: { A: '切入後分球', B: '拉開空間', C: '底角接球投籃' },
-    start: { A: TOP, B: { x: 6.9, y: 1.3 }, C: { x: -5.8, y: 4.0 } },
-    ball: 'A',
-    frames: [
-      {
-        note: 'A 從弧頂往籃下運球切入；C 從左翼往底角移動（跟著切入的方向找空檔）。',
-        paths: [
-          { kind: 'dribble', actor: 'A', to: { x: 0.6, y: 4.0 } },
-          { kind: 'cut', actor: 'C', to: { x: -6.9, y: 1.3 } },
-        ],
-      },
-      { note: 'A 把球分給底角的 C。', paths: [{ kind: 'pass', actor: 'A', target: 'C' }] },
-      { note: 'C 底角弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
-    ],
-    finisher: 'C',
-    finish: 'C 接切入分球後底角投籃',
-    weights: { A: { speed: 2, iso: 2 }, B: { threePoint: 1 }, C: { threePoint: 3 } },
-    shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 0,
-      to: { x: -4.4, y: 2.2 },
-      notes: {
-        0: 'A 從弧頂往籃下運球切入；C 從左翼往底線的短角移動（跟著切入的方向找空檔）。',
-        1: 'A 把球分給短角的 C。',
-        2: 'C 在短角中距離投籃（1 分）。',
-      },
-      summary: '持球者往籃下切入，吸引防守收縮，再分給移到短角的隊友投中距離。',
-      finish: 'C 接切入分球後短角投籃',
-    },
-  },
 ];

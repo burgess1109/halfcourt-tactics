@@ -12,9 +12,9 @@ import { loadPlay } from './instantiate';
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
 
 describe('內建戰術庫', () => {
-  it('共 22 套，id 不重複', () => {
-    expect(PLAYS).toHaveLength(22);
-    expect(new Set(PLAYS.map((p) => p.id)).size).toBe(22);
+  it('共 21 套，id 不重複', () => {
+    expect(PLAYS).toHaveLength(21);
+    expect(new Set(PLAYS.map((p) => p.id)).size).toBe(21);
   });
 
   // 跳投戰術的兩個出手點都要檢查
@@ -79,7 +79,6 @@ describe('內建戰術庫', () => {
       'high-pnr-pop',
       'high-pnr-pullup',
       'high-pnr-spain',
-      'iso-kick',
       'offball-down',
       'offball-flare',
       'offball-post-split',

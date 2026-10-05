@@ -18,7 +18,7 @@
 |---|---|
 | `docs/SPEC.md` | 產品規格書。§1 流程、§3 球員資料、§4 路線、§5 分鏡與播放、§6 模擬引擎（防守 AI、戰術庫、評分）、§7 能力模型、§11 資料模型。**只描述目前實作的規格**，不放歷史與規劃 |
 | `docs/PLANNING.md` | 專案規劃：§1 里程碑（M1–M8 已完成，M9 GitHub CI/CD、M10 英文語系、M11 防守模式暫緩）、§2 決策紀錄、§3 待確認清單 |
-| `docs/PLAYS.md`、`docs/plays/*.svg` | 22 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：紅隊用防守模擬畫，所以改了戰術資料（`src/plays/library.ts`）、防守站位或模擬（`src/sim/`）、配色後，都要執行 `npm run plays-doc`；`scripts/plays-doc.test.ts` 會檢查是否和程式產生的一致 |
+| `docs/PLAYS.md`、`docs/plays/*.svg` | 21 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：紅隊用防守模擬畫，所以改了戰術資料（`src/plays/library.ts`）、防守站位或模擬（`src/sim/`）、配色後，都要執行 `npm run plays-doc`；`scripts/plays-doc.test.ts` 會檢查是否和程式產生的一致 |
 
 - 行為改變時，要同步更新 `docs/SPEC.md`（直接改成新的規格，不寫「原本…改成…」），並在 `docs/PLANNING.md` 的決策紀錄加一列（被取代的舊決策用 `~~刪除線~~` 標註，不要直接刪掉）。
 - 里程碑的內容或順序改變時，更新 `docs/PLANNING.md` 的里程碑，也在決策紀錄加一列。
@@ -62,7 +62,7 @@ src/
     simulation.ts    時間軸 + 防守模擬 = 完整姿態
     playback.ts      requestAnimationFrame 播放
   plays/           內建戰術庫
-    library.ts       22 套戰術，用角色 A / B / C 描述；9 套跳投戰術有兩個出手點（playVariant）
+    library.ts       21 套戰術，用角色 A / B / C 描述；8 套跳投戰術有兩個出手點（playVariant）
     instantiate.ts   loadPlay：依角色指派載入成戰術「複本」（不會改到內建資料）
     recommend.ts     推薦演算法：能力 + 對位的身高差、速度差，6 種角色排列取最高分
   render/          Canvas 繪圖（球場離屏快取、球員、路線、分身、把手）
