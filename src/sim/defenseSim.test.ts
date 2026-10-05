@@ -451,7 +451,7 @@ describe('弱邊補防', () => {
   });
 });
 
-describe('補防與擋拆協防（18 套戰術 × 各種設定）', () => {
+describe('補防與擋拆協防（所有內建戰術 × 各種設定）', () => {
   const combos = (['switch', 'fight-over'] as const).flatMap((screenDefense) =>
     (['normal', 'tight'] as const).flatMap((pressure) =>
       (['drop', 'hedge'] as const).map((pickCoverage) => ({ screenDefense, pressure, pickCoverage, driveHelp: 'weak-side' as const })),

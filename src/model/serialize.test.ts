@@ -128,7 +128,7 @@ describe('JSON 匯出入', () => {
 });
 
 describe('分享連結', () => {
-  it('18 套內建戰術都能完整還原（使用者畫的部分與設定都相同，評分不帶出去）', async () => {
+  it('所有內建戰術都能完整還原（使用者畫的部分與設定都相同，評分不帶出去）', async () => {
     for (let i = 0; i < PLAYS.length; i++) {
       const t = sample(i);
       t.lastResult = { grade: 'S', expectedPoints: 1.5, score: 100 };
