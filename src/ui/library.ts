@@ -61,7 +61,7 @@ export function attachLibrary(
     const { play, roles } = rec;
     const current = store.get().tactic.basedOn?.playId === play.id;
     const expected = rec.grade
-      ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, `預期 ${rec.grade} ${rec.expectedPoints!.toFixed(2)}`)]
+      ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, `預期 ${rec.grade} ${Math.round(rec.gradeScore!)} 分`)]
       : [];
     const button = el(
       'button',

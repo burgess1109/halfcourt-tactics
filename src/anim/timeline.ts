@@ -15,8 +15,6 @@ import { BALL_ID, type Frame, type Tactic, type Vec2 } from '../model/types';
 export const EMPTY_FRAME_SECONDS = 0.5;
 /** 掩護者在下一個分鏡先站住多久才開始移動（秒） */
 export const SCREEN_HOLD_SECONDS = 0.5;
-/** SPEC §5：3x3 進攻時限 */
-export const SHOT_CLOCK_SECONDS = 12;
 
 interface Track {
   samples: Vec2[];

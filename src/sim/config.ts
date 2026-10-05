@@ -17,7 +17,7 @@ export const AVOID_STEP = Math.PI / 36;
 export const MIN_RED_PATH = 0.3;
 
 /**
- * 防守距離（SPEC §6.2，站位與對位頁選擇）：
+ * 防守距離（SPEC §6.2，比賽設定頁的防守設定）：
  * - 一般：上面的 ON_BALL_GAP / OFF_BALL_GAP，外圍無球者平常協防站位，對位者往外跑才阻絕。
  * - 緊貼：距離縮小（持球者貼到圓標不重疊的極限），外圍無球者一律阻絕傳球路線。
  *   出手時干擾比較大、外圍不好接球；代價是持球者切入、無球者背切時比較容易被甩到身後。
@@ -163,18 +163,18 @@ export const MISMATCH_MAX_INCREASE = 0.5;
 export const ISO_SEPARATION = [0, 0.15, 0.3, 0.45, 0.6] as const;
 
 /**
- * 評等門檻（預期得分），由高到低。依 18 套戰術的實測結果校正（SPEC §6.4）：
- * 平均能力的人空檔投弧外 ≈ 0.66（A）、甩開防守者上籃 ≈ 0.49（B）、被貼身干擾 < 0.36（D）。
+ * 評等門檻（0–100 分，見 model/scoring.ts 的 scoreOf），由高到低。依 18 套戰術的實測結果校正（SPEC §6.4）：
+ * FIBA 3x3 規則下，平均能力的人空檔投弧外 ≈ 66（A）、甩開防守者上籃 ≈ 49（B）、被貼身干擾 < 36（D）。
  */
 export const GRADE_THRESHOLDS = [
-  { grade: 'S', min: 0.75 },
-  { grade: 'A', min: 0.6 },
-  { grade: 'B', min: 0.48 },
-  { grade: 'C', min: 0.36 },
+  { grade: 'S', min: 75 },
+  { grade: 'A', min: 60 },
+  { grade: 'B', min: 48 },
+  { grade: 'C', min: 36 },
 ] as const;
 
-/** 其他人比出手者多這麼多預期得分，才列為「更好的選擇」 */
-export const BETTER_OPTION_MARGIN = 0.1;
+/** 其他人比出手者多這麼多分（0–100 分），才列為「更好的選擇」 */
+export const BETTER_OPTION_MARGIN = 10;
 /** 兩名藍隊球員距離小於這個值（公尺），算擠壓空間 */
 export const SPACING_DISTANCE = 3.0;
 

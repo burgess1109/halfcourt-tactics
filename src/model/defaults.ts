@@ -29,6 +29,7 @@ export function createDefaultTactic(): Tactic {
     pressure: 'normal',
     driveHelp: 'off',
     autoDefense: true,
+    scoring: 'fiba3x3',
     players,
     frames: [frame],
     updatedAt: Date.now(),

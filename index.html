@@ -30,7 +30,7 @@
       </div>
     </section>
 
-    <!-- 設定流程：① 藍隊 ② 紅隊 ③ 對位 -->
+    <!-- 設定流程：① 藍隊 ② 紅隊 ③ 比賽設定 -->
     <section id="setup" class="screen setup" aria-labelledby="setup-title">
       <header class="setup__head">
         <p id="setup-progress" class="setup__progress">1 / 3</p>
@@ -38,7 +38,7 @@
         <div id="setup-tabs" class="tabs" role="tablist" aria-label="球隊設定">
           <button class="tabs__tab" type="button" role="tab" data-step="1">藍隊</button>
           <button class="tabs__tab" type="button" role="tab" data-step="2">紅隊</button>
-          <button class="tabs__tab" type="button" role="tab" data-step="3">站位與對位</button>
+          <button class="tabs__tab" type="button" role="tab" data-step="3">比賽設定</button>
         </div>
         <h2 id="setup-title" class="setup__title"></h2>
         <p id="setup-hint" class="setup__hint"></p>
@@ -100,6 +100,7 @@
           <div class="result__head">
             <div id="result-grade" class="result__grade">A</div>
             <div class="result__summary">
+              <div id="result-score" class="result__score"></div>
               <div id="result-points" class="result__points"></div>
               <div class="result__hint">點評價可以跳到該分鏡</div>
             </div>

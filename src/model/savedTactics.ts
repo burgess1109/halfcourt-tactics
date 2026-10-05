@@ -12,6 +12,8 @@ export interface SavedSummary {
   mode: Mode;
   grade?: Grade;
   expectedPoints?: number;
+  /** 0–100 分 */
+  score?: number;
   /** 戰術最後修改的時間 */
   updatedAt: number;
   /** 根據的內建戰術 */
@@ -28,7 +30,7 @@ const summaryOf = (t: Tactic): SavedSummary => ({
   id: t.id,
   name: t.name,
   mode: t.mode,
-  ...(t.lastResult && { grade: t.lastResult.grade, expectedPoints: t.lastResult.expectedPoints }),
+  ...(t.lastResult && { grade: t.lastResult.grade, expectedPoints: t.lastResult.expectedPoints, score: t.lastResult.score }),
   updatedAt: t.updatedAt,
   ...(t.basedOn && { playId: t.basedOn.playId }),
 });

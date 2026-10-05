@@ -44,7 +44,7 @@ describe('戰術名稱', () => {
 describe('JSON 匯出入', () => {
   it('匯出再匯入，資料完全相同', () => {
     const t = sample();
-    t.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    t.lastResult = { grade: 'A', expectedPoints: 0.8, score: 80.0 };
     const { tactic, removed } = fromJsonFile(toJsonFile(t));
     expect(removed).toBe(0);
     expect(tactic).toEqual(t);
@@ -131,7 +131,7 @@ describe('分享連結', () => {
   it('18 套內建戰術都能完整還原（使用者畫的部分與設定都相同，評分不帶出去）', async () => {
     for (let i = 0; i < PLAYS.length; i++) {
       const t = sample(i);
-      t.lastResult = { grade: 'S', expectedPoints: 1.5 };
+      t.lastResult = { grade: 'S', expectedPoints: 1.5, score: 100 };
       t.pickCoverage = i % 2 ? 'hedge' : 'drop';
       t.pressure = i % 3 ? 'normal' : 'tight';
       t.driveHelp = i % 4 ? 'off' : 'weak-side';
@@ -195,7 +195,7 @@ describe('已存的戰術（localStorage）', () => {
     const b = sample(1);
     b.name = '第二套';
     b.updatedAt = 2000;
-    b.lastResult = { grade: 'B', expectedPoints: 0.6 };
+    b.lastResult = { grade: 'B', expectedPoints: 0.6, score: 60.0 };
     saved.save(a);
     saved.save(b);
     expect(saved.list().map((s) => s.name)).toEqual(['第二套', '測試戰術']);
@@ -287,7 +287,7 @@ describe('分享連結的唯讀預覽（Store）', () => {
     const store = new Store();
     const saved = sample();
     saved.updatedAt = 1234;
-    saved.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    saved.lastResult = { grade: 'A', expectedPoints: 0.8, score: 80.0 };
     store.load(structuredClone(saved));
     expect(store.get().tactic).toEqual(saved);
     expect(store.canUndo).toBe(true);
@@ -322,7 +322,7 @@ describe('分享連結的唯讀預覽（Store）', () => {
     const { Store } = await import('./store');
     const store = new Store();
     const saved = sample();
-    saved.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    saved.lastResult = { grade: 'A', expectedPoints: 0.8, score: 80.0 };
     store.load(structuredClone(saved));
     store.commit((s) => {
       s.tactic.frames[0]!.paths = [];
@@ -338,7 +338,7 @@ describe('分享連結的唯讀預覽（Store）', () => {
     const store = new Store();
     const t = sample();
     t.name = '';
-    t.lastResult = { grade: 'A', expectedPoints: 0.8 };
+    t.lastResult = { grade: 'A', expectedPoints: 0.8, score: 80.0 };
     store.load(t);
     store.commit((s) => {
       s.tactic.frames[0]!.start.b3 = { x: -5, y: 6.5 };

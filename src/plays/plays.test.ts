@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds, screensOf } from '../anim/timeline';
+import { buildTimeline, possessionSeconds, screensOf } from '../anim/timeline';
+import { SCORING_RULES } from '../model/scoring';
 import { createDefaultTactic } from '../model/defaults';
 import { MAX_FRAMES } from '../model/frames';
 import { simulateDefense } from '../sim/defenseSim';
@@ -24,7 +25,8 @@ describe('內建戰術庫', () => {
         const last = t.frames.at(-1)!;
         expect(last.paths.find((p) => p.kind === 'shot')?.actorId).toBe(roles[play.finisher]);
         const tl = buildTimeline(t);
-        expect(possessionSeconds(tl)).toBeLessThan(SHOT_CLOCK_SECONDS);
+        // 內建戰術要在比較短的 FIBA 3x3 時限（12 秒）內出手
+        expect(possessionSeconds(tl)).toBeLessThan(SCORING_RULES.fiba3x3.shotClock);
         expect(t.basedOn).toMatchObject({ playId: play.id, modified: false });
       });
 

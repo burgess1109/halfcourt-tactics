@@ -15,7 +15,8 @@ import {
 } from '../model/physique';
 import { applyPatch, parseTeamForm, type PlayerFormValues } from '../model/playerForm';
 import type { EditorState, Store } from '../model/store';
-import type { DriveHelp, PickCoverage, Player, Pressure, Rating, Skills, Tactic, Team } from '../model/types';
+import { SCORING_RULES } from '../model/scoring';
+import type { DriveHelp, PickCoverage, Player, Pressure, Rating, ScoringRule, Skills, Tactic, Team } from '../model/types';
 
 // 進攻模式的設定流程（SPEC §1.1）：① 藍隊 → ② 紅隊 → ③ 對位 → 戰術面板。
 
@@ -26,7 +27,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 const STEP_TEXT: Record<Step, { title: string; hint: string }> = {
   1: { title: '你的球隊（藍隊）', hint: '都是選填。能力以場上六個人的平均為基準，預設平均；有填身高才會推薦內建戰術。' },
   2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時跟藍隊同順序的球員一樣高；速度以場上六個人的平均為基準，預設平均。' },
-  3: { title: '站位與對位', hint: '在小球場上擺好開局站位、指定誰持球，再設定紅隊誰盯誰。' },
+  3: { title: '比賽設定', hint: '選擇計分規則，在小球場上擺好開局站位、指定誰持球，再設定紅隊誰盯誰、怎麼防守。' },
 };
 
 const teamPlayers = (t: Tactic, team: Team) => t.players.filter((p) => p.team === team);
@@ -77,6 +78,7 @@ export function attachSetup(
   let draftPressure: Pressure = 'normal';
   let draftDriveHelp: DriveHelp = 'off';
   let draftAutoDefense = true;
+  let draftScoring: ScoringRule = 'fiba3x3';
   let draftLineup: Lineup = lineupOf(store.get().tactic);
 
   const tactic = () => store.get().tactic;
@@ -185,6 +187,17 @@ export function attachSetup(
     const label = (p: Player) => `${p.number} 號 ${p.name}（${heightOf(p, players)} cm）`;
     form.replaceChildren();
 
+    // 計分規則：影響每一球的分數、評分與進攻時限（存在戰術裡，分享連結才能重現）
+    form.append(el('h3', { class: 'setup__section' }, '計分規則'));
+    const scoring = el('fieldset', { class: 'choice' }, el('legend', {}, '每一球的分數與進攻時限'));
+    for (const rule of ['fiba3x3', 'standard'] as const) {
+      const spec = SCORING_RULES[rule];
+      const radio = el('input', { type: 'radio', name: 'scoring', value: rule, checked: draftScoring === rule });
+      radio.addEventListener('change', () => (draftScoring = rule));
+      scoring.append(el('label', {}, radio, el('span', {}, rule === 'fiba3x3' ? `${spec.label}（預設）` : spec.label, el('small', {}, spec.description))));
+    }
+    form.append(scoring);
+
     // 開局站位：小球場自由放置（紅隊依目前的對位即時站好）
     form.append(el('h3', { class: 'setup__section' }, '開局站位'));
     form.append(
@@ -198,7 +211,7 @@ export function attachSetup(
         },
       }),
     );
-    form.append(el('h3', { class: 'setup__section' }, '對位'));
+    form.append(el('h3', { class: 'setup__section' }, '對位設定'));
 
     for (const b of teamPlayers(t, 'blue')) {
       const r = players.find((p) => p.id === draftMatchups[b.id])!;
@@ -242,8 +255,8 @@ export function attachSetup(
       form.append(reset);
     }
 
-    // 進階設定：紅隊的防守方式（自動防守跑位、防守距離、切入補防、掩護應對）
-    form.append(el('h3', { class: 'setup__section' }, '進階設定'));
+    // 防守設定：紅隊的防守方式（自動防守跑位、防守距離、切入補防、掩護應對）
+    form.append(el('h3', { class: 'setup__section' }, '防守設定'));
 
     // 自動防守跑位：關閉時紅隊不會自動移動，每個分鏡由使用者拖曳；切入補防、掩護應對用不到
     const auto = el('input', { type: 'checkbox', checked: draftAutoDefense });
@@ -375,6 +388,7 @@ export function attachSetup(
     draftPressure = t.pressure;
     draftDriveHelp = t.driveHelp;
     draftAutoDefense = t.autoDefense;
+    draftScoring = t.scoring;
     draftLineup = lineupOf(t);
   };
 
@@ -397,6 +411,7 @@ export function attachSetup(
         s.tactic.pickCoverage = draftCoverage;
         s.tactic.pressure = draftPressure;
         s.tactic.driveHelp = draftDriveHelp;
+        s.tactic.scoring = draftScoring;
         const wasAuto = s.tactic.autoDefense;
         // 切換自動防守開關：手動的紅隊開局位置從頭開始（改成手動時以自動模擬為起點；改回自動時用不到）
         if (wasAuto !== draftAutoDefense) delete s.tactic.redStarts;

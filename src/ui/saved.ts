@@ -199,7 +199,7 @@ export function attachSaved(
     const based = basedTitle(item.playId);
     const meta = [timeText(item.updatedAt), based && `根據「${based}」`].filter(Boolean).join('・');
     const grade = item.grade
-      ? [el('span', { class: 'play-item__grade', 'data-grade': item.grade }, `${item.grade} ${item.expectedPoints!.toFixed(2)}`)]
+      ? [el('span', { class: 'play-item__grade', 'data-grade': item.grade }, `${item.grade} ${Math.round(item.score!)} 分`)]
       : [];
 
     const head =

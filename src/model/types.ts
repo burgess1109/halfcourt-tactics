@@ -58,6 +58,9 @@ export interface Frame {
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 
+/** 計分規則（SPEC §6.4）：fiba3x3 = 弧內 1 分、弧外 2 分、12 秒；standard = 弧內 2 分、弧外 3 分、24 秒 */
+export type ScoringRule = 'fiba3x3' | 'standard';
+
 /** 防守距離（SPEC §6.2）：normal = 一般；tight = 緊貼（距離較小、外圍一律阻絕） */
 export type Pressure = 'normal' | 'tight';
 
@@ -95,6 +98,8 @@ export interface Tactic {
    * （存在 Frame.start），播放時在分鏡之間直線移動。
    */
   autoDefense: boolean;
+  /** 計分規則（SPEC §6.4），預設 FIBA 3x3 */
+  scoring: ScoringRule;
   /**
    * 關閉自動防守時，使用者在第 1 個分鏡拖過的紅隊開局位置（紅隊 id → 位置）。
    * 沒拖過的紅隊每次都依對位、防守距離重新站位；改對位、清空戰術、載入內建戰術時清空。
@@ -103,6 +108,7 @@ export interface Tactic {
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
   players: Player[];
   frames: Frame[];
-  lastResult?: { grade: Grade; expectedPoints: number };
+  /** 上次播放的評分：評等、預期得分、0–100 分 */
+  lastResult?: { grade: Grade; expectedPoints: number; score: number };
   updatedAt: number;
 }

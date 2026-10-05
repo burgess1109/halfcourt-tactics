@@ -86,7 +86,7 @@ export function attachPointer(
     const manualDefense = !state.tactic.autoDefense;
     // 紅隊：啟用自動防守時由系統防守；關閉時可以畫跑位（其他路線不行）
     if (id && isRed && state.tool !== 'move' && !(manualDefense && state.tool === 'cut')) {
-      const reason = manualDefense ? '紅隊只能畫跑位路線' : '紅隊由系統防守，只能畫藍隊的路線（可以在站位與對位的進階設定關閉自動防守跑位）';
+      const reason = manualDefense ? '紅隊只能畫跑位路線' : '紅隊由系統防守，只能畫藍隊的路線（可以在比賽設定的防守設定關閉自動防守跑位）';
       return { type: 'blocked', id, reason, downAt: local(e), moved: false };
     }
     if (id && state.tool === 'move') {
@@ -94,7 +94,7 @@ export function attachPointer(
       // 紅隊站位由防守 AI 決定（關閉自動防守時和藍隊一樣：第 1 個分鏡可以拖曳）；
       // 第 2 個分鏡之後的站位由上一個分鏡的路線推算
       const locked = isRed && !manualDefense
-        ? '紅隊由系統防守，會自動站在對位球員與籃框之間（可以在站位與對位的進階設定關閉自動防守跑位）'
+        ? '紅隊由系統防守，會自動站在對位球員與籃框之間（可以在比賽設定的防守設定關閉自動防守跑位）'
         : state.frameIndex > 0
           ? '只能在第 1 個分鏡調整站位；之後的站位由上一個分鏡的路線決定'
           : null;

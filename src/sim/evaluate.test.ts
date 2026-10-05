@@ -89,12 +89,12 @@ describe('單一出手的預期得分', () => {
     );
   });
 
-  it('評等門檻', () => {
-    expect(gradeOf(0.84)).toBe('S');
-    expect(gradeOf(0.66)).toBe('A');
-    expect(gradeOf(0.5)).toBe('B');
-    expect(gradeOf(0.4)).toBe('C');
-    expect(gradeOf(0.2)).toBe('D');
+  it('評等門檻（0–100 分）', () => {
+    expect(gradeOf(84)).toBe('S');
+    expect(gradeOf(66)).toBe('A');
+    expect(gradeOf(50)).toBe('B');
+    expect(gradeOf(40)).toBe('C');
+    expect(gradeOf(20)).toBe('D');
   });
 });
 
@@ -266,7 +266,7 @@ describe('4. 戰術一改就清掉上次的評分', () => {
     const { Store } = await import('../model/store');
     const store = new Store();
     store.update((s) => {
-      s.tactic.lastResult = { grade: 'A', expectedPoints: 0.66 };
+      s.tactic.lastResult = { grade: 'A', expectedPoints: 0.66, score: 66.0 };
     });
     store.commit((s) => {
       s.tactic.frames[0]!.start.b2 = { x: -4, y: 7 };
@@ -280,9 +280,9 @@ describe('載入戰術時保留它自己的評分', () => {
     const { Store } = await import('../model/store');
     const store = new Store();
     const saved = createDefaultTactic();
-    saved.lastResult = { grade: 'B', expectedPoints: 0.5 };
+    saved.lastResult = { grade: 'B', expectedPoints: 0.5, score: 50.0 };
     store.load(saved);
-    expect(store.get().tactic.lastResult).toEqual({ grade: 'B', expectedPoints: 0.5 });
+    expect(store.get().tactic.lastResult).toEqual({ grade: 'B', expectedPoints: 0.5, score: 50.0 });
     store.commit((s) => {
       s.tactic.frames[0]!.start.b2 = { x: -4, y: 7 };
     });

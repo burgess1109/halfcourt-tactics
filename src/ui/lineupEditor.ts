@@ -6,7 +6,7 @@ import { drawBall, drawPlayer, drawPlayerLabel } from '../render/entities';
 import type { Viewport } from '../render/viewport';
 import { defendPosition } from '../sim/defense';
 
-// 站位與對位頁的小球場（SPEC §1.1 步驟 ③）：拖曳藍隊自由放置、點一下指定持球者、一鍵套用常用陣型；
+// 比賽設定頁的小球場（SPEC §1.1 步驟 ③）：拖曳藍隊自由放置、點一下指定持球者、一鍵套用常用陣型；
 // 紅隊依目前的對位即時站到防守位置。
 
 /** 只顯示半場靠籃框的部分，球員才不會太小；拖曳也限制在這個範圍內 */

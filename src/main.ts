@@ -1,6 +1,7 @@
 import './style.css';
 import { Playback } from './anim/playback';
-import { SHOT_CLOCK_SECONDS, buildTimeline, possessionSeconds } from './anim/timeline';
+import { buildTimeline, possessionSeconds } from './anim/timeline';
+import { shotClockOf } from './model/scoring';
 import { attachPointer } from './input/pointer';
 import { SavedTactics, type KeyValueStorage } from './model/savedTactics';
 import { Store } from './model/store';
@@ -130,9 +131,10 @@ const togglePlay = () => {
   if (!playback.active) {
     const tl = buildTimeline(store.get().tactic);
     const t = possessionSeconds(tl);
-    if (t > SHOT_CLOCK_SECONDS) {
+    const clock = shotClockOf(store.get().tactic);
+    if (t > clock) {
       const what = tl.shotReleaseAt === null ? '整個戰術' : '出手時間';
-      notify(`${what} ${t.toFixed(1)} 秒，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限`);
+      notify(`${what} ${t.toFixed(1)} 秒，超過 ${clock} 秒進攻時限`);
     }
   }
   playback.toggle();

@@ -95,6 +95,8 @@ export interface Recommendation {
   reason: string;
   /** 用這個角色分配實際模擬後的預期得分與評等（有跑過模擬才有） */
   expectedPoints?: number;
+  /** 模擬評分的 0–100 分（和適合度 score 不同） */
+  gradeScore?: number;
   grade?: Grade;
 }
 
@@ -106,7 +108,7 @@ export function withSimulation(tactic: Tactic, rec: Recommendation): Recommendat
   const loaded = loadPlay({ ...tactic, autoDefense: true }, rec.play, rec.roles, { defense: false });
   const e = evaluate(loaded, simulate(loaded));
   // 內建戰術一定有投籃，所以一定有分數
-  return { ...rec, expectedPoints: e.expectedPoints ?? 0, grade: e.grade ?? 'D' };
+  return { ...rec, expectedPoints: e.expectedPoints ?? 0, gradeScore: e.score ?? 0, grade: e.grade ?? 'D' };
 }
 
 /** 依預期得分排序；同分時看適合度，再維持戰術庫順序 */
@@ -125,7 +127,7 @@ export function rankBySimulation(tactic: Tactic): Recommendation[] {
 
 /** 推薦結果只和球員、對位、掩護應對有關（和目前畫的路線無關），用來快取 */
 export function recommendationKey(tactic: Tactic): string {
-  return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense, pick: tactic.pickCoverage, pressure: tactic.pressure, help: tactic.driveHelp });
+  return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense, pick: tactic.pickCoverage, pressure: tactic.pressure, help: tactic.driveHelp, scoring: tactic.scoring });
 }
 
 /** 這套戰術最適合的角色分配；同分時取排列順序在前的 */

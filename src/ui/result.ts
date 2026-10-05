@@ -1,5 +1,6 @@
 import type { Simulation } from '../anim/simulation';
 import type { Store } from '../model/store';
+import { scoringOf } from '../model/scoring';
 import { evaluate } from '../sim/evaluate';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -14,6 +15,7 @@ const HIGHLIGHT_MS = 3000;
 export function attachResult(store: Store): { show: (sim: Simulation) => void; hide: () => void } {
   const panel = $<HTMLElement>('#result');
   const grade = $<HTMLElement>('#result-grade');
+  const score = $<HTMLElement>('#result-score');
   const points = $<HTMLElement>('#result-points');
   const list = $<HTMLElement>('#result-comments');
   let shownFor = 0;
@@ -69,7 +71,7 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
       // 沒有投籃就不評分，也不記錄評分
       const scored = e.grade !== null && e.expectedPoints !== null;
       store.update((s) => {
-        if (scored) s.tactic.lastResult = { grade: e.grade!, expectedPoints: e.expectedPoints! };
+        if (scored) s.tactic.lastResult = { grade: e.grade!, expectedPoints: e.expectedPoints!, score: e.score! };
         else delete s.tactic.lastResult;
       });
       shownFor = store.get().tactic.updatedAt;
@@ -78,7 +80,13 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
       grade.textContent = scored ? e.grade! : '—';
       grade.dataset.grade = scored ? e.grade! : 'none';
       grade.setAttribute('aria-label', scored ? `評等 ${e.grade}` : '未評分');
-      points.textContent = !scored ? '未評分：沒有投籃' : e.violation ? '預期得分 0（違例）' : `預期得分 ${e.expectedPoints!.toFixed(2)} 分`;
+      const rule = scoringOf(store.get().tactic);
+      score.textContent = !scored ? '未評分' : `${Math.round(e.score!)} 分`;
+      points.textContent = !scored
+        ? '沒有投籃'
+        : e.violation
+          ? `違例，預期得分 0（${rule.label}）`
+          : `預期得分 ${e.expectedPoints!.toFixed(2)} 分（${rule.label}）`;
       list.replaceChildren(
         ...e.comments.map((c) => {
           const button = document.createElement('button');

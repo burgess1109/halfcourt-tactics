@@ -1,8 +1,9 @@
 import { fullPoseAt, type Simulation } from '../anim/simulation';
-import { SHOT_CLOCK_SECONDS, possessionSeconds, type Timeline } from '../anim/timeline';
+import { possessionSeconds, type Timeline } from '../anim/timeline';
 import { BASKET_Y, PAINT_DEPTH, PAINT_HALF_WIDTH, isBeyondArc } from '../court/fiba';
 import { PLAYER_RADIUS } from '../model/entities';
 import { RATING_LABEL, heightOf, skillsOf, speedOf } from '../model/physique';
+import { scoreOf, scoringOf, shotClockOf } from '../model/scoring';
 import type { Grade, Player, Tactic, Vec2 } from '../model/types';
 import {
   BETTER_OPTION_MARGIN,
@@ -41,7 +42,8 @@ export interface ShotValue {
   playerId: string;
   at: Vec2;
   zone: Zone;
-  points: 1 | 2;
+  /** 這一球幾分（依計分規則） */
+  points: number;
   /** 空檔命中率（只看能力與區域） */
   baseRate: number;
   /** 最近防守者的實際距離（公尺） */
@@ -108,7 +110,8 @@ export function shotValue(
     }
   }
   const factor = 1 - best!.loss;
-  const points = zone === 'three' ? 2 : 1;
+  const rule = scoringOf(tactic);
+  const points = zone === 'three' ? rule.outside : rule.inside;
   return {
     playerId,
     at: { ...at },
@@ -135,8 +138,9 @@ function mismatchText(shot: ShotValue): string {
     : `（比干擾他的防守者矮 ${-shot.heightEdge} cm，干擾增加 ${pct}%）`;
 }
 
-export function gradeOf(expectedPoints: number): Grade {
-  return GRADE_THRESHOLDS.find((g) => expectedPoints >= g.min)?.grade ?? 'D';
+/** 0–100 分對應的評等 */
+export function gradeOf(score: number): Grade {
+  return GRADE_THRESHOLDS.find((g) => score >= g.min)?.grade ?? 'D';
 }
 
 export interface Comment {
@@ -153,6 +157,8 @@ export interface Evaluation {
   /** 沒有投籃時不評分（SPEC §6.4），為 null */
   grade: Grade | null;
   expectedPoints: number | null;
+  /** 0–100 分（有效命中率，model/scoring.ts 的 scoreOf）；沒有投籃時為 null */
+  score: number | null;
   shot: ShotValue;
   /** 使用者有畫投籃 */
   hasShot: boolean;
@@ -223,7 +229,9 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
     ? options.find((o) => o.playerId === shotPath.actorId)!
     : [...options].sort((a, b) => b.expectedPoints - a.expectedPoints)[0]!;
 
-  const violation = possessionSeconds(timeline) > SHOT_CLOCK_SECONDS;
+  const shotClock = shotClockOf(tactic);
+  const rule = scoringOf(tactic);
+  const violation = possessionSeconds(timeline) > shotClock;
   const expectedPoints = !shotPath ? null : violation ? 0 : shot.expectedPoints;
   const comments: Comment[] = [];
   const name = (id: string) => label(players, id);
@@ -261,8 +269,8 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   if (violation) {
     comments.push({
       text: shotPath
-        ? `第 ${possessionSeconds(timeline).toFixed(1)} 秒才出手，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限，違例不計分`
-        : `整個戰術 ${possessionSeconds(timeline).toFixed(1)} 秒，超過 ${SHOT_CLOCK_SECONDS} 秒進攻時限，就算最後投籃也是違例`,
+        ? `第 ${possessionSeconds(timeline).toFixed(1)} 秒才出手，超過 ${shotClock} 秒進攻時限，違例不計分`
+        : `整個戰術 ${possessionSeconds(timeline).toFixed(1)} 秒，超過 ${shotClock} 秒進攻時限，就算最後投籃也是違例`,
       frameIndex: releaseFrame,
       playerIds: [shot.playerId],
       priority: 1,
@@ -272,7 +280,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   // 3. 更好的選擇
   if (shotPath) {
     const better = options
-      .filter((o) => o.playerId !== shot.playerId && o.expectedPoints >= shot.expectedPoints + BETTER_OPTION_MARGIN)
+      .filter((o) => o.playerId !== shot.playerId && scoreOf(o.expectedPoints, rule) >= scoreOf(shot.expectedPoints, rule) + BETTER_OPTION_MARGIN)
       .sort((a, b) => b.expectedPoints - a.expectedPoints)[0];
     if (better) {
       comments.push({
@@ -377,7 +385,7 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   // 7. 出手時間（違例已在前面說明；沒有投籃就沒有出手時間）
   if (shotPath && !violation) {
     comments.push({
-      text: `第 ${possessionSeconds(timeline).toFixed(1)} 秒出手，在 ${SHOT_CLOCK_SECONDS} 秒進攻時限內`,
+      text: `第 ${possessionSeconds(timeline).toFixed(1)} 秒出手，在 ${shotClock} 秒進攻時限內`,
       frameIndex: releaseFrame,
       playerIds: [shot.playerId],
       priority: 6,
@@ -385,8 +393,9 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   }
 
   return {
-    grade: expectedPoints === null ? null : gradeOf(expectedPoints),
+    grade: expectedPoints === null ? null : gradeOf(scoreOf(expectedPoints, rule)),
     expectedPoints,
+    score: expectedPoints === null ? null : scoreOf(expectedPoints, rule),
     shot,
     hasShot: !!shotPath,
     violation,

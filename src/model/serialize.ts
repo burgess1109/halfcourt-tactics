@@ -2,6 +2,7 @@ import { VIEW_BOUNDS } from '../court/fiba';
 import { BALL_HOLD_OFFSET } from './entities';
 import { MAX_FRAMES, syncFrames } from './frames';
 import { shotControls } from './paths';
+import { scoreOf, scoringOf } from './scoring';
 import { newId } from './id';
 import { HEIGHT_RANGE } from './physique';
 import { NAME_MAX } from './playerForm';
@@ -218,6 +219,8 @@ export function parseTactic(data: unknown): ParseResult {
     pressure: o.pressure === undefined ? 'normal' : oneOf(o.pressure, ['normal', 'tight'] as const, '防守距離'),
     driveHelp: o.driveHelp === undefined ? 'off' : oneOf(o.driveHelp, ['off', 'weak-side'] as const, '補防'),
     autoDefense,
+    // 舊資料沒有這個欄位：FIBA 3x3
+    scoring: o.scoring === undefined ? 'fiba3x3' : oneOf(o.scoring, ['fiba3x3', 'standard'] as const, '計分規則'),
     // 關閉自動防守時，使用者拖過的紅隊開局位置（之後的分鏡由紅隊跑位推算）
     ...(o.redStarts !== undefined && !autoDefense && { redStarts: parseRedStarts(o.redStarts) }),
     players,
@@ -235,8 +238,12 @@ export function parseTactic(data: unknown): ParseResult {
   if (o.lastResult !== undefined) {
     const r = obj(o.lastResult, '評分');
     const ep = r.expectedPoints;
-    if (typeof ep !== 'number' || !Number.isFinite(ep) || ep < 0 || ep > 2) fail('評分');
-    tactic.lastResult = { grade: oneOf(r.grade, GRADES, '評分'), expectedPoints: ep as number };
+    // 一球最多 3 分（一般規則的弧外）
+    if (typeof ep !== 'number' || !Number.isFinite(ep) || ep < 0 || ep > 3) fail('評分');
+    // 舊資料沒有 0–100 分：依計分規則換算
+    const score = r.score === undefined ? scoreOf(ep as number, scoringOf(tactic)) : r.score;
+    if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 100) fail('評分');
+    tactic.lastResult = { grade: oneOf(r.grade, GRADES, '評分'), expectedPoints: ep as number, score: score as number };
   }
 
   // 啟用自動防守時紅隊路線用不到，移除並算進不成立的路線
@@ -311,6 +318,7 @@ export function compactForShare(tactic: Tactic): object {
     pressure: tactic.pressure,
     driveHelp: tactic.driveHelp,
     autoDefense: tactic.autoDefense,
+    scoring: tactic.scoring,
     ...(!tactic.autoDefense && tactic.redStarts && { redStarts: roundRecord(tactic.redStarts) }),
     ...(tactic.basedOn && { basedOn: tactic.basedOn }),
     players: tactic.players,
