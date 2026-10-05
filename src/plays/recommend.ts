@@ -2,11 +2,11 @@ import { RATING_LABEL, SKILL_LABEL, heightOf, skillsOf, speedOf } from '../model
 import { simulate } from '../anim/simulation';
 import { evaluate } from '../sim/evaluate';
 import type { Grade, Player, Skills, Tactic } from '../model/types';
-import { PLAYS, ROLES, type Play, type Role, type RoleWeights } from './library';
+import { PLAYS, ROLES, playVariants, type Play, type Role, type RoleWeights } from './library';
 import { loadPlay, type RoleAssignment } from './instantiate';
 
 // 推薦演算法（SPEC §6.3）：完全決定性。
-// - 外線投射、禁區終結、單打：直接用能力等級（0–4 分）
+// - 中距離投射、弧外投射、禁區終結、單打：直接用能力等級（0–4 分）
 // - 身高、速度：跟「對位的防守者」比，每差 HEIGHT_STEP_CM / SPEED_STEP 算一級，平均 = 2 分
 // - 每套戰術的分數 = Σ 權重 × 分數 ÷ Σ 權重（0–4），權重項目多的戰術不會因此佔便宜
 
@@ -98,6 +98,8 @@ export interface Recommendation {
   /** 模擬評分的 0–100 分（和適合度 score 不同） */
   gradeScore?: number;
   grade?: Grade;
+  /** 跳投戰術：所有出手點版本的模擬結果（包含自己），戰術庫用來切換「中距離 / 弧外」 */
+  alternatives?: Recommendation[];
 }
 
 /**
@@ -111,9 +113,19 @@ export function withSimulation(tactic: Tactic, rec: Recommendation): Recommendat
   return { ...rec, expectedPoints: e.expectedPoints ?? 0, gradeScore: e.score ?? 0, grade: e.grade ?? 'D' };
 }
 
+/**
+ * 一套戰術的推薦（SPEC §6.3）：跳投戰術的兩個出手點，各自用最適合的角色分配模擬，選分數高的
+ * （同分時選原本的出手點）；其他戰術只有一個版本。
+ */
+export function withBestShot(tactic: Tactic, play: Play): Recommendation {
+  const options = playVariants(play).map((v) => withSimulation(tactic, bestAssignment(tactic, v)));
+  const best = options.reduce((a, b) => ((b.expectedPoints ?? 0) > (a.expectedPoints ?? 0) + 1e-9 ? b : a));
+  return options.length > 1 ? { ...best, alternatives: options } : best;
+}
+
 /** 依預期得分排序；同分時看適合度，再維持戰術庫順序 */
 export function sortBySimulation(list: readonly Recommendation[]): Recommendation[] {
-  const order = (r: Recommendation) => PLAYS.indexOf(r.play);
+  const order = (r: Recommendation) => PLAYS.findIndex((p) => p.id === r.play.id);
   return [...list].sort(
     (a, b) =>
       (b.expectedPoints ?? 0) - (a.expectedPoints ?? 0) || b.score - a.score || order(a) - order(b),
@@ -122,7 +134,7 @@ export function sortBySimulation(list: readonly Recommendation[]): Recommendatio
 
 /** 推薦（SPEC §6.3）：角色分配看適合度，排序看實際模擬的預期得分 */
 export function rankBySimulation(tactic: Tactic): Recommendation[] {
-  return sortBySimulation(PLAYS.map((play) => withSimulation(tactic, bestAssignment(tactic, play))));
+  return sortBySimulation(PLAYS.map((play) => withBestShot(tactic, play)));
 }
 
 /** 推薦結果只和球員、對位、掩護應對有關（和目前畫的路線無關），用來快取 */
@@ -163,7 +175,8 @@ export function recommend(
 const STRENGTH_SCORE = 3;
 
 const STYLE: Record<WeightKey, string> = {
-  shooting: '外線出手',
+  midRange: '中距離跳投',
+  threePoint: '弧外投籃',
   finishing: '切入或下順到籃下終結',
   iso: '持球單打',
   speed: '空切、背切或持球切入',
@@ -174,7 +187,7 @@ export interface Strength {
   playerId: string;
   key: WeightKey;
   score: number;
-  /** 例如「外線投射「優勢」」「比對位的防守者高 8 cm」 */
+  /** 例如「弧外投射「優勢」」「比對位的防守者高 8 cm」 */
   label: string;
   style: string;
   /** 由這位球員終結、而且看重這一項的戰術，最多 2 套 */
@@ -195,7 +208,7 @@ function strengthLabel(tactic: Tactic, blue: Player, key: WeightKey): string {
 
 /** ranked 預設為依預期得分排序的結果，總評的「最適合的戰術」才會跟推薦清單一致 */
 export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = rankBySimulation(tactic)): TeamSummary {
-  const keys: WeightKey[] = ['shooting', 'finishing', 'iso', 'speed', 'height'];
+  const keys: WeightKey[] = ['threePoint', 'midRange', 'finishing', 'iso', 'speed', 'height'];
   const strengths: Strength[] = [];
 
   for (const blue of tactic.players.filter((p) => p.team === 'blue')) {

@@ -3,18 +3,19 @@ import type { Player, Rating, Skills } from './types';
 // 球員能力模型，對應 SPEC §7。
 
 export const RATINGS: readonly Rating[] = [4, 3, 2, 1, 0];
-/** 等級名稱：藍隊四項能力與紅隊速度共用，以場上六個人的平均為基準 */
+/** 等級名稱：藍隊五項能力與紅隊速度共用，以場上六個人的平均為基準 */
 export const RATING_LABEL: Record<Rating, string> = { 4: '優勢', 3: '稍強', 2: '平均', 1: '稍弱', 0: '劣勢' };
 
 export const SKILL_LABEL: Record<keyof Skills, string> = {
-  shooting: '外線投射',
+  midRange: '中距離投射',
+  threePoint: '弧外投射',
   speed: '速度',
   finishing: '禁區終結',
   iso: '單打',
 };
 export const SKILL_KEYS = Object.keys(SKILL_LABEL) as (keyof Skills)[];
 
-export const DEFAULT_SKILLS: Skills = { shooting: 2, speed: 2, finishing: 2, iso: 2 };
+export const DEFAULT_SKILLS: Skills = { midRange: 2, threePoint: 2, speed: 2, finishing: 2, iso: 2 };
 
 export const HEIGHT_RANGE = { min: 150, max: 230 } as const;
 /** 沒填身高時使用的值；也是速度公式的身高基準（這個身高 = 基準速度） */

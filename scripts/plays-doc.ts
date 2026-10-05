@@ -25,7 +25,7 @@ import { SKILL_LABEL } from '../src/model/physique';
 import { RIM, resolvePoints } from '../src/model/paths';
 import type { Tactic, Vec2 } from '../src/model/types';
 import { wave } from '../src/render/paths';
-import { PLAYS, ROLES, type Role, type RoleWeights } from '../src/plays/library';
+import { PLAYS, ROLES, SHOT_LABEL, playVariant, type Play, type Role, type RoleWeights } from '../src/plays/library';
 import { loadPlay } from '../src/plays/instantiate';
 import { theme } from '../src/render/theme';
 
@@ -195,14 +195,13 @@ function weightText(w: RoleWeights): string {
 export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string> } {
   const svgs: Record<string, string> = {};
   const out: string[] = [
-    '# 內建戰術說明（草稿，待確認）',
+    '# 內建戰術說明',
     '',
-    `> ${PLAYS.length} 套內建進攻戰術的跑位，確認後就是 M6 戰術庫的資料（\`src/plays/library.ts\`）。`,
+    `> ${PLAYS.length} 套內建進攻戰術（\`src/plays/library.ts\`），由程式產生，不要手改（改完執行 \`npm run plays-doc\`）。`,
+    '> 跳投戰術有兩個出手點（中距離 / 弧外），戰術庫依球隊能力與設定兩個都模擬，選分數高的；兩個出手點的圖都列在下面。',
     '> 圖是用遊戲本身的路線與防守 AI 畫的：藍隊標角色字母 A / B / C，紅點是防守 AI 在該分鏡**開始時**的位置（預設身高 175 cm、換防），虛線圓是跑位終點，橘色小球是球。',
     '> 線條：實線箭頭＝跑位、波浪線＝運球、虛線＝傳球、T 字＝掩護、點狀弧線＋圈＝投籃。',
-    '> 計分採 FIBA 3x3：弧線（三分線，半徑 6.75 m）以內 1 分、以外 2 分，說明一律寫「弧內 / 弧外」。',
-    '',
-    '**請確認的地方**：每套的起始站位、跑位方向、誰終結、推薦時看重的能力。要改的話，直接告訴我「第 N 套的哪個分鏡改成…」即可。',
+    '> 說明中的分數以 FIBA 3x3 計：弧線（半徑 6.75 m）以內 1 分、以外 2 分；一般規則是 2 / 3 分。',
     '',
     '## 目錄',
     '',
@@ -210,10 +209,22 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
     '',
   ];
 
-  PLAYS.forEach((play, i) => {
+  /** 一個出手點版本：分鏡圖、終結與時間、各分鏡說明 */
+  const variantBody = (play: Play, svgId: string): string[] => {
     const tactic = loadPlay(createDefaultTactic(), play, { A: 'b1', B: 'b2', C: 'b3' });
     const tl = buildTimeline(tactic);
-    svgs[play.id] = playSvg(tactic);
+    svgs[svgId] = playSvg(tactic);
+    return [
+      `**終結**：${play.finish}　**時間**：約 ${tl.total.toFixed(1)} 秒，第 ${possessionSeconds(tl).toFixed(1)} 秒出手`,
+      '',
+      `![${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}](plays/${svgId}.svg)`,
+      '',
+      ...play.frames.map((fr, k) => `${k + 1}. ${fr.note}`),
+      '',
+    ];
+  };
+
+  PLAYS.forEach((play, i) => {
     out.push(
       `## ${i + 1}. ${play.category}-${play.name}`,
       '',
@@ -223,13 +234,19 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
       '|---|---|---|',
       ...ROLES.map((r) => `| **${r}**${r === play.ball ? '（開局持球）' : ''} | ${play.roles[r]} | ${weightText(play.weights[r])} |`),
       '',
-      `**終結**：${play.finish}　**時間**：約 ${tl.total.toFixed(1)} 秒，第 ${possessionSeconds(tl).toFixed(1)} 秒出手`,
-      '',
-      `![${play.category}-${play.name}](plays/${play.id}.svg)`,
-      '',
-      ...play.frames.map((fr, k) => `${k + 1}. ${fr.note}`),
-      '',
+      ...(play.shot ? [`**出手點：${SHOT_LABEL[play.shot]}**`, ''] : []),
+      ...variantBody(play, play.id),
     );
+    if (play.alt) {
+      const alt = playVariant(play, play.alt.shot);
+      out.push(
+        `### 另一個出手點：${SHOT_LABEL[alt.shot!]}`,
+        '',
+        `${alt.summary}終結者改看重：${weightText(alt.weights[alt.finisher])}。`,
+        '',
+        ...variantBody(alt, `${play.id}-${alt.shot}`),
+      );
+    }
   });
   return { markdown: out.join('\n'), svgs };
 }

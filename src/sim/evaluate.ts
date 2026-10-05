@@ -2,7 +2,7 @@ import { fullPoseAt, type Simulation } from '../anim/simulation';
 import { possessionSeconds, type Timeline } from '../anim/timeline';
 import { BASKET_Y, PAINT_DEPTH, PAINT_HALF_WIDTH, isBeyondArc } from '../court/fiba';
 import { PLAYER_RADIUS } from '../model/entities';
-import { RATING_LABEL, heightOf, skillsOf, speedOf } from '../model/physique';
+import { RATING_LABEL, SKILL_LABEL, heightOf, skillsOf, speedOf } from '../model/physique';
 import { scoreOf, scoringOf, shotClockOf } from '../model/scoring';
 import type { Grade, Player, Tactic, Vec2 } from '../model/types';
 import {
@@ -83,7 +83,7 @@ export function shotValue(
   const at = positions[playerId]!;
   const zone = zoneOf(at);
   const skills = skillsOf(shooter);
-  const baseRate = zone === 'paint' ? PAINT_RATE[skills.finishing] : zone === 'mid' ? MID_RATE[skills.shooting] : THREE_RATE[skills.shooting];
+  const baseRate = zone === 'paint' ? PAINT_RATE[skills.finishing] : zone === 'mid' ? MID_RATE[skills.midRange] : THREE_RATE[skills.threePoint];
   const shooterRimDist = dist(at, RIM);
 
   // 找干擾最大的防守者：距離越近、身高優勢越大，造成的命中率損失越多。
@@ -372,8 +372,10 @@ export function evaluate(tactic: Tactic, sim: Simulation): Evaluation {
   }
 
   // 6. 命中率：說明分數從哪裡來（沒有投籃就不說）
-  const skillName = shot.zone === 'paint' ? '禁區終結' : '外線投射';
-  const skillValue = shot.zone === 'paint' ? skillsOf(players.find((p) => p.id === shot.playerId)!).finishing : skillsOf(players.find((p) => p.id === shot.playerId)!).shooting;
+  // 用到的能力：禁區看禁區終結、中距離看中距離投射、弧外看弧外投射
+  const skillKey = shot.zone === 'paint' ? 'finishing' : shot.zone === 'mid' ? 'midRange' : 'threePoint';
+  const skillName = SKILL_LABEL[skillKey];
+  const skillValue = skillsOf(players.find((p) => p.id === shot.playerId)!)[skillKey];
   const finalRate = shot.expectedPoints / shot.points;
   if (shotPath) comments.push({
     text: `${name(shot.playerId)} 的${skillName}「${RATING_LABEL[skillValue]}」，${ZONE_LABEL[shot.zone]}空檔命中率 ${Math.round(shot.baseRate * 100)}%${finalRate < shot.baseRate - 0.005 ? `，受干擾後剩 ${Math.round(finalRate * 100)}%` : ''}${mismatchText(shot)}`,

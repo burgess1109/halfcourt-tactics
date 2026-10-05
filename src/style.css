@@ -1473,3 +1473,33 @@ body[data-screen='board'] .app {
   opacity: 0.4;
   cursor: default;
 }
+
+/* 戰術庫：跳投戰術的出手點（中距離 / 弧外） */
+.play-item__shot {
+  color: #c9ccd3;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.play-item__shots {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 0 12px;
+}
+
+.play-item__shot-btn {
+  padding: 4px 10px;
+  border: 1px solid #3a3d45;
+  border-radius: 999px;
+  background: #22252b;
+  color: #c9ccd3;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.play-item__shot-btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: #2c2620;
+  color: #fff;
+}

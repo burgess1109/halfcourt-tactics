@@ -11,7 +11,8 @@ export type Mode = 'offense' | 'defense';
 export type Rating = 0 | 1 | 2 | 3 | 4;
 
 export interface Skills {
-  shooting: Rating; // 外線投射
+  midRange: Rating; // 中距離投射（弧內、禁區外的跳投）
+  threePoint: Rating; // 弧外投射
   speed: Rating; // 速度
   finishing: Rating; // 禁區終結
   iso: Rating; // 單打
@@ -58,6 +59,9 @@ export interface Frame {
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 
+/** 跳投的出手點：中距離（弧內、禁區外）或弧外 */
+export type ShotZone = 'mid' | 'three';
+
 /** 計分規則（SPEC §6.4）：fiba3x3 = 弧內 1 分、弧外 2 分、12 秒；standard = 弧內 2 分、弧外 3 分、24 秒 */
 export type ScoringRule = 'fiba3x3' | 'standard';
 
@@ -94,8 +98,8 @@ export interface Tactic {
   /** 持球者切入時：不補防 / 弱邊補防（SPEC §6.2） */
   driveHelp: DriveHelp;
   /**
-   * 自動防守跑位（SPEC §6.2）。false 時紅隊不會自動移動：每個分鏡開始時的紅隊位置由使用者拖曳決定
-   * （存在 Frame.start），播放時在分鏡之間直線移動。
+   * 自動防守跑位（SPEC §6.2）。false 時紅隊不會自動移動，規則和藍隊一樣：
+   * 第 1 個分鏡拖曳開局位置（redStarts），用跑位路線（kind: 'cut'）移動。
    */
   autoDefense: boolean;
   /** 計分規則（SPEC §6.4），預設 FIBA 3x3 */
@@ -105,7 +109,8 @@ export interface Tactic {
    * 沒拖過的紅隊每次都依對位、防守距離重新站位；改對位、清空戰術、載入內建戰術時清空。
    */
   redStarts?: Record<string, Vec2>;
-  basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean };
+  /** 從戰術庫載入時；shot：跳投戰術用的出手點 */
+  basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean; shot?: ShotZone };
   players: Player[];
   frames: Frame[];
   /** 上次播放的評分：評等、預期得分、0–100 分 */

@@ -38,9 +38,9 @@ describe('設定頁表單', () => {
     const t = createDefaultTactic();
     const b1 = t.players.find((p) => p.id === 'b1')!;
     b1.heightCm = 190;
-    applyPatch(b1, { id: 'b1', number: 5, name: '阿明', heightCm: undefined, skills: { ...DEFAULT_SKILLS, shooting: 4 } });
+    applyPatch(b1, { id: 'b1', number: 5, name: '阿明', heightCm: undefined, skills: { ...DEFAULT_SKILLS, threePoint: 4 } });
     expect(b1).not.toHaveProperty('heightCm');
-    expect(b1.skills!.shooting).toBe(4);
+    expect(b1.skills!.threePoint).toBe(4);
     const r1 = t.players.find((p) => p.id === 'r1')!;
     applyPatch(r1, { id: 'r1', number: 5, name: '對手', heightCm: 200, skills: DEFAULT_SKILLS });
     expect(r1).not.toHaveProperty('skills');

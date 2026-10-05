@@ -3,13 +3,13 @@ import { createDefaultTactic } from '../model/defaults';
 import { Store } from '../model/store';
 import type { Rating, Skills, Tactic } from '../model/types';
 import { loadPlay } from './instantiate';
-import { PLAYS } from './library';
+import { PLAYS, playVariant } from './library';
 import { attributeScore, bestAssignment, rankPlays, recommend, scoreAssignment } from './recommend';
 
 function team(skills: Partial<Record<'b1' | 'b2' | 'b3', Partial<Skills>>>, heights?: Record<string, number>): Tactic {
   const t = createDefaultTactic();
   for (const p of t.players) {
-    if (p.team === 'blue') p.skills = { shooting: 2, speed: 2, finishing: 2, iso: 2, ...skills[p.id as 'b1'] };
+    if (p.team === 'blue') p.skills = { midRange: 2, threePoint: 2, speed: 2, finishing: 2, iso: 2, ...skills[p.id as 'b1'] };
     if (heights?.[p.id] !== undefined) p.heightCm = heights[p.id];
   }
   return t;
@@ -17,9 +17,9 @@ function team(skills: Partial<Record<'b1' | 'b2' | 'b3', Partial<Skills>>>, heig
 
 describe('推薦演算法', () => {
   it('能力分數直接用等級；身高、速度跟對位的防守者比', () => {
-    const t = team({ b1: { shooting: 4 } }, { b1: 185, r1: 175 });
+    const t = team({ b1: { threePoint: 4 } }, { b1: 185, r1: 175 });
     const b1 = t.players.find((p) => p.id === 'b1')!;
-    expect(attributeScore(t, b1, 'shooting')).toBe(4);
+    expect(attributeScore(t, b1, 'threePoint')).toBe(4);
     expect(attributeScore(t, b1, 'height')).toBe(4); // 高 10 cm = 兩級
     // 高 10 cm 的人慢 3%（身高係數 0.97）→ 速度分數 2 − 0.6
     expect(attributeScore(t, b1, 'speed')).toBeCloseTo(1.4);
@@ -35,15 +35,15 @@ describe('推薦演算法', () => {
     expect(ranked[0]!.reason).toContain('能力都在平均水準');
   });
 
-  it('外線優勢的球員會被排到投籃的角色，推薦投籃類戰術', () => {
-    const t = team({ b3: { shooting: 4 } });
+  it('弧外投射優勢的球員會被排到投籃的角色，推薦投籃類戰術', () => {
+    const t = team({ b3: { threePoint: 4 } });
     const top = recommend(t);
     expect(top).toHaveLength(5);
     const first = top[0]!;
-    expect(first.play.weights[first.play.finisher].shooting).toBeGreaterThan(0);
+    expect(first.play.weights[first.play.finisher].threePoint).toBeGreaterThan(0);
     expect(first.roles[first.play.finisher]).toBe('b3');
     expect(first.reason).toContain('3 號');
-    expect(first.reason).toContain('3 號 球員 3 的外線投射「優勢」');
+    expect(first.reason).toContain('3 號 球員 3 的弧外投射「優勢」');
   });
 
   it('速度和單打優勢、對上慢的防守者 → 推薦切入、單打類戰術', () => {
@@ -54,7 +54,7 @@ describe('推薦演算法', () => {
     for (const r of top) expect(r.roles[r.play.finisher]).toBe('b1');
     // 投籃類戰術（終結者看重外線）都排在後面
     const ranked = rankPlays(t).map((r) => r.play);
-    const firstShooting = ranked.findIndex((p) => (p.weights[p.finisher].shooting ?? 0) > 0);
+    const firstShooting = ranked.findIndex((p) => (p.weights[p.finisher].threePoint ?? 0) > 0);
     expect(firstShooting).toBeGreaterThanOrEqual(5);
   });
 
@@ -143,25 +143,25 @@ describe('球隊總評', () => {
 
   it('列出每個人的強項、對應的戰術類型與例子，並給整體建議', async () => {
     const { teamSummary } = await import('./recommend');
-    const t = team({ b3: { shooting: 4 }, b2: { finishing: 3 } }, { b1: 180, b2: 198, b3: 185, r1: 180, r2: 185, r3: 185 });
+    const t = team({ b3: { threePoint: 4 }, b2: { finishing: 3 } }, { b1: 180, b2: 198, b3: 185, r1: 180, r2: 185, r3: 185 });
     // 預設對位依身高：b2(198)→r2/r3(185)… 讓 b2 有身高優勢
     const s = teamSummary(t);
-    const shooter = s.strengths.find((x) => x.playerId === 'b3' && x.key === 'shooting')!;
-    expect(shooter.label).toBe('外線投射「優勢」');
-    expect(shooter.style).toBe('外線出手');
+    const shooter = s.strengths.find((x) => x.playerId === 'b3' && x.key === 'threePoint')!;
+    expect(shooter.label).toBe('弧外投射「優勢」');
+    expect(shooter.style).toBe('弧外投籃');
     expect(shooter.examples.length).toBeGreaterThan(0);
-    for (const p of shooter.examples) expect(p.weights[p.finisher].shooting).toBeGreaterThan(0);
+    for (const p of shooter.examples) expect(p.weights[p.finisher].threePoint).toBeGreaterThan(0);
     expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'finishing')).toBe(true);
     expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'height')).toBe(true);
-    // 最強的是 3 號的外線，第二選擇是另一個人
-    expect(s.advice).toMatch(/^建議以 3 號 球員 3 的外線出手為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」（預期 [SABCD]）。$/);
+    // 最強的是 3 號的弧外投射，第二選擇是另一個人
+    expect(s.advice).toMatch(/^建議以 3 號 球員 3 的弧外投籃為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」（預期 [SABCD]）。$/);
   });
 });
 
 describe('空白戰術', () => {
   it('保留球員資料、對位與掩護應對，跑位清空、只剩一個分鏡、不再標示內建戰術', async () => {
     const { createBlankTactic } = await import('../model/defaults');
-    const base = team({ b3: { shooting: 4 } }, { b1: 180, b2: 198, b3: 185 });
+    const base = team({ b3: { threePoint: 4 } }, { b1: 180, b2: 198, b3: 185 });
     base.matchups = { b1: 'r3', b2: 'r2', b3: 'r1' };
     base.screenDefense = 'fight-over';
     base.players.find((p) => p.id === 'b1')!.name = '小明';
@@ -183,7 +183,7 @@ describe('依實際模擬的預期得分排序', () => {
     const { rankBySimulation } = await import('./recommend');
     const { simulate } = await import('../anim/simulation');
     const { evaluate } = await import('../sim/evaluate');
-    const t = team({ b1: { iso: 3 }, b2: { finishing: 3 }, b3: { shooting: 4 } }, { b1: 180, b2: 198, b3: 185 });
+    const t = team({ b1: { iso: 3 }, b2: { finishing: 3 }, b3: { threePoint: 4 } }, { b1: 180, b2: 198, b3: 185 });
     const ranked = rankBySimulation(t);
     expect(ranked).toHaveLength(PLAYS.length);
     for (let i = 1; i < ranked.length; i++) {
@@ -273,5 +273,51 @@ describe('小球場拖曳範圍', () => {
     const view = { minX: -8.3, maxX: 8.3, minY: -0.8, maxY: 11.2 };
     const moved = moveInLineup(DEFAULT_LINEUP, 'b2', { x: -5, y: 13 }, view);
     expect(moved.positions.b2!.y).toBeCloseTo(11.2 - PLAYER_RADIUS);
+  });
+});
+
+describe('跳投戰術的出手點（中距離 / 弧外）', () => {
+  const pop = () => PLAYS.find((p) => p.id === 'high-pnr-pop')!;
+
+  it('兩個出手點都模擬，選分數高的；中距離型射手選中距離、弧外型射手選弧外', async () => {
+    const { withBestShot } = await import('./recommend');
+    const mid = withBestShot(team({ b1: { midRange: 4, threePoint: 0 }, b2: { midRange: 4, threePoint: 0 }, b3: { midRange: 4, threePoint: 0 } }), pop());
+    expect(mid.play.shot).toBe('mid');
+    const three = withBestShot(team({ b1: { midRange: 0, threePoint: 4 }, b2: { midRange: 0, threePoint: 4 }, b3: { midRange: 0, threePoint: 4 } }), pop());
+    expect(three.play.shot).toBe('three');
+    // 兩個版本都保留，戰術庫可以切換；選中的是分數比較高的那一個
+    expect(mid.alternatives!.map((a) => a.play.shot).sort()).toEqual(['mid', 'three']);
+    for (const r of [mid, three]) {
+      for (const a of r.alternatives!) expect(r.expectedPoints!).toBeGreaterThanOrEqual(a.expectedPoints!);
+    }
+  });
+
+  it('終結者依出手點找最適合的人：中距離版給中距離好的人、弧外版給弧外好的人', async () => {
+    const { withBestShot } = await import('./recommend');
+    const t = team({ b1: { midRange: 4 }, b3: { threePoint: 4 } });
+    const r = withBestShot(t, pop());
+    const byShot = Object.fromEntries(r.alternatives!.map((a) => [a.play.shot, a]));
+    expect(byShot.mid!.roles[byShot.mid!.play.finisher]).toBe('b1');
+    expect(byShot.three!.roles[byShot.three!.play.finisher]).toBe('b3');
+  });
+
+  it('計分規則會影響選擇：同樣的射手，一般規則下的中距離比 FIBA 3x3 更有利', async () => {
+    const { withBestShot } = await import('./recommend');
+    const t = team({});
+    const fiba = withBestShot(t, pop());
+    const std = withBestShot({ ...t, scoring: 'standard' }, pop());
+    const gap = (r: typeof fiba) => {
+      const by = Object.fromEntries(r.alternatives!.map((a) => [a.play.shot, a.gradeScore!]));
+      return by.mid! - by.three!;
+    };
+    expect(gap(std)).toBeGreaterThan(gap(fiba));
+  });
+
+  it('載入時記住出手點，戰術名稱也標示出來', async () => {
+    const { playTitle } = await import('../ui/library');
+    const alt = playVariant(pop(), 'mid');
+    const t = loadPlay(createDefaultTactic(), alt, { A: 'b1', B: 'b2', C: 'b3' });
+    expect(t.basedOn).toMatchObject({ playId: 'high-pnr-pop', shot: 'mid' });
+    expect(playTitle(alt)).toBe('高位擋拆-Pick and Pop（中距離）');
   });
 });

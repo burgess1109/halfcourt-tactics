@@ -151,7 +151,7 @@ describe('整套戰術的評分', () => {
     const t = createDefaultTactic();
     putPath(t.frames[0]!, makeShot('b1', t.frames[0]!));
     // 把 b3 的防守者換到很遠：直接讓 b1 出手、b3 在弧外完全空檔
-    t.players.find((p) => p.id === 'b3')!.skills!.shooting = 4;
+    Object.assign(t.players.find((p) => p.id === 'b3')!.skills!, { midRange: 4, threePoint: 4 });
     t.matchups = { b1: 'r1', b2: 'r2', b3: 'r3' };
     const sim = simulate(t);
     sim.defense.red.r3 = sim.defense.red.r3!.map(() => ({ x: -7, y: 14 }));

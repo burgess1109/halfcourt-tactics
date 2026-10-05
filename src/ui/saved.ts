@@ -2,8 +2,8 @@ import { newId } from '../model/id';
 import { SaveError, type SavedSummary, type SavedTactics } from '../model/savedTactics';
 import { TacticFormatError, fromJsonFile, jsonFileName, nameError, toJsonFile } from '../model/serialize';
 import type { Store } from '../model/store';
-import type { Tactic } from '../model/types';
-import { PLAYS } from '../plays/library';
+import type { ShotZone, Tactic } from '../model/types';
+import { basePlay, playVariant } from '../plays/library';
 import { playTitle } from './library';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -35,10 +35,10 @@ export function downloadText(filename: string, text: string): void {
 const timeText = (ts: number) =>
   new Date(ts).toLocaleString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-/** 內建戰術的名稱（找不到時回傳 null） */
-const basedTitle = (playId: string | undefined) => {
-  const play = playId ? PLAYS.find((p) => p.id === playId) : undefined;
-  return play ? playTitle(play) : null;
+/** 內建戰術的名稱，跳投戰術含出手點（找不到時回傳 null） */
+const basedTitle = (playId: string | undefined, shot?: ShotZone) => {
+  const play = playId ? basePlay(playId) : undefined;
+  return play ? playTitle(playVariant(play, shot)) : null;
 };
 
 export interface SavedUi {
@@ -86,7 +86,7 @@ export function attachSaved(
     const t = s.tactic;
     let name = t.name;
     if (!name || s.readonly) {
-      const suggestion = name || (t.basedOn && !t.basedOn.modified ? basedTitle(t.basedOn.playId) : null) || '';
+      const suggestion = name || (t.basedOn && !t.basedOn.modified ? basedTitle(t.basedOn.playId, t.basedOn.shot) : null) || '';
       const asked = await opts.askName({
         title: s.readonly ? '另存到我的戰術列表' : '存檔',
         initial: suggestion,
@@ -131,7 +131,7 @@ export function attachSaved(
         const dirty = saved.savedUpdatedAt(t.id) !== t.updatedAt;
         text = dirty ? `${t.name}・未存檔` : t.name;
       } else if (t.basedOn) {
-        const based = basedTitle(t.basedOn.playId);
+        const based = basedTitle(t.basedOn.playId, t.basedOn.shot);
         if (based) text = t.basedOn.modified ? `根據「${based}」修改` : based;
       }
     }
@@ -196,7 +196,7 @@ export function attachSaved(
 
   const row = (item: SavedSummary) => {
     const current = store.get().tactic.id === item.id && !store.get().readonly;
-    const based = basedTitle(item.playId);
+    const based = basedTitle(item.playId, item.shot);
     const meta = [timeText(item.updatedAt), based && `根據「${based}」`].filter(Boolean).join('・');
     const grade = item.grade
       ? [el('span', { class: 'play-item__grade', 'data-grade': item.grade }, `${item.grade} ${Math.round(item.score!)} 分`)]

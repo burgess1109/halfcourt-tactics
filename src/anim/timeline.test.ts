@@ -32,7 +32,7 @@ describe('速度模型', () => {
     expect(speedOf({ ...r1, speedRating: 4 }, t.players, false)).toBeCloseTo(BASE_SPEED * 1.1);
     expect(speedOf({ ...r1, speedRating: 0 }, t.players, false)).toBeCloseTo(BASE_SPEED * 0.9);
     // 紅隊不受藍隊能力欄位影響
-    expect(speedOf({ ...r1, skills: { shooting: 2, speed: 4, finishing: 2, iso: 2 } }, t.players, false)).toBeCloseTo(BASE_SPEED);
+    expect(speedOf({ ...r1, skills: { midRange: 2, threePoint: 2, speed: 4, finishing: 2, iso: 2 } }, t.players, false)).toBeCloseTo(BASE_SPEED);
   });
 
   it('紅隊沒填身高時跟藍隊同順序球員一樣', () => {

@@ -33,7 +33,7 @@ const BLUE_IDS = ['b1', 'b2', 'b3'] as const;
 const RED_IDS = ['r1', 'r2', 'r3'] as const;
 const PATH_KINDS = ['cut', 'dribble', 'pass', 'screen', 'shot'] as const;
 const GRADES: readonly Grade[] = ['S', 'A', 'B', 'C', 'D'];
-const SKILL_KEYS = ['shooting', 'speed', 'finishing', 'iso'] as const;
+const SKILL_KEYS = ['midRange', 'threePoint', 'speed', 'finishing', 'iso'] as const;
 /** 座標可以稍微超出畫面（拖曳時圓心最多到邊緣） */
 const COORD_SLACK = 1;
 
@@ -83,12 +83,14 @@ function parsePlayer(v: unknown, id: string): Player {
   if (team === 'blue') {
     const s = obj(o.skills, `球員 ${id} 的能力`);
     p.skills = {
-      shooting: rating(s.shooting, `球員 ${id} 的能力`),
+      // 舊資料只有一項「外線投射」（shooting）：中距離與弧外都用它
+      midRange: rating(s.midRange ?? s.shooting, `球員 ${id} 的能力`),
+      threePoint: rating(s.threePoint ?? s.shooting, `球員 ${id} 的能力`),
       speed: rating(s.speed, `球員 ${id} 的能力`),
       finishing: rating(s.finishing, `球員 ${id} 的能力`),
       iso: rating(s.iso, `球員 ${id} 的能力`),
     };
-    for (const k of Object.keys(s)) if (!SKILL_KEYS.includes(k as never)) fail(`球員 ${id} 的能力`);
+    for (const k of Object.keys(s)) if (!SKILL_KEYS.includes(k as never) && k !== 'shooting') fail(`球員 ${id} 的能力`);
   } else if (o.speedRating !== undefined && o.speedRating !== 2) {
     p.speedRating = rating(o.speedRating, `球員 ${id} 的速度`);
   }
@@ -233,7 +235,12 @@ export function parseTactic(data: unknown): ParseResult {
     const r = obj(b.roles, '戰術來源');
     const roles = { A: oneOf(r.A, BLUE_IDS, '角色'), B: oneOf(r.B, BLUE_IDS, '角色'), C: oneOf(r.C, BLUE_IDS, '角色') };
     if (new Set(Object.values(roles)).size !== 3) fail('角色');
-    tactic.basedOn = { playId: str(b.playId, '戰術來源'), roles, modified: bool(b.modified, '戰術來源') };
+    tactic.basedOn = {
+      playId: str(b.playId, '戰術來源'),
+      roles,
+      modified: bool(b.modified, '戰術來源'),
+      ...(b.shot !== undefined && { shot: oneOf(b.shot, ['mid', 'three'] as const, '戰術來源') }),
+    };
   }
   if (o.lastResult !== undefined) {
     const r = obj(o.lastResult, '評分');

@@ -1,6 +1,6 @@
 import { newId } from './id';
 import { TACTIC_NAME_MAX, parseTactic } from './serialize';
-import type { Grade, Mode, Tactic } from './types';
+import type { Grade, Mode, ShotZone, Tactic } from './types';
 
 // 存在 localStorage 的戰術列表（SPEC §8）：開啟、重新命名、複製、刪除。
 
@@ -18,6 +18,8 @@ export interface SavedSummary {
   updatedAt: number;
   /** 根據的內建戰術 */
   playId?: string;
+  /** 跳投戰術的出手點 */
+  shot?: ShotZone;
 }
 
 /** 只需要讀寫，測試時可以換成記憶體版本 */
@@ -32,7 +34,7 @@ const summaryOf = (t: Tactic): SavedSummary => ({
   mode: t.mode,
   ...(t.lastResult && { grade: t.lastResult.grade, expectedPoints: t.lastResult.expectedPoints, score: t.lastResult.score }),
   updatedAt: t.updatedAt,
-  ...(t.basedOn && { playId: t.basedOn.playId }),
+  ...(t.basedOn && { playId: t.basedOn.playId, ...(t.basedOn.shot && { shot: t.basedOn.shot }) }),
 });
 
 /** 「X 複本」，超過長度上限時截短名稱 */

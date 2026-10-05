@@ -146,7 +146,7 @@ export function attachSetup(
         Number(card.querySelector<HTMLInputElement>(`input[name="${p.id}-${key}"]:checked`)!.value) as Rating;
       const skills: Skills | undefined =
         team === 'blue'
-          ? { shooting: pick('shooting'), speed: pick('speed'), finishing: pick('finishing'), iso: pick('iso') }
+          ? { midRange: pick('midRange'), threePoint: pick('threePoint'), speed: pick('speed'), finishing: pick('finishing'), iso: pick('iso') }
           : undefined;
       const speedRating = team === 'red' ? pick('speed') : undefined;
       return { id: p.id, number: value('number'), name: value('name'), height: value('height'), skills, speedRating };

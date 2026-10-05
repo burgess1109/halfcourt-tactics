@@ -2,7 +2,7 @@ import { isBlueComplete } from '../model/playerForm';
 import type { Store } from '../model/store';
 import type { Player } from '../model/types';
 import { loadPlay, type RoleAssignment } from '../plays/instantiate';
-import { PLAYS, ROLES, type Play } from '../plays/library';
+import { PLAYS, ROLES, SHOT_LABEL, type Play } from '../plays/library';
 import { createBlankTactic } from '../model/defaults';
 import {
   bestAssignment,
@@ -10,7 +10,7 @@ import {
   recommendationKey,
   sortBySimulation,
   teamSummary,
-  withSimulation,
+  withBestShot,
   type Recommendation,
 } from '../plays/recommend';
 
@@ -30,7 +30,8 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-export const playTitle = (play: Play) => `${play.category}-${play.name}`;
+/** 戰術名稱；跳投戰術加上出手點，例如「高位擋拆-Pick and Pop（中距離）」 */
+export const playTitle = (play: Play) => `${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}`;
 
 /**
  * 戰術庫面板（SPEC §6.3）：資料完整時先列出 5 套推薦，下面是全部戰術。
@@ -57,9 +58,12 @@ export function attachLibrary(
     opts.onLoaded();
   };
 
-  const item = (rec: Recommendation, text: string, rank?: number) => {
+  /** text：說明文字（推薦清單用推薦理由、全部清單用戰術簡介），切換出手點時跟著換 */
+  const item = (rec: Recommendation, textOf: (r: Recommendation) => string, rank?: number): HTMLLIElement => {
     const { play, roles } = rec;
-    const current = store.get().tactic.basedOn?.playId === play.id;
+    const text = textOf(rec);
+    const based = store.get().tactic.basedOn;
+    const current = based?.playId === play.id && (based.shot ?? null) === (play.shot ?? null);
     const expected = rec.grade
       ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, `預期 ${rec.grade} ${Math.round(rec.gradeScore!)} 分`)]
       : [];
@@ -67,12 +71,34 @@ export function attachLibrary(
       'button',
       { type: 'button', class: `play-item${rank ? '' : ' play-item--plain'}`, 'aria-current': String(current) },
       ...(rank ? [el('span', { class: 'play-item__rank' }, String(rank))] : []),
-      el('span', { class: 'play-item__name' }, el('span', { class: 'play-item__cat' }, play.category), play.name, ...expected),
+      el(
+        'span',
+        { class: 'play-item__name' },
+        el('span', { class: 'play-item__cat' }, play.category),
+        play.name,
+        ...(play.shot ? [el('span', { class: 'play-item__shot' }, `（${SHOT_LABEL[play.shot]}）`)] : []),
+        ...expected,
+      ),
       el('span', { class: 'play-item__text' }, text),
       el('span', { class: 'play-item__roles' }, rolesText(play, roles)),
     );
     button.addEventListener('click', () => choose(play, roles));
-    return el('li', {}, button);
+    const li = el('li', {}, button);
+    // 跳投戰術：切換出手點（預設是模擬分數比較高的那一個）
+    if (rec.alternatives) {
+      const shots = el('div', { class: 'play-item__shots', role: 'group', 'aria-label': '出手點' });
+      for (const alt of rec.alternatives) {
+        const b = el(
+          'button',
+          { type: 'button', class: 'play-item__shot-btn', 'aria-pressed': String(alt.play.shot === play.shot) },
+          `${SHOT_LABEL[alt.play.shot!]}${alt.grade ? ` ${alt.grade} ${Math.round(alt.gradeScore!)} 分` : ''}`,
+        );
+        b.addEventListener('click', () => li.replaceWith(item({ ...alt, alternatives: rec.alternatives }, textOf, rank)));
+        shots.append(b);
+      }
+      li.append(shots);
+    }
+    return li;
   };
 
   const render = (ranked: readonly Recommendation[]) => {
@@ -122,7 +148,7 @@ export function attachLibrary(
 
       body.append(el('h3', { class: 'lib-section' }, '推薦給你的球隊'));
       const list = el('ol', { class: 'lib-list' });
-      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(rec, rec.reason, i + 1)));
+      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(rec, (r) => r.reason, i + 1)));
       body.append(list);
     } else {
       const go = el('button', { type: 'button', class: 'btn' }, '去填身高');
@@ -138,7 +164,7 @@ export function attachLibrary(
       body.append(el('h3', { class: 'lib-section' }, category));
       const list = el('ul', { class: 'lib-list' });
       for (const play of PLAYS.filter((p) => p.category === category)) {
-        list.append(item(byPlay.get(play.id) ?? bestAssignment(t, play), play.summary));
+        list.append(item(byPlay.get(play.id) ?? bestAssignment(t, play), (r) => r.play.summary));
       }
       body.append(list);
     }
@@ -171,7 +197,7 @@ export function attachLibrary(
         // 讓瀏覽器先畫出進度，再算下一套
         await new Promise((resolve) => setTimeout(resolve, 0));
         if (id !== run || !dialog.open) return;
-        results.push(withSimulation(t, bestAssignment(t, play)));
+        results.push(withBestShot(t, play));
       }
       cache = { key, ranked: sortBySimulation(results) };
     }
