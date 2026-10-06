@@ -18,7 +18,7 @@ export interface SavedSummary {
   updatedAt: number;
   /** 根據的內建戰術 */
   playId?: string;
-  /** 跳投戰術的出手點 */
+  /** 有多個出手點的戰術用的出手點 */
   shot?: ShotZone;
 }
 

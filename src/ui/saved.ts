@@ -35,7 +35,7 @@ export function downloadText(filename: string, text: string): void {
 const timeText = (ts: number) =>
   new Date(ts).toLocaleString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-/** 內建戰術的名稱，跳投戰術含出手點（找不到時回傳 null） */
+/** 內建戰術的名稱，有多個出手點的戰術含出手點（找不到時回傳 null） */
 const basedTitle = (playId: string | undefined, shot?: ShotZone) => {
   const play = playId ? basePlay(playId) : undefined;
   return play ? playTitle(playVariant(play, shot)) : null;

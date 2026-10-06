@@ -62,7 +62,7 @@ src/
     simulation.ts    時間軸 + 防守模擬 = 完整姿態
     playback.ts      requestAnimationFrame 播放
   plays/           內建戰術庫
-    library.ts       21 套戰術，用角色 A / B / C 描述；8 套跳投戰術有兩個出手點（playVariant）
+    library.ts       21 套戰術，用角色 A / B / C 描述；8 套跳投戰術有中距離、弧外兩個出手點，Spain 另有換人出手的禁區出手點（playVariant）
     instantiate.ts   loadPlay：依角色指派載入成戰術「複本」（不會改到內建資料）
     recommend.ts     推薦演算法：能力 + 對位的身高差、速度差，6 種角色排列取最高分
   render/          Canvas 繪圖（球場離屏快取、球員、路線、分身、把手）

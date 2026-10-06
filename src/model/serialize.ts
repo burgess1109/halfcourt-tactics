@@ -239,7 +239,7 @@ export function parseTactic(data: unknown): ParseResult {
       playId: str(b.playId, '戰術來源'),
       roles,
       modified: bool(b.modified, '戰術來源'),
-      ...(b.shot !== undefined && { shot: oneOf(b.shot, ['mid', 'three'] as const, '戰術來源') }),
+      ...(b.shot !== undefined && { shot: oneOf(b.shot, ['paint', 'mid', 'three'] as const, '戰術來源') }),
     };
   }
   if (o.lastResult !== undefined) {

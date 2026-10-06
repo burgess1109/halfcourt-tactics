@@ -198,7 +198,7 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
     '# 內建戰術說明',
     '',
     `> ${PLAYS.length} 套內建進攻戰術（\`src/plays/library.ts\`），由程式產生，不要手改（改完執行 \`npm run plays-doc\`）。`,
-    '> 跳投戰術有兩個出手點（中距離 / 弧外），戰術庫依球隊能力與設定兩個都模擬，選分數高的；兩個出手點的圖都列在下面。',
+    '> 跳投戰術有中距離、弧外兩個出手點；Spain Pick and Roll 還可以改傳給下順的掩護者在禁區出手。戰術庫依球隊能力與設定把每個出手點都模擬一次，選分數高的；每個出手點的圖都列在下面。',
     '> 圖是用遊戲本身的路線與防守 AI 畫的：藍隊標角色字母 A / B / C，紅點是防守 AI 在該分鏡**開始時**的位置（預設身高 175 cm、換防），虛線圓是跑位終點，橘色小球是球。',
     '> 線條：實線箭頭＝跑位、波浪線＝運球、虛線＝傳球、T 字＝掩護、點狀弧線＋圈＝投籃。',
     '> 說明中的分數以 FIBA 3x3 計：弧線（半徑 6.75 m）以內 1 分、以外 2 分；一般規則是 2 / 3 分。',
@@ -237,14 +237,15 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
       ...(play.shot ? [`**出手點：${SHOT_LABEL[play.shot]}**`, ''] : []),
       ...variantBody(play, play.id),
     );
-    if (play.alt) {
-      const alt = playVariant(play, play.alt.shot);
+    for (const { shot } of play.alts ?? []) {
+      const alt = playVariant(play, shot);
+      const who = alt.finisher === play.finisher ? '終結者改看重' : `改由 ${alt.finisher} 出手，看重`;
       out.push(
-        `### 另一個出手點：${SHOT_LABEL[alt.shot!]}`,
+        `### 另一個出手點：${SHOT_LABEL[shot]}`,
         '',
-        `${alt.summary}終結者改看重：${weightText(alt.weights[alt.finisher])}。`,
+        `${alt.summary}${who}：${weightText(alt.weights[alt.finisher])}。`,
         '',
-        ...variantBody(alt, `${play.id}-${alt.shot}`),
+        ...variantBody(alt, `${play.id}-${shot}`),
       );
     }
   });

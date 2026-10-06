@@ -322,6 +322,36 @@ describe('跳投戰術的出手點（中距離 / 弧外）', () => {
   });
 });
 
+describe('Spain Pick and Roll：依防守選擇傳給外拉的 C 或下順的 B', () => {
+  const spain = () => PLAYS.find((p) => p.id === 'high-pnr-spain')!;
+
+  it('三個出手點都模擬；對方擠過沉退時傳給下順的 B（背掩護擋住沉退的防守者），換防時傳給外拉的 C', async () => {
+    const { withBestShot } = await import('./recommend');
+    const drop = withBestShot({ ...createDefaultTactic(), screenDefense: 'fight-over', pickCoverage: 'drop' }, spain());
+    expect(drop.alternatives!.map((a) => a.play.shot).sort()).toEqual(['mid', 'paint', 'three']);
+    expect(drop.play.shot).toBe('paint');
+    expect(drop.play.finisher).toBe('B');
+    const sw = withBestShot({ ...createDefaultTactic(), screenDefense: 'switch' }, spain());
+    expect(sw.play.shot).toBe('three');
+  });
+
+  it('沉退時，Spain 的下順比一般的 Pick and Roll 空（背掩護真的有效果）', async () => {
+    const { withBestShot } = await import('./recommend');
+    const t = { ...createDefaultTactic(), screenDefense: 'fight-over' as const, pickCoverage: 'drop' as const };
+    const paint = withBestShot(t, spain()).alternatives!.find((a) => a.play.shot === 'paint')!;
+    const roll = withBestShot(t, PLAYS.find((p) => p.id === 'high-pnr-roll')!);
+    expect(paint.gradeScore!).toBeGreaterThan(roll.gradeScore! + 20);
+  });
+
+  it('載入時記住禁區出手點，戰術名稱也標示出來', async () => {
+    const { playTitle } = await import('../ui/library');
+    const alt = playVariant(spain(), 'paint');
+    const t = loadPlay(createDefaultTactic(), alt, { A: 'b1', B: 'b2', C: 'b3' });
+    expect(t.basedOn).toMatchObject({ playId: 'high-pnr-spain', shot: 'paint' });
+    expect(playTitle(alt)).toBe('高位擋拆-Spain Pick and Roll（禁區）');
+  });
+});
+
 describe('球隊總評：跳投戰術的另一個出手點也能當例子', () => {
   it('中距離強項的人，即使五套跳投戰術都選了弧外版，也找得到中距離版的例子', async () => {
     const { teamSummary, rankBySimulation } = await import('./recommend');

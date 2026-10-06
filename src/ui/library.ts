@@ -30,7 +30,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-/** 戰術名稱；跳投戰術加上出手點，例如「高位擋拆-Pick and Pop（中距離）」 */
+/** 戰術名稱；有多個出手點的戰術加上出手點，例如「高位擋拆-Pick and Pop（中距離）」 */
 export const playTitle = (play: Play) => `${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}`;
 
 /**
@@ -90,7 +90,7 @@ export function attachLibrary(
     );
     button.addEventListener('click', () => choose(play, roles));
     const li = el('li', {}, button);
-    // 跳投戰術：切換出手點（預設是模擬分數比較高的那一個）
+    // 有多個出手點的戰術：切換出手點（預設是模擬分數比較高的那一個）
     if (rec.alternatives) {
       const shots = el('div', { class: 'play-item__shots', role: 'group', 'aria-label': '出手點' });
       for (const alt of rec.alternatives) {
@@ -107,7 +107,7 @@ export function attachLibrary(
     return li;
   };
 
-  /** 目前戰術用的就是這套跳投戰術時，卡片預設顯示載入的那個出手點（不是分數比較高的那個） */
+  /** 目前戰術用的就是這套戰術時，卡片預設顯示載入的那個出手點（不是分數比較高的那個） */
   const showLoaded = (rec: Recommendation): Recommendation => {
     const shot = loadedShot(rec.play.id);
     const alt = shot && rec.alternatives?.find((a) => a.play.shot === shot);

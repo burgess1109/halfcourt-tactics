@@ -59,8 +59,8 @@ export interface Frame {
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 
-/** 跳投的出手點：中距離（弧內、禁區外）或弧外 */
-export type ShotZone = 'mid' | 'three';
+/** 戰術的出手點：禁區、中距離（弧內、禁區外）或弧外 */
+export type ShotZone = 'paint' | 'mid' | 'three';
 
 /** 計分規則（SPEC §6.4）：fiba3x3 = 弧內 1 分、弧外 2 分、12 秒；standard = 弧內 2 分、弧外 3 分、24 秒 */
 export type ScoringRule = 'fiba3x3' | 'standard';
@@ -109,7 +109,7 @@ export interface Tactic {
    * 沒拖過的紅隊每次都依對位、防守距離重新站位；改對位、清空戰術、載入內建戰術時清空。
    */
   redStarts?: Record<string, Vec2>;
-  /** 從戰術庫載入時；shot：跳投戰術用的出手點 */
+  /** 從戰術庫載入時；shot：有多個出手點的戰術用的出手點 */
   basedOn?: { playId: string; roles: Record<'A' | 'B' | 'C', string>; modified: boolean; shot?: ShotZone };
   players: Player[];
   frames: Frame[];

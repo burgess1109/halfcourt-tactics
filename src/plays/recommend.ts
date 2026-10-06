@@ -98,7 +98,7 @@ export interface Recommendation {
   /** 模擬評分的 0–100 分（和適合度 score 不同） */
   gradeScore?: number;
   grade?: Grade;
-  /** 跳投戰術：所有出手點版本的模擬結果（包含自己），戰術庫用來切換「中距離 / 弧外」 */
+  /** 有多個出手點的戰術：所有出手點版本的模擬結果（包含自己），戰術庫用來切換出手點 */
   alternatives?: Recommendation[];
 }
 
@@ -114,8 +114,8 @@ export function withSimulation(tactic: Tactic, rec: Recommendation): Recommendat
 }
 
 /**
- * 一套戰術的推薦（SPEC §6.3）：跳投戰術的兩個出手點，各自用最適合的角色分配模擬，選分數高的
- * （同分時選原本的出手點）；其他戰術只有一個版本。
+ * 一套戰術的推薦（SPEC §6.3）：每個出手點各自用最適合的角色分配模擬，選分數高的
+ * （同分時選原本的出手點）；只有一個出手點的戰術只有一個版本。
  */
 export function withBestShot(tactic: Tactic, play: Play): Recommendation {
   const options = playVariants(play).map((v) => withSimulation(tactic, bestAssignment(tactic, v)));
@@ -211,8 +211,8 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
   const keys: WeightKey[] = ['threePoint', 'midRange', 'finishing', 'iso', 'speed', 'height'];
   const strengths: Strength[] = [];
 
-  // 找例子：照推薦順序一套一套看，每套最多一個例子（先看推薦的版本，不符合才看另一個出手點）。
-  // 這樣同一套戰術的兩個出手點不會同時佔掉例子名額，順序也和推薦一致。
+  // 找例子：照推薦順序一套一套看，每套最多一個例子（先看推薦的版本，不符合才看其他出手點）。
+  // 這樣同一套戰術的多個出手點不會同時佔掉例子名額，順序也和推薦一致。
   const versionsOf = (r: Recommendation) => [r, ...(r.alternatives ?? []).filter((a) => a.play.shot !== r.play.shot)];
   for (const blue of tactic.players.filter((p) => p.team === 'blue')) {
     for (const key of keys) {
@@ -228,7 +228,7 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
     }
   }
   // 越強的排越前面；同分時，對應戰術在推薦裡排越前面的優先（總評才會跟推薦清單一致）
-  // 依戰術 id 比對：例子可能是另一個出手點的版本（不在 ranked 裡）
+  // 依戰術 id 比對：例子可能是其他出手點的版本（不在 ranked 裡）
   const rankOf = (s: Strength) => (s.examples[0] ? ranked.findIndex((r) => r.play.id === s.examples[0]!.id) : ranked.length);
   strengths.sort((a, b) => b.score - a.score || rankOf(a) - rankOf(b));
 

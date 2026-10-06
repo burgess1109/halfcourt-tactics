@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadPlay } from '../plays/instantiate';
-import { PLAYS } from '../plays/library';
+import { PLAYS, playVariant, playVariants } from '../plays/library';
 import { createDefaultTactic } from './defaults';
 import { syncFrames } from './frames';
 import { SavedTactics, STORAGE_KEY, copyName, type KeyValueStorage } from './savedTactics';
@@ -116,6 +116,16 @@ describe('JSON 匯出入', () => {
     f.paths = f.paths.filter((p) => p.actorId !== notHolder);
     f.paths.push({ id: 'd', kind: 'dribble', actorId: notHolder, points: [f.start[notHolder]!, { x: 0, y: 5 }], freehand: false });
     expect(parseTactic(t).removed).toBe(1);
+  });
+
+  it('每個出手點版本（含 Spain 的禁區）的戰術來源都能還原；不認得的出手點視為格式錯誤', () => {
+    for (const play of PLAYS.flatMap(playVariants)) {
+      const t = loadPlay(createDefaultTactic(), play, roles);
+      expect(parseTactic(JSON.parse(toJsonFile(t))).tactic.basedOn, play.id).toEqual(t.basedOn);
+    }
+    const bad = JSON.parse(toJsonFile(loadPlay(createDefaultTactic(), playVariant(PLAYS[0]!, 'mid'), roles)));
+    bad.basedOn.shot = 'corner';
+    expect(() => parseTactic(bad)).toThrow(TacticFormatError);
   });
 
   it('檔名去掉不能用的字元', () => {

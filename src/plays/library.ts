@@ -31,19 +31,24 @@ export type RoleWeights = Partial<Record<keyof Skills | 'height', number>>;
 
 
 /**
- * 跳投戰術的另一個出手點（SPEC §6.3）：只改終結者在某個分鏡的移動終點與說明，其他跑位、掩護、傳球都一樣
- * （傳球會自動傳到新的位置）。推薦時兩個出手點都模擬，選分數高的。
+ * 戰術的另一個出手點（SPEC §6.3），推薦時每個出手點都模擬，選分數高的。兩種：
+ * - 跳投換出手位置：只改終結者在某個分鏡的移動終點與說明，其他跑位、掩護、傳球都一樣（傳球會自動傳到新的位置）。
+ * - 換人出手（finisher）：跑位都一樣，最後一傳改傳給另一個人、由他出手，例如 Spain Pick and Roll 改傳給下順的掩護者。
  */
 export interface ShotVariant {
   shot: ShotZone;
-  /** 改終結者在第幾個分鏡（0 起算）的移動路線 */
-  frame: number;
-  to: Vec2;
+  /** 改由這個角色出手（最後一傳改傳給他）；省略 = 同一個終結者 */
+  finisher?: Role;
+  /** 改終結者在第幾個分鏡（0 起算）的移動路線；只換人出手時省略 */
+  frame?: number;
+  to?: Vec2;
   via?: Vec2[];
   /** 換掉說明的分鏡（0 起算）→ 新的說明 */
   notes: Record<number, string>;
   summary: string;
   finish: string;
+  /** 推薦權重（整份換掉）；省略 = 終結者的投射權重換成出手點對應的能力 */
+  weights?: Record<Role, RoleWeights>;
 }
 
 export interface Play {
@@ -58,45 +63,63 @@ export interface Play {
   finisher: Role;
   finish: string;
   weights: Record<Role, RoleWeights>;
-  /** 跳投戰術：這個版本的出手點（切入、禁區終結的戰術沒有） */
+  /** 有多個出手點的戰術：這個版本的出手點（只有一個版本的戰術沒有） */
   shot?: ShotZone;
-  /** 跳投戰術的另一個出手點 */
-  alt?: ShotVariant;
+  /** 其他出手點 */
+  alts?: ShotVariant[];
 }
 
-export const SHOT_LABEL: Record<ShotZone, string> = { mid: '中距離', three: '弧外' };
+export const SHOT_LABEL: Record<ShotZone, string> = { paint: '禁區', mid: '中距離', three: '弧外' };
 
-const SHOT_SKILL = { mid: 'midRange', three: 'threePoint' } as const;
+const SHOT_SKILL: Partial<Record<ShotZone, 'midRange' | 'threePoint'>> = { mid: 'midRange', three: 'threePoint' };
 
 /**
- * 依出手點取得戰術：shot 是另一個出手點時，產生改過終結者路線、說明與權重的版本（不改到 PLAYS）。
- * 終結者的投射權重換成對應出手點的能力（中距離投射 / 弧外投射）。
+ * 依出手點取得戰術：shot 是其他出手點時，產生改過路線、出手的人、說明與權重的版本（不改到 PLAYS）。
+ * 沒有指定權重時，終結者的投射權重換成對應出手點的能力（中距離投射 / 弧外投射）。
  */
 export function playVariant(play: Play, shot?: ShotZone): Play {
-  const alt = play.alt;
-  if (!alt || !shot || shot === play.shot) return play;
-  const from = SHOT_SKILL[play.shot!];
-  const to = SHOT_SKILL[alt.shot];
-  const finisherWeights = Object.fromEntries(
-    Object.entries(play.weights[play.finisher]).map(([k, v]) => [k === from ? to : k, v]),
-  ) as RoleWeights;
+  const alt = play.alts?.find((a) => a.shot === shot);
+  if (!alt) return play;
+  const finisher = alt.finisher ?? play.finisher;
+  // 換人出手：最後一次傳給原本終結者的那一傳，改傳給新的終結者
+  let passFrame = -1;
+  if (finisher !== play.finisher) {
+    play.frames.forEach((f, i) => {
+      if (f.paths.some((p) => p.kind === 'pass' && p.target === play.finisher)) passFrame = i;
+    });
+  }
   return {
     ...play,
     summary: alt.summary,
     finish: alt.finish,
     shot: alt.shot,
-    // 產生出來的版本不再帶另一個出手點；要切換時一律從 PLAYS 裡的原始戰術產生
-    alt: undefined,
-    weights: { ...play.weights, [play.finisher]: finisherWeights },
+    finisher,
+    // 產生出來的版本不再帶其他出手點；要切換時一律從 PLAYS 裡的原始戰術產生
+    alts: undefined,
+    weights: alt.weights ?? swapShotWeight(play, alt.shot),
     frames: play.frames.map((f, i) => ({
       note: alt.notes[i] ?? f.note,
-      paths: f.paths.map((p) =>
-        i === alt.frame && p.actor === play.finisher && (p.kind === 'cut' || p.kind === 'dribble')
-          ? { ...p, to: alt.to, via: alt.via }
-          : p,
-      ),
+      paths: f.paths.map((p) => {
+        if (i === alt.frame && alt.to && p.actor === finisher && (p.kind === 'cut' || p.kind === 'dribble')) {
+          return { ...p, to: alt.to, via: alt.via };
+        }
+        if (i === passFrame && p.kind === 'pass' && p.target === play.finisher) return { ...p, target: finisher };
+        if (p.kind === 'shot') return { ...p, actor: finisher };
+        return p;
+      }),
     })),
   };
+}
+
+/** 終結者的投射權重換成出手點對應的能力（例如弧外投射 → 中距離投射） */
+function swapShotWeight(play: Play, shot: ShotZone): Record<Role, RoleWeights> {
+  const from = play.shot && SHOT_SKILL[play.shot];
+  const to = SHOT_SKILL[shot];
+  if (!from || !to) return play.weights;
+  const finisherWeights = Object.fromEntries(
+    Object.entries(play.weights[play.finisher]).map(([k, v]) => [k === from ? to : k, v]),
+  ) as RoleWeights;
+  return { ...play.weights, [play.finisher]: finisherWeights };
 }
 
 /** 原始戰術（PLAYS 裡的那一份）；切換出手點時從它產生 */
@@ -104,9 +127,9 @@ export function basePlay(id: string): Play | undefined {
   return PLAYS.find((p) => p.id === id);
 }
 
-/** 這套戰術的所有出手點版本（跳投戰術兩個，其他一個） */
+/** 這套戰術的所有出手點版本（原本的在第一個；只有一個出手點的戰術只有自己） */
 export function playVariants(play: Play): Play[] {
-  return play.alt ? [play, playVariant(play, play.alt.shot)] : [play];
+  return [play, ...(play.alts ?? []).map((a) => playVariant(play, a.shot))];
 }
 
 // 常用站位
@@ -156,18 +179,20 @@ export const PLAYS: readonly Play[] = [
     finish: 'A 擋拆後急停跳投',
     weights: { A: { midRange: 3, iso: 2 }, B: { height: 1 }, C: { threePoint: 1 } },
     shot: 'mid',
-    alt: {
-      shot: 'three',
-      frame: 1,
-      to: { x: 4.4, y: 7.3 },
-      via: [AROUND_SCREEN],
-      notes: {
-        1: 'A 從 B 外側繞過掩護往右運球，在弧外急停；B 先站住擋人，再下順把防守者帶離。',
-        2: 'A 在弧外急停跳投（2 分）。',
+    alts: [
+      {
+        shot: 'three',
+        frame: 1,
+        to: { x: 4.4, y: 7.3 },
+        via: [AROUND_SCREEN],
+        notes: {
+          1: 'A 從 B 外側繞過掩護往右運球，在弧外急停；B 先站住擋人，再下順把防守者帶離。',
+          2: 'A 在弧外急停跳投（2 分）。',
+        },
+        summary: '持球者繞過高位掩護後，在弧外急停跳投。',
+        finish: 'A 擋拆後弧外急停跳投',
       },
-      summary: '持球者繞過高位掩護後，在弧外急停跳投。',
-      finish: 'A 擋拆後弧外急停跳投',
-    },
+    ],
   },
   {
     id: 'high-pnr-floater',
@@ -239,17 +264,19 @@ export const PLAYS: readonly Play[] = [
     finish: 'B 外彈接球投籃',
     weights: { A: { iso: 1 }, B: { threePoint: 3 }, C: { threePoint: 1 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 1,
-      to: { x: -2.0, y: 6.2 },
-      notes: {
-        1: 'A 從 B 外側繞過掩護往右運球，吸引防守；B 先站住擋人，再往左外彈到罰球線左側。',
-        3: 'B 在罰球線左側中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 1,
+        to: { x: -2.0, y: 6.2 },
+        notes: {
+          1: 'A 從 B 外側繞過掩護往右運球，吸引防守；B 先站住擋人，再往左外彈到罰球線左側。',
+          3: 'B 在罰球線左側中距離投籃（1 分）。',
+        },
+        summary: '掩護後，掩護者往外彈到罰球線附近，接球投中距離。',
+        finish: 'B 外彈到中距離接球投籃',
       },
-      summary: '掩護後，掩護者往外彈到罰球線附近，接球投中距離。',
-      finish: 'B 外彈到中距離接球投籃',
-    },
+    ],
   },
   {
     id: 'high-pnr-roll',
@@ -279,8 +306,8 @@ export const PLAYS: readonly Play[] = [
     id: 'high-pnr-spain',
     category: '高位擋拆',
     name: 'Spain Pick and Roll',
-    summary: '高位擋拆後掩護者下順，第三人對下順者的防守者做背掩護，再外拉接球投籃。',
-    roles: { A: '持球者', B: '掩護者（下順）', C: '背掩護後外拉投籃' },
+    summary: '高位擋拆後掩護者下順，第三人從背後擋住下順者的防守者，再外拉接球投籃。',
+    roles: { A: '持球者', B: '掩護者（下順）', C: '背掩護後外拉' },
     start: { A: TOP, B: { x: 4.4, y: 6.8 }, C: { x: -4.6, y: 6.8 } },
     ball: 'A',
     frames: [
@@ -292,15 +319,15 @@ export const PLAYS: readonly Play[] = [
         ],
       },
       {
-        note: 'A 從 B 外側繞過掩護往右運球；B 先站住擋人，再往籃下順；C 往下對 B 的防守者做背掩護。',
+        note: 'A 從 B 外側繞過掩護往右運球；B 先站住擋人，再從右側繞往籃下順；C 往下到籃下附近，從背後擋住 B 的防守者。',
         paths: [
           { kind: 'dribble', actor: 'A', to: { x: 3.4, y: 5.6 }, via: [AROUND_SCREEN] },
-          { kind: 'cut', actor: 'B', to: { x: 0.6, y: 2.8 } },
-          { kind: 'screen', actor: 'C', to: { x: 0.2, y: 5.4 } },
+          { kind: 'cut', actor: 'B', to: { x: 1.0, y: 2.0 }, via: [{ x: 2.4, y: 4.0 }] },
+          { kind: 'screen', actor: 'C', to: { x: 0.4, y: 3.6 } },
         ],
       },
       {
-        note: 'C 背掩護後外拉到弧頂左側，A 傳給 C（B 下順是第二選擇）。',
+        note: 'C 背掩護後外拉到弧頂左側，A 傳給 C。',
         paths: [
           { kind: 'cut', actor: 'C', to: { x: -2.8, y: 8.2 } },
           { kind: 'pass', actor: 'A', target: 'C' },
@@ -309,20 +336,33 @@ export const PLAYS: readonly Play[] = [
       { note: 'C 弧外投籃（2 分）。', paths: [{ kind: 'shot', actor: 'C' }] },
     ],
     finisher: 'C',
-    finish: 'C 背掩護後外拉接球投籃（B 下順是第二選擇）',
+    finish: 'C 背掩護後外拉接球投籃',
     weights: { A: { iso: 1 }, B: { finishing: 2, height: 1 }, C: { threePoint: 3 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 2,
-      to: { x: -2.2, y: 6.6 },
-      notes: {
-        2: 'C 背掩護後外拉到罰球線左側，A 傳給 C（B 下順是第二選擇）。',
-        3: 'C 在罰球線左側中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 2,
+        to: { x: -2.2, y: 6.6 },
+        notes: {
+          2: 'C 背掩護後外拉到罰球線左側，A 傳給 C。',
+          3: 'C 在罰球線左側中距離投籃（1 分）。',
+        },
+        summary: '高位擋拆後掩護者下順，第三人從背後擋住下順者的防守者，再外拉到罰球線附近投中距離。',
+        finish: 'C 背掩護後外拉到中距離接球投籃',
       },
-      summary: '高位擋拆後掩護者下順，第三人對下順者的防守者做背掩護，再外拉到罰球線附近投中距離。',
-      finish: 'C 背掩護後外拉到中距離接球投籃（B 下順是第二選擇）',
-    },
+      {
+        shot: 'paint',
+        finisher: 'B',
+        notes: {
+          2: 'C 背掩護後外拉到弧頂左側，把自己的防守者帶開；A 傳給順到籃下的 B。',
+          3: 'B 在籃下出手（1 分）。',
+        },
+        summary: '高位擋拆後掩護者下順，第三人從背後擋住下順者的防守者，A 傳給順到籃下的掩護者。對方沉退時特別有效。',
+        finish: 'B 下順到籃下接球出手',
+        weights: { A: { iso: 1 }, B: { finishing: 3, height: 1 }, C: { threePoint: 1 } },
+      },
+    ],
   },
   {
     id: 'low-pnr-paint',
@@ -453,18 +493,20 @@ export const PLAYS: readonly Play[] = [
     finish: 'C 繞下掩護接球投籃',
     weights: { A: {}, B: { height: 1 }, C: { threePoint: 3, speed: 1 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 1,
-      to: { x: -4.0, y: 5.0 },
-      via: [{ x: -3.4, y: 4.0 }],
-      notes: {
-        1: 'C 繞過掩護往左側罰球線延伸處跑，A 配合時機傳球；B 先站住擋人，再往禁區卡位。',
-        2: 'C 在罰球線延伸處中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 1,
+        to: { x: -4.0, y: 5.0 },
+        via: [{ x: -3.4, y: 4.0 }],
+        notes: {
+          1: 'C 繞過掩護往左側罰球線延伸處跑，A 配合時機傳球；B 先站住擋人，再往禁區卡位。',
+          2: 'C 在罰球線延伸處中距離投籃（1 分）。',
+        },
+        summary: '側翼往下幫低位的隊友掩護，隊友繞出來到罰球線延伸處接球投中距離。',
+        finish: 'C 繞下掩護接球投中距離',
       },
-      summary: '側翼往下幫低位的隊友掩護，隊友繞出來到罰球線延伸處接球投中距離。',
-      finish: 'C 繞下掩護接球投中距離',
-    },
+    ],
   },
   {
     id: 'offball-back',
@@ -525,18 +567,20 @@ export const PLAYS: readonly Play[] = [
     finish: 'A 交叉掩護後外彈投籃（C 切入是第二選擇）',
     weights: { A: { threePoint: 3 }, B: { height: 2 }, C: { finishing: 1, speed: 1 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 3,
-      to: { x: 1.8, y: 6.4 },
-      via: [{ x: -1.6, y: 7.6 }],
-      notes: {
-        3: 'A 從 C 上方繞過掩護外彈到罰球線，B 配合時機傳給 A；C 先站住擋人，再往籃下切，製造第二個選擇。',
-        4: 'A 在罰球線中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 3,
+        to: { x: 1.8, y: 6.4 },
+        via: [{ x: -1.6, y: 7.6 }],
+        notes: {
+          3: 'A 從 C 上方繞過掩護外彈到罰球線，B 配合時機傳給 A；C 先站住擋人，再往籃下切，製造第二個選擇。',
+          4: 'A 在罰球線中距離投籃（1 分）。',
+        },
+        summary: '球傳進低位後，外圍兩人交叉掩護：A 先幫 C 掩護，C 繞過來後回頭幫 A 掩護，A 外彈到罰球線投中距離。',
+        finish: 'A 交叉掩護後外彈到罰球線投籃（C 切入是第二選擇）',
       },
-      summary: '球傳進低位後，外圍兩人交叉掩護：A 先幫 C 掩護，C 繞過來後回頭幫 A 掩護，A 外彈到罰球線投中距離。',
-      finish: 'A 交叉掩護後外彈到罰球線投籃（C 切入是第二選擇）',
-    },
+    ],
   },
   {
     id: 'offball-flare',
@@ -565,18 +609,20 @@ export const PLAYS: readonly Play[] = [
     finish: 'C 利用反向掩護外拉接球投籃',
     weights: { A: {}, B: { height: 1 }, C: { threePoint: 3, speed: 1 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 1,
-      to: { x: -4.2, y: 5.4 },
-      via: [{ x: -2.6, y: 8.0 }],
-      notes: {
-        1: 'C 從 B 上方繞過掩護，往遠離球的方向外拉到左側罰球線延伸處，A 配合時機傳球；B 先站住擋人，再往禁區走。',
-        2: 'C 在罰球線延伸處中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 1,
+        to: { x: -4.2, y: 5.4 },
+        via: [{ x: -2.6, y: 8.0 }],
+        notes: {
+          1: 'C 從 B 上方繞過掩護，往遠離球的方向外拉到左側罰球線延伸處，A 配合時機傳球；B 先站住擋人，再往禁區走。',
+          2: 'C 在罰球線延伸處中距離投籃（1 分）。',
+        },
+        summary: '持球者在一側時，弱邊的隊友幫射手設反向掩護，射手外拉到罰球線延伸處接球投中距離。',
+        finish: 'C 利用反向掩護外拉到中距離接球投籃',
       },
-      summary: '持球者在一側時，弱邊的隊友幫射手設反向掩護，射手外拉到罰球線延伸處接球投中距離。',
-      finish: 'C 利用反向掩護外拉到中距離接球投籃',
-    },
+    ],
   },
   {
     id: 'dho-drive',
@@ -638,18 +684,20 @@ export const PLAYS: readonly Play[] = [
     finish: 'B 繞過 A 到弧頂投籃',
     weights: { A: { height: 1 }, B: { threePoint: 3, iso: 1 }, C: { threePoint: 1 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 2,
-      to: { x: 1.2, y: 6.5 },
-      via: [{ x: 3.8, y: 8.0 }],
-      notes: {
-        2: 'B 從 A 的外側（靠中場那側）繞過去，往罰球線運球；A 擋住追過來的防守者。',
-        3: 'B 在罰球線附近中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 2,
+        to: { x: 1.2, y: 6.5 },
+        via: [{ x: 3.8, y: 8.0 }],
+        notes: {
+          2: 'B 從 A 的外側（靠中場那側）繞過去，往罰球線運球；A 擋住追過來的防守者。',
+          3: 'B 在罰球線附近中距離投籃（1 分）。',
+        },
+        summary: '手遞手後，接球者從交球者外側繞過去，往罰球線運球，交球者擋住追上來的防守者，接球者投中距離。',
+        finish: 'B 繞過 A 運到罰球線投中距離',
       },
-      summary: '手遞手後，接球者從交球者外側繞過去，往罰球線運球，交球者擋住追上來的防守者，接球者投中距離。',
-      finish: 'B 繞過 A 運到罰球線投中距離',
-    },
+    ],
   },
   {
     id: 'dho-fake',
@@ -715,18 +763,20 @@ export const PLAYS: readonly Play[] = [
     finish: 'C 連續利用下掩護與手遞手後投籃',
     weights: { A: { height: 1 }, B: { height: 1 }, C: { threePoint: 3, speed: 1 } },
     shot: 'three',
-    alt: {
-      shot: 'mid',
-      frame: 3,
-      to: { x: -1.0, y: 6.6 },
-      via: [{ x: -3.6, y: 8.4 }],
-      notes: {
-        3: 'C 從 A 的外側（靠中場那側）繞過去，往罰球線運球；A 擋住追過來的防守者。',
-        4: 'C 在罰球線附近中距離投籃（1 分）。',
+    alts: [
+      {
+        shot: 'mid',
+        frame: 3,
+        to: { x: -1.0, y: 6.6 },
+        via: [{ x: -3.6, y: 8.4 }],
+        notes: {
+          3: 'C 從 A 的外側（靠中場那側）繞過去，往罰球線運球；A 擋住追過來的防守者。',
+          4: 'C 在罰球線附近中距離投籃（1 分）。',
+        },
+        summary: '底角的射手先利用下掩護往上跑，再接持球者的手遞手，運到罰球線附近投中距離。',
+        finish: 'C 連續利用下掩護與手遞手後運到罰球線投籃',
       },
-      summary: '底角的射手先利用下掩護往上跑，再接持球者的手遞手，運到罰球線附近投中距離。',
-      finish: 'C 連續利用下掩護與手遞手後運到罰球線投籃',
-    },
+    ],
   },
   {
     id: 'iso-top',

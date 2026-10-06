@@ -5,7 +5,7 @@ import { createDefaultTactic } from '../model/defaults';
 import { MAX_FRAMES } from '../model/frames';
 import { simulateDefense } from '../sim/defenseSim';
 import { isBeyondArc } from '../court/fiba';
-import { PLAYS, SHOT_LABEL, playVariants } from './library';
+import { PLAYS, SHOT_LABEL, playVariant, playVariants } from './library';
 import { zoneOf } from '../sim/evaluate';
 import { loadPlay } from './instantiate';
 
@@ -17,7 +17,7 @@ describe('內建戰術庫', () => {
     expect(new Set(PLAYS.map((p) => p.id)).size).toBe(21);
   });
 
-  // 跳投戰術的兩個出手點都要檢查
+  // 每個出手點版本都要檢查
   for (const play of PLAYS.flatMap(playVariants)) {
     describe(`${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}`, () => {
       it('可以載入，最後一個分鏡由終結者投籃，12 秒內出手', () => {
@@ -57,7 +57,7 @@ describe('內建戰術庫', () => {
       const note = play.frames.at(-1)!.note;
       expect(note, `${play.id}：${note}`).toContain(beyondArc ? '（2 分）' : '（1 分）');
       if (beyondArc) expect(note, play.id).toContain('弧外');
-      // 跳投戰術：實際出手的區域就是這個版本標示的出手點
+      // 有多個出手點的戰術：實際出手的區域就是這個版本標示的出手點
       if (play.shot) expect(zoneOf(pos), `${play.id}（${play.shot}）`).toBe(play.shot);
     }
     // 移動說明也統一用「弧外」，不混用「三分線外」
@@ -71,8 +71,8 @@ describe('內建戰術庫', () => {
     expect(JSON.stringify(PLAYS)).toBe(before);
   });
 
-  it('跳投戰術有兩個出手點（中距離、弧外），終結者的投射權重跟著出手點；切入戰術只有一個', () => {
-    const jumpers = PLAYS.filter((p) => p.alt);
+  it('跳投戰術有中距離、弧外兩個出手點，終結者的投射權重跟著出手點；切入戰術只有一個', () => {
+    const jumpers = PLAYS.filter((p) => p.alts);
     expect(jumpers.map((p) => p.id).sort()).toEqual([
       'dho-chicago',
       'dho-shoot',
@@ -84,14 +84,43 @@ describe('內建戰術庫', () => {
       'offball-post-split',
     ]);
     for (const play of jumpers) {
-      const [a, b] = playVariants(play);
-      expect(new Set([a!.shot, b!.shot])).toEqual(new Set(['mid', 'three']));
-      for (const v of [a!, b!]) {
+      const variants = playVariants(play);
+      const shots = variants.map((v) => v.shot);
+      expect(new Set(shots).size, play.id).toBe(shots.length);
+      expect(shots, play.id).toEqual(expect.arrayContaining(['mid', 'three']));
+      for (const v of variants.filter((x) => x.shot !== 'paint')) {
         const w = v.weights[v.finisher];
+        expect(v.finisher, `${v.id}（${v.shot}）`).toBe(play.finisher);
         expect(w[v.shot === 'mid' ? 'midRange' : 'threePoint'], `${v.id}（${v.shot}）`).toBeGreaterThan(0);
         expect(w[v.shot === 'mid' ? 'threePoint' : 'midRange'], `${v.id}（${v.shot}）`).toBeUndefined();
       }
     }
-    for (const play of PLAYS.filter((p) => !p.alt)) expect(playVariants(play)).toHaveLength(1);
+    for (const play of PLAYS.filter((p) => !p.alts)) expect(playVariants(play)).toHaveLength(1);
+  });
+
+  it('Spain Pick and Roll 的禁區出手點：跑位都一樣，最後一傳改傳給下順的 B、由 B 出手', () => {
+    const spain = PLAYS.find((p) => p.id === 'high-pnr-spain')!;
+    const before = JSON.stringify(spain);
+    const paint = playVariant(spain, 'paint');
+    expect(JSON.stringify(spain)).toBe(before);
+    expect(paint).toMatchObject({ shot: 'paint', finisher: 'B' });
+    expect(paint.weights.B.finishing).toBeGreaterThan(0);
+    // 只有傳球對象與出手的人不同，其他路線（含 C 背掩護後外拉）都一樣
+    paint.frames.forEach((f, i) => {
+      const base = spain.frames[i]!;
+      expect(f.paths.length).toBe(base.paths.length);
+      f.paths.forEach((p, k) => {
+        const b = base.paths[k]!;
+        if (p.kind === 'pass') expect([b.target, p.target]).toEqual(['C', 'B']);
+        else if (p.kind === 'shot') expect([b.actor, p.actor]).toEqual(['C', 'B']);
+        else expect(p).toEqual(b);
+      });
+    });
+    // B 在禁區接球出手
+    const t = loadPlay(createDefaultTactic(), paint, roles);
+    const last = t.frames.at(-1)!;
+    const shot = last.paths.find((p) => p.kind === 'shot')!;
+    expect(shot.actorId).toBe(roles.B);
+    expect(zoneOf(last.start[shot.actorId]!)).toBe('paint');
   });
 });

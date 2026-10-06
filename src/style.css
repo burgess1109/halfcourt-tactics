@@ -1469,7 +1469,7 @@ body[data-screen='board'] .app {
   cursor: default;
 }
 
-/* 戰術庫：跳投戰術的出手點（中距離 / 弧外） */
+/* 戰術庫：有多個出手點的戰術，切換出手點 */
 .play-item__shot {
   color: #c9ccd3;
   font-size: 14px;
@@ -1478,6 +1478,7 @@ body[data-screen='board'] .app {
 
 .play-item__shots {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 6px 0 0 12px;
 }
