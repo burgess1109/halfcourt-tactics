@@ -205,14 +205,44 @@ describe('依實際模擬的預期得分排序', () => {
     expect(sorted.map((r) => PLAYS.indexOf(r.play))).toEqual([0, 2, 1, 3]);
   });
 
-  it('快取鍵只看球員、對位、掩護應對，不看目前畫的路線', async () => {
+  it('快取鍵：每一項會影響模擬的設定改了都要重新模擬', async () => {
+    const { recommendationKey } = await import('./recommend');
+    const changes: Record<string, (t: Tactic) => void> = {
+      藍隊身高: (t) => (t.players.find((p) => p.id === 'b1')!.heightCm = 200),
+      藍隊能力: (t) => (t.players.find((p) => p.id === 'b1')!.skills = { ...t.players.find((p) => p.id === 'b1')!.skills!, threePoint: 4 }),
+      紅隊身高: (t) => (t.players.find((p) => p.id === 'r1')!.heightCm = 200),
+      紅隊速度: (t) => (t.players.find((p) => p.id === 'r1')!.speedRating = 4),
+      對位: (t) => (t.matchups = { ...t.matchups, b1: t.matchups.b2!, b2: t.matchups.b1! }),
+      掩護應對: (t) => (t.screenDefense = 'fight-over'),
+      擋拆協防: (t) => (t.pickCoverage = 'hedge'),
+      防守距離: (t) => (t.pressure = 'tight'),
+      切入補防: (t) => (t.driveHelp = 'weak-side'),
+      計分規則: (t) => (t.scoring = 'standard'),
+    };
+    for (const [name, change] of Object.entries(changes)) {
+      const t = createDefaultTactic();
+      const key = recommendationKey(t);
+      change(t);
+      expect(recommendationKey(t), name).not.toBe(key);
+    }
+  });
+
+  it('快取鍵：目前畫的路線、開局站位、自動防守開關不影響推薦（內建戰術有自己的站位，推薦一律用自動防守）', async () => {
     const { recommendationKey } = await import('./recommend');
     const t = createDefaultTactic();
     const key = recommendationKey(t);
     t.frames[0]!.start.b1 = { x: 1, y: 7 };
+    t.setup.lineup = { holder: 'b2', positions: { b1: { x: -3, y: 6 }, b2: { x: 0, y: 8.6 }, b3: { x: 3, y: 6 } } };
+    t.autoDefense = false;
     expect(recommendationKey(t)).toBe(key);
-    t.screenDefense = 'fight-over';
-    expect(recommendationKey(t)).not.toBe(key);
+  });
+
+  it('快取鍵：戰術的每個欄位都要分類（放進快取鍵，或確定不影響推薦）；新增欄位時這個測試會提醒', () => {
+    // 影響模擬的欄位（recommendationKey 裡有）
+    const keyed = ['players', 'matchups', 'screenDefense', 'pickCoverage', 'pressure', 'driveHelp', 'scoring'];
+    // 不影響推薦：內建戰術用自己的站位與路線，推薦一律用自動防守模擬
+    const ignored = ['version', 'id', 'name', 'mode', 'setup', 'autoDefense', 'redStarts', 'basedOn', 'frames', 'updatedAt', 'lastResult'];
+    for (const field of Object.keys(createDefaultTactic())) expect([...keyed, ...ignored], field).toContain(field);
   });
 });
 

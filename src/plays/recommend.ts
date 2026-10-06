@@ -137,7 +137,7 @@ export function rankBySimulation(tactic: Tactic): Recommendation[] {
   return sortBySimulation(PLAYS.map((play) => withBestShot(tactic, play)));
 }
 
-/** 推薦結果只和球員、對位、掩護應對有關（和目前畫的路線無關），用來快取 */
+/** 推薦結果只和球員、對位、防守設定、計分規則有關（和目前畫的路線、開局站位無關），用來快取 */
 export function recommendationKey(tactic: Tactic): string {
   return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense, pick: tactic.pickCoverage, pressure: tactic.pressure, help: tactic.driveHelp, scoring: tactic.scoring });
 }
