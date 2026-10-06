@@ -27,6 +27,7 @@ import type { Tactic, Vec2 } from '../src/model/types';
 import { wave } from '../src/render/paths';
 import { PLAYS, ROLES, SHOT_LABEL, playVariant, type Play, type Role, type RoleWeights } from '../src/plays/library';
 import { loadPlay } from '../src/plays/instantiate';
+import { videosOf } from '../src/plays/videos';
 import { theme } from '../src/render/theme';
 
 const PX = 20; // 每公尺幾個 SVG 單位
@@ -234,6 +235,10 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
       '|---|---|---|',
       ...ROLES.map((r) => `| **${r}**${r === play.ball ? '（開局持球）' : ''} | ${play.roles[r]} | ${weightText(play.weights[r])} |`),
       '',
+      // 參考影片（src/plays/videos.ts）
+      ...(videosOf(play.id).length
+        ? ['**參考影片**：' + videosOf(play.id).map((v) => `[${v.title.replace(/[[\]|]/g, '\\$&')}](${v.url})`).join('、'), '']
+        : []),
       ...(play.shot ? [`**出手點：${SHOT_LABEL[play.shot]}**`, ''] : []),
       ...variantBody(play, play.id),
     );

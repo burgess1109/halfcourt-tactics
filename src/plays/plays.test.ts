@@ -8,6 +8,7 @@ import { isBeyondArc } from '../court/fiba';
 import { PLAYS, SHOT_LABEL, playVariant, playVariants } from './library';
 import { zoneOf } from '../sim/evaluate';
 import { loadPlay } from './instantiate';
+import { MAX_VIDEOS, PLAY_VIDEOS } from './videos';
 
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
 
@@ -46,6 +47,19 @@ describe('內建戰術庫', () => {
       });
     });
   }
+
+  it('參考影片設定：戰術 id 存在、每套 1–3 個、有標題、網址是 https', () => {
+    const ids = new Set(PLAYS.map((p) => p.id));
+    for (const [id, videos] of Object.entries(PLAY_VIDEOS)) {
+      expect(ids.has(id), `不存在的戰術 id：${id}`).toBe(true);
+      expect(videos.length, id).toBeGreaterThanOrEqual(1);
+      expect(videos.length, id).toBeLessThanOrEqual(MAX_VIDEOS);
+      for (const v of videos) {
+        expect(v.title.trim(), id).not.toBe('');
+        expect(new URL(v.url).protocol, `${id}：${v.url}`).toBe('https:');
+      }
+    }
+  });
 
   it('出手說明寫的分數和實際出手位置一致（弧外 2 分、弧內 1 分）', () => {
     for (const play of PLAYS.flatMap(playVariants)) {

@@ -1117,6 +1117,60 @@ body[data-screen='board'] .app {
   background: #2a2d33;
 }
 
+/* 評分卡片的參考影片：固定在評價下面，不跟著捲動 */
+.result__videos {
+  flex: none;
+  padding-top: 8px;
+  border-top: 1px solid #2f323a;
+}
+
+/* 參考影片連結（戰術庫卡片、評分卡片共用）：點擊開新分頁 */
+.videos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.videos__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #3a3d45;
+  border-radius: 999px;
+  background: #22252b;
+  color: #c9ccd3;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.videos__link:hover,
+.videos__link:focus-visible {
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.videos__link svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  fill: var(--accent);
+}
+
+/* 標題太長時以省略號結尾，不撐開卡片 */
+.videos__link span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.play-item__videos {
+  margin: 6px 0 0 12px;
+}
+
 @media (orientation: landscape) {
   /* 橫式：評分卡片放在球場右側 */
   .result {

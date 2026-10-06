@@ -13,6 +13,8 @@ import {
   withBestShot,
   type Recommendation,
 } from '../plays/recommend';
+import { videosOf } from '../plays/videos';
+import { videoLinks } from './videos';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -104,6 +106,8 @@ export function attachLibrary(
       }
       li.append(shots);
     }
+    const videos = videosOf(play.id);
+    if (videos.length) li.append(videoLinks(videos, 'play-item__videos'));
     return li;
   };
 

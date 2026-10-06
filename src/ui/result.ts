@@ -2,6 +2,8 @@ import type { Simulation } from '../anim/simulation';
 import type { Store } from '../model/store';
 import { scoringOf } from '../model/scoring';
 import { evaluate } from '../sim/evaluate';
+import { videosOf } from '../plays/videos';
+import { videoLinks } from './videos';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -18,6 +20,7 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
   const score = $<HTMLElement>('#result-score');
   const points = $<HTMLElement>('#result-points');
   const list = $<HTMLElement>('#result-comments');
+  const videoBox = $<HTMLElement>('#result-videos');
   let shownFor = 0;
   let shownId = '';
   let timer: number | undefined;
@@ -106,6 +109,10 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
           return li;
         }),
       );
+      // 從內建戰術載入的（改過跑位也算，大方向還是同一套戰術）：附上參考影片
+      const videos = videosOf(store.get().tactic.basedOn?.playId);
+      videoBox.replaceChildren(...(videos.length ? [videoLinks(videos, 'result__video-list')] : []));
+      videoBox.hidden = videos.length === 0;
       panel.hidden = false;
       reserveSpace();
     },

@@ -40,6 +40,8 @@
 | **B** | 掩護者 | 身高 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[擋拆教學](https://www.youtube.com/watch?v=IULh8LwbDZE)、[籃球教學 - Pick&Roll擋拆攻擊](https://www.youtube.com/watch?v=B_Ofn946hXo)
+
 **出手點：中距離**
 
 **終結**：A 擋拆後急停跳投　**時間**：約 3.0 秒，第 2.4 秒出手
@@ -72,6 +74,8 @@
 | **B** | 掩護者 | 弧外投射 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[擋拆教學](https://www.youtube.com/watch?v=IULh8LwbDZE)、[籃球教學 - Pick&Roll擋拆攻擊](https://www.youtube.com/watch?v=B_Ofn946hXo)
+
 **終結**：A 切入拋投　**時間**：約 3.3 秒，第 2.8 秒出手
 
 ![高位擋拆-Floater](plays/high-pnr-floater.svg)
@@ -90,6 +94,8 @@
 | **B** | 掩護者 | 弧外投射 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[擋拆教學](https://www.youtube.com/watch?v=IULh8LwbDZE)、[籃球教學 - Pick&Roll擋拆攻擊](https://www.youtube.com/watch?v=B_Ofn946hXo)
+
 **終結**：A 切入上籃　**時間**：約 3.6 秒，第 3.1 秒出手
 
 ![高位擋拆-Drive to Rim](plays/high-pnr-drive.svg)
@@ -107,6 +113,8 @@
 | **A**（開局持球） | 持球者 | 單打 ×1 |
 | **B** | 掩護者 | 弧外投射 ×3 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
+
+**參考影片**：[新北國王湯瑪士 Pick & Pop](https://www.youtube.com/watch?v=5SUNHcFeGj4)
 
 **出手點：弧外**
 
@@ -142,6 +150,8 @@
 | **B** | 掩護者 | 禁區終結 ×3、身高 ×2 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[Pick＆Roll 擋拆小組配合](https://www.youtube.com/watch?v=puZxpKfcv7Y)、[How Pick And Roll In Basketball](https://www.youtube.com/watch?v=bwT15tI3H70)、[OVER THE TOP PASS TO ROLL MAN](https://www.youtube.com/watch?v=ZRY_dhTSWTM)
+
 **終結**：B 下順接球上籃　**時間**：約 3.3 秒，第 2.8 秒出手
 
 ![高位擋拆-Pick and Roll](plays/high-pnr-roll.svg)
@@ -160,6 +170,8 @@
 | **A**（開局持球） | 持球者 | 單打 ×1 |
 | **B** | 掩護者（下順） | 禁區終結 ×2、身高 ×1 |
 | **C** | 背掩護後外拉 | 弧外投射 ×3 |
+
+**參考影片**：[三對三超實用戰術：西班牙擋拆](https://www.facebook.com/watch/?v=174199876616333)、[3x3 Playbook - Spanish Pick and Roll](https://www.youtube.com/watch?v=db22lmGpGbM)
 
 **出手點：弧外**
 
@@ -247,6 +259,8 @@
 | **B** | 接球者 | 弧外投射 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[The Give-and-Go](https://www.youtube.com/watch?v=LOL5ZNuP7vk)
+
 **終結**：A 切入接回傳上籃　**時間**：約 2.3 秒，第 1.8 秒出手
 
 ![空切-Pass and Cut](plays/cut-give-go.svg)
@@ -265,6 +279,8 @@
 | **B** | 背切者 | 速度 ×3、禁區終結 ×3 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[The Backdoor Cut](https://www.youtube.com/watch?v=O4EX3P76h_U)、[NBA Cutting- Backdoor Cuts](https://www.youtube.com/watch?v=RzfXykjY_L4)
+
 **終結**：B 背切接球上籃　**時間**：約 2.4 秒，第 1.9 秒出手
 
 ![空切-Backdoor Cut](plays/cut-backdoor.svg)
@@ -282,6 +298,8 @@
 | **A**（開局持球） | 持球者 | — |
 | **B** | 掩護者 | 身高 ×1 |
 | **C** | 繞掩護接球 | 弧外投射 ×3、速度 ×1 |
+
+**參考影片**：[無球擋拆影片分析 \| 下擋down screen進攻選項](https://www.youtube.com/watch?v=1HuVxCLThjM)
 
 **出手點：弧外**
 
@@ -315,6 +333,8 @@
 | **B** | 掩護者 | 身高 ×1 |
 | **C** | 空切者 | 速度 ×2、禁區終結 ×3 |
 
+**參考影片**：[4 High Set Play - Back Screen and Ball Screen Options](https://www.youtube.com/watch?v=2S8FFvIP9_U)
+
 **終結**：C 背掩護空切上籃　**時間**：約 2.1 秒，第 1.6 秒出手
 
 ![無球掩護-Back Screen](plays/offball-back.svg)
@@ -332,6 +352,8 @@
 | **A**（開局持球） | 傳入低位後掩護，再利用掩護外彈投籃 | 弧外投射 ×3 |
 | **B** | 低位傳球 | 身高 ×2 |
 | **C** | 繞過掩護後回頭幫 A 掩護，再往籃下切 | 禁區終結 ×1、速度 ×1 |
+
+**參考影片**：[Golden State Offense - Post Split](https://www.youtube.com/watch?v=ivcb5niZ-PM)
 
 **出手點：弧外**
 
@@ -369,6 +391,8 @@
 | **B** | 反向掩護者 | 身高 ×1 |
 | **C** | 外拉投籃 | 弧外投射 ×3、速度 ×1 |
 
+**參考影片**：[林志傑 Flare Screen](https://www.youtube.com/watch?v=5g41UVABV0I)、[The BEST Way to Use Flare Screens in Basketball](https://www.youtube.com/watch?v=Fy_rEXaU4jM)
+
 **出手點：弧外**
 
 **終結**：C 利用反向掩護外拉接球投籃　**時間**：約 2.8 秒，第 1.8 秒出手
@@ -401,6 +425,8 @@
 | **B** | 接球者 | 速度 ×3、單打 ×2、禁區終結 ×2 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[DHO: Dribble Pitch/Dribble Screen](https://www.youtube.com/watch?v=Oqzx1JElX5g)
+
 **終結**：B 接手遞手後繞過 A 往中路切入上籃　**時間**：約 3.9 秒，第 3.4 秒出手
 
 ![手遞手-DHO to Drive](plays/dho-drive.svg)
@@ -419,6 +445,8 @@
 | **A**（開局持球） | 手遞手給球者 | 身高 ×1 |
 | **B** | 接球者 | 弧外投射 ×3、單打 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
+
+**參考影片**：[DHO: Dribble Pitch/Dribble Screen](https://www.youtube.com/watch?v=Oqzx1JElX5g)
 
 **出手點：弧外**
 
@@ -454,6 +482,8 @@
 | **B** | 假接球者 | 速度 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
 
+**參考影片**：[Fake Handoff Breakdown](https://www.youtube.com/watch?v=41sDICfHVlo)
+
 **終結**：A 假遞後自己切入上籃　**時間**：約 2.8 秒，第 2.3 秒出手
 
 ![手遞手-Fake Hand-Off](plays/dho-fake.svg)
@@ -471,6 +501,8 @@
 | **A**（開局持球） | 手遞手給球者 | 身高 ×1 |
 | **B** | 下掩護者 | 身高 ×1 |
 | **C** | 連續利用掩護投籃 | 弧外投射 ×3、速度 ×1 |
+
+**參考影片**：[籃球字典: ZOOM\|CHICAGO 戰術](https://www.youtube.com/watch?v=JWRnjldFXWQ)
 
 **出手點：弧外**
 
@@ -544,6 +576,8 @@
 | **A**（開局持球） | 單打持球者 | 單打 ×3、速度 ×2、禁區終結 ×1 |
 | **B** | 掩護者（引出錯位） | 身高 ×1 |
 | **C** | 拉開空間 | 弧外投射 ×1 |
+
+**參考影片**：[球场上最常用的战术？如何快速形成错位？3种制造错位战术教程](https://www.youtube.com/watch?v=-naJ7vD3YgI)
 
 **終結**：A 換防後對錯位的防守者切入　**時間**：約 4.1 秒，第 3.6 秒出手
 
