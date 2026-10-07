@@ -91,7 +91,8 @@ export function attachLibrary(
       el('span', { class: 'play-item__roles' }, rolesText(play, roles)),
     );
     button.addEventListener('click', () => choose(play, roles));
-    const li = el('li', {}, button);
+    // 卡片、出手點、影片一起框成一張卡片，和下一套戰術明顯分開
+    const li = el('li', { class: 'play-card' }, button);
     // 有多個出手點的戰術：切換出手點（預設是模擬分數比較高的那一個）
     if (rec.alternatives) {
       const shots = el('div', { class: 'play-item__shots', role: 'group', 'aria-label': '出手點' });
@@ -135,7 +136,7 @@ export function attachLibrary(
       store.load(createBlankTactic(store.get().tactic));
       opts.notify('已換成空白戰術，按復原可以回到剛才的戰術');
     });
-    body.append(el('ul', { class: 'lib-list lib-list--top' }, el('li', {}, blank)));
+    body.append(el('ul', { class: 'lib-list lib-list--top' }, el('li', { class: 'play-card' }, blank)));
 
     if (!t.autoDefense) {
       body.append(
