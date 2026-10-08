@@ -1,7 +1,8 @@
 import type { Simulation } from '../anim/simulation';
 import type { Store } from '../model/store';
-import { scoringOf } from '../model/scoring';
-import { evaluate } from '../sim/evaluate';
+import { evaluate, type Evaluation } from '../sim/evaluate';
+import { onLocaleChange, t } from '../i18n';
+import { commentText } from '../i18n/describe';
 import { videosOf } from '../plays/videos';
 import { videoLinks } from './videos';
 
@@ -68,6 +69,52 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
     if (s.playing || s.tactic.updatedAt !== shownFor || s.tactic.id !== shownId) hide();
   });
 
+  /** 目前顯示的評分；切換語系時用它重新組出文字 */
+  let shown: Evaluation | null = null;
+
+  /** 依目前語系填入卡片的文字 */
+  const render = (e: Evaluation) => {
+    const m = t().result;
+    const tactic = store.get().tactic;
+    const scored = e.grade !== null && e.expectedPoints !== null;
+    grade.textContent = scored ? e.grade! : '—';
+    grade.dataset.grade = scored ? e.grade! : 'none';
+    grade.setAttribute('aria-label', scored ? m.gradeLabel(e.grade!) : m.unscored);
+    const rule = t().scoring[tactic.scoring].label;
+    score.textContent = !scored ? m.unscored : m.score(Math.round(e.score!));
+    points.textContent = !scored ? m.noShot : e.violation ? m.violation(rule) : m.expected(e.expectedPoints!.toFixed(2), rule);
+    list.replaceChildren(
+      ...e.comments.map((c) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = commentText(c.message, tactic.players);
+        button.addEventListener('click', () => {
+          clearTimeout(timer);
+          store.update((s) => {
+            s.frameIndex = Math.min(c.frameIndex, s.tactic.frames.length - 1);
+            s.selectedPathId = null;
+            s.highlightIds = c.playerIds;
+          });
+          timer = window.setTimeout(clearHighlight, HIGHLIGHT_MS);
+        });
+        const li = document.createElement('li');
+        li.append(button);
+        return li;
+      }),
+    );
+    // 從內建戰術載入的（改過跑位也算，大方向還是同一套戰術）：附上這個語系的參考影片
+    const videos = videosOf(tactic.basedOn?.playId);
+    videoBox.replaceChildren(...(videos.length ? [videoLinks(videos, 'result__video-list')] : []));
+    videoBox.hidden = videos.length === 0;
+  };
+
+  onLocaleChange(() => {
+    if (shown && !panel.hidden) {
+      render(shown);
+      reserveSpace();
+    }
+  });
+
   return {
     show(sim: Simulation) {
       const e = evaluate(store.get().tactic, sim);
@@ -79,40 +126,8 @@ export function attachResult(store: Store): { show: (sim: Simulation) => void; h
       });
       shownFor = store.get().tactic.updatedAt;
       shownId = store.get().tactic.id;
-
-      grade.textContent = scored ? e.grade! : '—';
-      grade.dataset.grade = scored ? e.grade! : 'none';
-      grade.setAttribute('aria-label', scored ? `評等 ${e.grade}` : '未評分');
-      const rule = scoringOf(store.get().tactic);
-      score.textContent = !scored ? '未評分' : `${Math.round(e.score!)} 分`;
-      points.textContent = !scored
-        ? '沒有投籃'
-        : e.violation
-          ? `違例，預期得分 0（${rule.label}）`
-          : `預期得分 ${e.expectedPoints!.toFixed(2)} 分（${rule.label}）`;
-      list.replaceChildren(
-        ...e.comments.map((c) => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.textContent = c.text;
-          button.addEventListener('click', () => {
-            clearTimeout(timer);
-            store.update((s) => {
-              s.frameIndex = Math.min(c.frameIndex, s.tactic.frames.length - 1);
-              s.selectedPathId = null;
-              s.highlightIds = c.playerIds;
-            });
-            timer = window.setTimeout(clearHighlight, HIGHLIGHT_MS);
-          });
-          const li = document.createElement('li');
-          li.append(button);
-          return li;
-        }),
-      );
-      // 從內建戰術載入的（改過跑位也算，大方向還是同一套戰術）：附上參考影片
-      const videos = videosOf(store.get().tactic.basedOn?.playId);
-      videoBox.replaceChildren(...(videos.length ? [videoLinks(videos, 'result__video-list')] : []));
-      videoBox.hidden = videos.length === 0;
+      shown = e;
+      render(e);
       panel.hidden = false;
       reserveSpace();
     },

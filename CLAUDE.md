@@ -2,13 +2,14 @@
 
 ## 語言
 
-- **繁體中文（台灣用語）**：回覆、code review 意見、測試名稱、介面文字。
+- **繁體中文（台灣用語）**：回覆、code review 意見、測試名稱。
+- **介面文字**：繁體中文與英文兩種語系（M10），一律放在 `src/i18n/zh.ts`、`src/i18n/en.ts` 的文字表，**兩份要同時加**（型別與 `i18n.test.ts` 檢查結構一致、英文表沒有中文）。用語照 `docs/SPEC.md` §10.3 的術語對照。
 - **繁體中文或英文皆可**：程式碼註解、文件、git commit message。同一段註解或同一份文件內維持一種語言。
 - **英文**：識別字（變數、函式、檔名）。
 
 ## 專案簡介
 
-3 對 3 半場籃球戰術 Web 小遊戲（PWA）。使用者固定操作**藍隊**、系統固定操作**紅隊**。v1 只做**進攻模式**：使用者設定球員 → 對位 → 選內建戰術或自己畫跑位 → 播放，紅隊由防守 AI 即時反應，之後評分（M7）；可以存檔、匯入匯出 JSON、產生分享連結，並且能離線使用（M8）。防守模式暫緩。
+3 對 3 半場籃球戰術 Web 小遊戲（PWA），介面有繁體中文與英文。使用者固定操作**藍隊**、系統固定操作**紅隊**。v1 只做**進攻模式**：使用者設定球員 → 對位 → 選內建戰術或自己畫跑位 → 播放，紅隊由防守 AI 即時反應，之後評分（M7）；可以存檔、匯入匯出 JSON、產生分享連結，並且能離線使用（M8）。防守模式暫緩。
 
 技術：TypeScript 7 + Vite 8 + 原生 Canvas 2D，測試用 Vitest 5，PWA 用 vite-plugin-pwa（只在打包時使用）。**沒有任何執行期相依套件**（不用 React 等框架）；分享連結的壓縮用瀏覽器內建的 CompressionStream。
 
@@ -16,8 +17,8 @@
 
 | 檔案 | 內容 |
 |---|---|
-| `docs/SPEC.md` | 產品規格書。§1 流程、§3 球員資料、§4 路線、§5 分鏡與播放、§6 模擬引擎（防守 AI、戰術庫、評分）、§7 能力模型、§11 資料模型。**只描述目前實作的規格**，不放歷史與規劃 |
-| `docs/PLANNING.md` | 專案規劃：§1 里程碑（M1–M8 已完成，M9 GitHub CI/CD、M10 英文語系、M11 防守模式暫緩）、§2 決策紀錄、§3 待確認清單 |
+| `docs/SPEC.md` | 產品規格書。§1 流程、§3 球員資料、§4 路線、§5 分鏡與播放、§6 模擬引擎（防守 AI、戰術庫、評分）、§7 能力模型、§10 版面與語系（§10.3 語系規則與術語對照）、§11 資料模型。**只描述目前實作的規格**，不放歷史與規劃 |
+| `docs/PLANNING.md` | 專案規劃：§1 里程碑（M1–M10 已完成，M11 防守模式暫緩）、§2 決策紀錄、§3 待確認清單 |
 | `docs/PLAYS.md`、`docs/plays/*.svg` | 21 套內建戰術的說明與分鏡圖。**由程式產生，不要手改**：紅隊用防守模擬畫，所以改了戰術資料（`src/plays/library.ts`）、防守站位或模擬（`src/sim/`）、配色後，都要執行 `npm run plays-doc`；`scripts/plays-doc.test.ts` 會檢查是否和程式產生的一致 |
 
 - 行為改變時，要同步更新 `docs/SPEC.md`（直接改成新的規格，不寫「原本…改成…」），並在 `docs/PLANNING.md` 的決策紀錄加一列（被取代的舊決策用 `~~刪除線~~` 標註，不要直接刪掉）。
@@ -62,13 +63,18 @@ src/
     simulation.ts    時間軸 + 防守模擬 = 完整姿態
     playback.ts      requestAnimationFrame 播放
   plays/           內建戰術庫
-    library.ts       21 套戰術，用角色 A / B / C 描述；8 套跳投戰術有中距離、弧外兩個出手點，Spain 另有換人出手的禁區出手點（playVariant）
+    library.ts       21 套戰術，用角色 A / B / C 描述；8 套跳投戰術有中距離、弧外兩個出手點，Spain 另有換人出手的禁區出手點（playVariant）。
+                     名稱一律英文；類別是 id；簡介、終結、角色是 { zh, en }；分鏡說明 note 只用在 PLAYS.md，只寫中文
+    videos/          參考影片：每種語系一份（zh-Hant.ts、en.ts），依目前語系只讀其中一份
     instantiate.ts   loadPlay：依角色指派載入成戰術「複本」（不會改到內建資料）
     recommend.ts     推薦演算法：能力 + 對位的身高差、速度差，6 種角色排列取最高分
   render/          Canvas 繪圖（球場離屏快取、球員、路線、分身、把手）
   input/pointer.ts 指標事件：拖曳、畫線、編輯控制點、點球員開設定
   ui/              DOM 介面：設定流程（含開局站位小球場）、戰術庫面板、評分卡片、工具列、分鏡列、HUD、選單、提示、
-                   存檔與戰術列表（saved.ts）、命名對話框、分享與唯讀預覽（share.ts）
+                   存檔與戰術列表（saved.ts）、命名對話框、分享與唯讀預覽（share.ts）、語系選單（language.ts）、
+                   index.html 固定文字的填入（i18nDom.ts）
+  i18n/            語系：index.ts（t() 取目前語系的文字表、setLocale、onLocaleChange）、zh.ts / en.ts 文字表、
+                   describe.ts（把評價、推薦理由、球隊總評的資料依語系組成句子）
 scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 ```
 
@@ -83,7 +89,8 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - **能力等級**：優勢 / 稍強 / 平均 / 稍弱 / 劣勢（分數 4 → 0），以場上六個人的平均為基準。藍隊有 5 項（速度、單打、禁區終結、中距離投射、弧外投射），紅隊只有速度。
 - **計分**：依戰術的計分規則（`model/scoring.ts`：FIBA 3x3 弧內 1、弧外 2 分、12 秒，預設；一般規則 2／3 分、24 秒）。分數、進攻時限一律從 `scoringOf` / `shotClockOf` 取，不要寫死 1、2、12。評等用 0–100 分（`scoreOf`，有效命中率）。判斷弧內外一律用 `isBeyondArc`，不要只算離籃框的距離（底角是直線）。
 - **係數**：模擬、速度相關的數字放在 `sim/config.ts` 或 `model/physique.ts`，不要散落在邏輯裡。
-- **介面文字**：繁體中文；狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`；要清空復原紀錄（分享連結預覽、結束預覽）用 `reset`。
+- **介面文字**：從 `t()` 取（`src/i18n`），不要把字串寫死在程式或 `index.html`；`index.html` 的固定文字用 `data-i18n` / `data-i18n-tip` / `data-i18n-aria` 標示文字表的位置（「區塊.名稱」）。數字、名稱要放進句子時，文字表裡寫成函式（兩種語言語序不同）。`sim/` 與推薦只產生資料（例如評價的 `CommentMessage`），句子由 `i18n/describe.ts` 組。會隨狀態改變的文字要在切換語系時重新顯示（`store.refresh()` 會通知所有訂閱者；不靠 store 的用 `onLocaleChange`）。測試與 `plays-doc` 用預設的繁體中文。
+- **狀態**：狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`；要清空復原紀錄（分享連結預覽、結束預覽）用 `reset`。
 - **外部資料不直接相信**：localStorage、JSON 檔、分享連結一律經過 `parseTactic` 驗證，紅隊位置與後面分鏡一律重新推算。資料格式改變時，`SCHEMA_VERSION` 加一並在 `parseTactic` 裡遷移舊版本。
 - **唯讀預覽**（`EditorState.readonly`）：新增任何編輯操作時，記得在預覽中停用（和 `playing` 一起檢查）。
 - **改戰術名稱不算修改**：用 `store.update`，不要用 `commit`（否則會清掉評分、標示未存檔）。
@@ -98,7 +105,8 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - 模擬是否仍然決定性；新增的係數是否放進 config。
 - 路線與分鏡規則（每人每分鏡一條路線、持球限制、投籃只在最後一個分鏡、分鏡串接後的 prune）是否被破壞。
 - 內建戰術：載入不能改到 `PLAYS` 本身；每個掩護都要真的擋到防守者；出手說明的分數要和實際位置一致（`plays.test.ts` 有檢查）。
-- 手機直式（360–390 px 寬）與橫式版面是否正常；觸控操作（`touch-action: none`、Pointer Events）。
+- 手機直式（360–390 px 寬）與橫式版面是否正常（英文比較長，兩種語系都要看）；觸控操作（`touch-action: none`、Pointer Events）。
+- 新的介面文字是否放進文字表、繁中與英文都有；切換語系時是否會重新顯示。
 
 ### 刻意的設計（review 時不需要回報）
 

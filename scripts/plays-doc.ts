@@ -21,14 +21,20 @@ import { trimPolyline } from '../src/geom/polyline';
 import { normalize, perp, sub } from '../src/geom/vec';
 import { createDefaultTactic } from '../src/model/defaults';
 import { ballPosition } from '../src/model/entities';
-import { SKILL_LABEL } from '../src/model/physique';
 import { RIM, resolvePoints } from '../src/model/paths';
 import type { Tactic, Vec2 } from '../src/model/types';
 import { wave } from '../src/render/paths';
-import { PLAYS, ROLES, SHOT_LABEL, playVariant, type Play, type Role, type RoleWeights } from '../src/plays/library';
+import { MESSAGES } from '../src/i18n';
+import { playTitle } from '../src/i18n/describe';
+import { PLAYS, ROLES, playVariant, type Play, type Role, type RoleWeights } from '../src/plays/library';
 import { loadPlay } from '../src/plays/instantiate';
 import { videosOf } from '../src/plays/videos';
 import { theme } from '../src/render/theme';
+
+// 戰術說明只有繁體中文版（docs/PLAYS.md），一律用繁體中文的文字表
+const ZH = MESSAGES.zh;
+const SKILL_LABEL = ZH.skill;
+const SHOT_LABEL = ZH.shot;
 
 const PX = 20; // 每公尺幾個 SVG 單位
 const VIEW = { minX: -7.9, maxX: 7.9, minY: -0.6, maxY: 11.2 };
@@ -206,7 +212,7 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
     '',
     '## 目錄',
     '',
-    ...PLAYS.map((p, i) => `${i + 1}. [${p.category}-${p.name}](#${i + 1}-${p.category}-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')})`),
+    ...PLAYS.map((p, i) => `${i + 1}. [${playTitle(p, false, ZH)}](#${i + 1}-${ZH.library.category[p.category]}-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')})`),
     '',
   ];
 
@@ -216,9 +222,9 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
     const tl = buildTimeline(tactic);
     svgs[svgId] = playSvg(tactic);
     return [
-      `**終結**：${play.finish}　**時間**：約 ${tl.total.toFixed(1)} 秒，第 ${possessionSeconds(tl).toFixed(1)} 秒出手`,
+      `**終結**：${play.finish.zh}　**時間**：約 ${tl.total.toFixed(1)} 秒，第 ${possessionSeconds(tl).toFixed(1)} 秒出手`,
       '',
-      `![${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}](plays/${svgId}.svg)`,
+      `![${playTitle(play, true, ZH)}](plays/${svgId}.svg)`,
       '',
       ...play.frames.map((fr, k) => `${k + 1}. ${fr.note}`),
       '',
@@ -227,17 +233,17 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
 
   PLAYS.forEach((play, i) => {
     out.push(
-      `## ${i + 1}. ${play.category}-${play.name}`,
+      `## ${i + 1}. ${playTitle(play, false, ZH)}`,
       '',
-      play.summary,
+      play.summary.zh,
       '',
       '| 角色 | 任務 | 推薦時看重 |',
       '|---|---|---|',
-      ...ROLES.map((r) => `| **${r}**${r === play.ball ? '（開局持球）' : ''} | ${play.roles[r]} | ${weightText(play.weights[r])} |`),
+      ...ROLES.map((r) => `| **${r}**${r === play.ball ? '（開局持球）' : ''} | ${play.roles[r].zh} | ${weightText(play.weights[r])} |`),
       '',
-      // 參考影片（src/plays/videos.ts）
-      ...(videosOf(play.id).length
-        ? ['**參考影片**：' + videosOf(play.id).map((v) => `[${v.title.replace(/[[\]|]/g, '\\$&')}](${v.url})`).join('、'), '']
+      // 參考影片（繁體中文那份，src/plays/videos/zh-Hant.ts）
+      ...(videosOf(play.id, 'zh').length
+        ? ['**參考影片**：' + videosOf(play.id, 'zh').map((v) => `[${v.title.replace(/[[\]|]/g, '\\$&')}](${v.url})`).join('、'), '']
         : []),
       ...(play.shot ? [`**出手點：${SHOT_LABEL[play.shot]}**`, ''] : []),
       ...variantBody(play, play.id),
@@ -248,7 +254,7 @@ export function buildPlaysDoc(): { markdown: string; svgs: Record<string, string
       out.push(
         `### 另一個出手點：${SHOT_LABEL[shot]}`,
         '',
-        `${alt.summary}${who}：${weightText(alt.weights[alt.finisher])}。`,
+        `${alt.summary.zh}${who}：${weightText(alt.weights[alt.finisher])}。`,
         '',
         ...variantBody(alt, `${play.id}-${shot}`),
       );

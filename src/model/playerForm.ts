@@ -1,5 +1,6 @@
 import { HEIGHT_RANGE } from './physique';
 import type { Player, Rating, Skills } from './types';
+import { t } from '../i18n';
 
 // 設定頁的表單驗證（SPEC §3.1、§3.2），純函式方便測試。
 
@@ -29,21 +30,22 @@ export function parseTeamForm(values: readonly PlayerFormValues[]): TeamFormResu
   for (const v of values) {
     const num = Number(v.number);
     if (v.number.trim() === '' || !Number.isInteger(num) || num < 0 || num > 99) {
-      return { error: '號碼要是 0–99 的整數', id: v.id, field: 'number' };
+      return { error: t().form.number, id: v.id, field: 'number' };
     }
-    if (seen.has(num)) return { error: `號碼 ${num} 重複了`, id: v.id, field: 'number' };
+    if (seen.has(num)) return { error: t().form.duplicateNumber(num), id: v.id, field: 'number' };
     seen.set(num, v.id);
 
+    // 暱稱選填：空白 = 預設暱稱（顯示時依語系組出來）
     const name = v.name.trim();
-    if (name.length === 0 || name.length > NAME_MAX) {
-      return { error: `暱稱要 1–${NAME_MAX} 個字`, id: v.id, field: 'name' };
+    if (name.length > NAME_MAX) {
+      return { error: t().form.name(NAME_MAX), id: v.id, field: 'name' };
     }
 
     let heightCm: number | undefined;
     if (v.height.trim() !== '') {
       const h = Number(v.height);
       if (!Number.isInteger(h) || h < HEIGHT_RANGE.min || h > HEIGHT_RANGE.max) {
-        return { error: `身高要是 ${HEIGHT_RANGE.min}–${HEIGHT_RANGE.max} cm 的整數，或留空`, id: v.id, field: 'height' };
+        return { error: t().form.height(HEIGHT_RANGE.min, HEIGHT_RANGE.max), id: v.id, field: 'height' };
       }
       heightCm = h;
     }

@@ -1,16 +1,10 @@
-// 內建戰術的參考影片（SPEC §6.3）。只要改這個檔案就能新增、修改、刪除連結。
+// 繁體中文介面的參考影片（SPEC §6.3）。只要改這個檔案就能新增、修改、刪除連結。
 // key 是戰術的 id（src/plays/library.ts），每套最多 3 個；同一套戰術的所有出手點共用。
-// 顯示在戰術庫卡片與評分卡片（從這套戰術載入的戰術），點擊開新分頁；docs/PLAYS.md 也會列出（改完執行 npm run plays-doc）。
+// 介面是繁體中文時顯示在戰術庫卡片與評分卡片（從這套戰術載入的戰術），點擊開新分頁；
+// docs/PLAYS.md 也列這一份（改完執行 npm run plays-doc）。英文介面用 en.ts，沒有列的戰術就不顯示影片。
 // 網址必須是 https，plays.test.ts 會檢查 id、數量與網址格式。
 
-export interface PlayVideo {
-  /** 顯示文字 */
-  title: string;
-  url: string;
-}
-
-/** 每套戰術最多幾個影片 */
-export const MAX_VIDEOS = 3;
+import type { PlayVideo } from '.';
 
 const PNR_BASICS: PlayVideo[] = [
   { title: '擋拆教學', url: 'https://www.youtube.com/watch?v=IULh8LwbDZE' },
@@ -19,7 +13,7 @@ const PNR_BASICS: PlayVideo[] = [
 
 const DHO_BASICS: PlayVideo[] = [{ title: 'DHO: Dribble Pitch/Dribble Screen', url: 'https://www.youtube.com/watch?v=Oqzx1JElX5g' }];
 
-export const PLAY_VIDEOS: Readonly<Record<string, readonly PlayVideo[]>> = {
+export const ZH_VIDEOS: Readonly<Record<string, readonly PlayVideo[]>> = {
   // 高位擋拆-Pull-up Jumper
   'high-pnr-pullup': PNR_BASICS,
   // 高位擋拆-Floater
@@ -73,5 +67,3 @@ export const PLAY_VIDEOS: Readonly<Record<string, readonly PlayVideo[]>> = {
   ],
 };
 
-/** 這套戰術的參考影片（沒有就是空陣列） */
-export const videosOf = (playId: string | undefined): readonly PlayVideo[] => (playId && PLAY_VIDEOS[playId]) || [];

@@ -17,13 +17,25 @@ import { attachShare, type Screen } from './ui/share';
 import { createToast } from './ui/toast';
 import { attachToolbar } from './ui/toolbar';
 import { attachTooltips, setTip } from './ui/tooltip';
+import { detectLocale, onLocaleChange, setLocale, t } from './i18n';
+import { applyStaticText } from './ui/i18nDom';
+import { attachLanguageMenu, storedLocale } from './ui/language';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 const canvas = $<HTMLCanvasElement>('#court');
 
+// 語系要在建立任何資料之前決定（預設暱稱依語系產生）
+// 有些 WebView 的 navigator.languages 是空陣列，改用 navigator.language
+setLocale(detectLocale(storedLocale(), navigator.languages?.length ? navigator.languages : [navigator.language]));
 attachTooltips();
+applyStaticText();
 const store = new Store();
+// 切換語系：填入固定文字，再讓各模組依狀態重新顯示（預設暱稱是顯示時才組的，資料不用改）
+onLocaleChange(() => {
+  applyStaticText();
+  store.refresh();
+});
 const renderer = new Renderer(canvas);
 const playback = new Playback(store, renderer);
 const notify = createToast($('#toast'));
@@ -99,7 +111,7 @@ function storage(): KeyValueStorage {
     return localStorage;
   } catch {
     const memory = new Map<string, string>();
-    notify('瀏覽器不允許儲存資料，存檔只會保留到關閉頁面');
+    notify(t().board.storageBlocked);
     return { getItem: (k) => memory.get(k) ?? null, setItem: (k, v) => void memory.set(k, v) };
   }
 }
@@ -124,27 +136,30 @@ void share.openFromHash();
 
 $<HTMLButtonElement>('#mode-offense').addEventListener('click', () => setup.open(1));
 $<HTMLButtonElement>('#team').addEventListener('click', () => setup.open(1));
+attachLanguageMenu([$('#home-lang'), $('#settings')]);
 
 // ---- 播放 ----
 const playBtn = $<HTMLButtonElement>('#play');
 const togglePlay = () => {
   if (!playback.active) {
     const tl = buildTimeline(store.get().tactic);
-    const t = possessionSeconds(tl);
+    const seconds = possessionSeconds(tl);
     const clock = shotClockOf(store.get().tactic);
-    if (t > clock) {
-      const what = tl.shotReleaseAt === null ? '整個戰術' : '出手時間';
-      notify(`${what} ${t.toFixed(1)} 秒，超過 ${clock} 秒進攻時限`);
+    if (seconds > clock) {
+      notify(t().board.overClock(tl.shotReleaseAt !== null, seconds.toFixed(1), clock));
     }
   }
   playback.toggle();
 };
 playBtn.addEventListener('click', togglePlay);
-store.subscribe((s) => {
-  playBtn.querySelector('use')!.setAttribute('href', s.playing ? '#icon-stop' : '#icon-play');
-  playBtn.setAttribute('aria-label', s.playing ? '停止' : '播放');
-  setTip(playBtn, s.playing ? '停止（空白鍵）' : '播放（空白鍵）');
-});
+const syncPlay = () => {
+  const { playing } = store.get();
+  playBtn.querySelector('use')!.setAttribute('href', playing ? '#icon-stop' : '#icon-play');
+  playBtn.setAttribute('aria-label', playing ? t().board.stop : t().board.play);
+  setTip(playBtn, playing ? t().board.stopTip : t().board.playTip);
+};
+store.subscribe(syncPlay);
+syncPlay();
 document.addEventListener('keydown', (e) => {
   if (e.key !== ' ' || document.body.dataset.screen !== 'board' || document.querySelector('dialog[open]')) return;
   if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement) return;

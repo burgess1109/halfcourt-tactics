@@ -1,3 +1,4 @@
+import { displayName } from '../model/defaults';
 import { PLAYER_RADIUS } from '../model/entities';
 import { FORMATIONS, applyFormation, lineupBall, moveInLineup, setHolder, type Lineup } from '../model/lineup';
 import type { Player, Pressure, Vec2 } from '../model/types';
@@ -5,6 +6,7 @@ import { drawCourt } from '../render/court';
 import { drawBall, drawPlayer, drawPlayerLabel } from '../render/entities';
 import type { Viewport } from '../render/viewport';
 import { defendPosition } from '../sim/defense';
+import { t } from '../i18n';
 
 // 比賽設定頁的小球場（SPEC §1.1 步驟 ③）：拖曳藍隊自由放置、點一下指定持球者、一鍵套用常用陣型；
 // 紅隊依目前的對位即時站到防守位置。
@@ -45,7 +47,7 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
   const holderGroup = document.createElement('fieldset');
   holderGroup.className = 'lineup__holder';
   const legend = document.createElement('legend');
-  legend.textContent = '持球者';
+  legend.textContent = t().lineup.holder;
   holderGroup.append(legend);
   const radios = blues.map((b) => {
     const input = document.createElement('input');
@@ -56,7 +58,7 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
       if (input.checked) update(setHolder(lineup, b.id));
     });
     const label = document.createElement('label');
-    label.append(input, document.createTextNode(`${b.number} 號 ${b.name}`));
+    label.append(input, document.createTextNode(t().common.player(b.number, displayName(b))));
     holderGroup.append(label);
     return input;
   });
@@ -69,22 +71,22 @@ export function createLineupEditor(opts: LineupEditorOptions): HTMLElement {
   const presets = document.createElement('div');
   presets.className = 'lineup__presets';
   presets.setAttribute('role', 'group');
-  presets.setAttribute('aria-label', '常用陣型');
+  presets.setAttribute('aria-label', t().lineup.presets);
   for (const f of FORMATIONS) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'lineup__preset';
-    b.textContent = f.label;
+    b.textContent = t().formation[f.id];
     b.addEventListener('click', () => update(applyFormation(lineup, f)));
     presets.append(b);
   }
 
   const canvas = document.createElement('canvas');
   canvas.className = 'lineup__court';
-  canvas.setAttribute('aria-label', '開局站位：拖曳藍隊球員調整位置，點一下讓他持球');
+  canvas.setAttribute('aria-label', t().lineup.court);
   const hint = document.createElement('p');
   hint.className = 'lineup__hint';
-  hint.textContent = '拖曳藍隊到想要的位置；選上方的持球者，或在球場上點一下球員，都能換人持球。紅隊會依對位自動站好。';
+  hint.textContent = t().lineup.hint;
   wrap.append(holderGroup, presets, canvas, hint);
 
   const ctx = canvas.getContext('2d')!;

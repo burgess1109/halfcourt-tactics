@@ -1,34 +1,19 @@
-import { defaultPlayer } from '../model/defaults';
+import { defaultName, defaultPlayer, displayName } from '../model/defaults';
 import { assignMatchup, defaultMatchups, setMatchups } from '../model/matchups';
 import { clearRedPaths, freezeDefenseAsPaths, syncFrames } from '../model/frames';
 import { applyLineup, canApplyLineupNow, lineupOf, type Lineup } from '../model/lineup';
 import { createLineupEditor } from './lineupEditor';
-import {
-  DEFAULT_SKILLS,
-  RATINGS,
-  RATING_LABEL,
-  SKILL_KEYS,
-  SKILL_LABEL,
-  counterpartId,
-  heightOf,
-  speedOf,
-} from '../model/physique';
+import { DEFAULT_SKILLS, RATINGS, SKILL_KEYS, counterpartId, heightOf, speedOf } from '../model/physique';
 import { applyPatch, parseTeamForm, type PlayerFormValues } from '../model/playerForm';
 import type { EditorState, Store } from '../model/store';
-import { SCORING_RULES } from '../model/scoring';
 import type { DriveHelp, PickCoverage, Player, Pressure, Rating, ScoringRule, Skills, Tactic, Team } from '../model/types';
+import { t as tx } from '../i18n';
 
 // 進攻模式的設定流程（SPEC §1.1）：① 藍隊 → ② 紅隊 → ③ 對位 → 戰術面板。
 
 export type Step = 1 | 2 | 3;
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
-
-const STEP_TEXT: Record<Step, { title: string; hint: string }> = {
-  1: { title: '你的球隊（藍隊）', hint: '都是選填。能力以場上六個人的平均為基準，預設平均；有填身高才會推薦內建戰術。' },
-  2: { title: '對手（紅隊）', hint: '都是選填。身高沒填時跟藍隊同順序的球員一樣高；速度以場上六個人的平均為基準，預設平均。' },
-  3: { title: '比賽設定', hint: '選擇計分規則，在小球場上擺好開局站位、指定誰持球，再設定紅隊誰盯誰、怎麼防守。' },
-};
 
 const teamPlayers = (t: Tactic, team: Team) => t.players.filter((p) => p.team === team);
 
@@ -88,24 +73,24 @@ export function attachSetup(
   const playerCard = (p: Player, index: number) => {
     const blue = p.team === 'blue';
     const card = el('fieldset', { class: `pcard pcard--${p.team}`, 'data-id': p.id });
-    card.append(el('legend', {}, `${blue ? '藍隊' : '紅隊'}第 ${index + 1} 位`));
+    card.append(el('legend', {}, tx().setup.cardLegend(blue, index + 1)));
 
     const input = (name: string, label: string, attrs: Record<string, unknown>, optional = false) =>
       el(
         'label',
         { class: 'field' },
-        el('span', {}, label, ...(optional ? [' ', el('small', {}, '選填')] : [])),
+        el('span', {}, label, ...(optional ? [' ', el('small', {}, tx().setup.optional)] : [])),
         el('input', { name, ...attrs }),
       );
     card.append(
       el(
         'div',
         { class: 'pcard__row' },
-        input('number', '號碼', { type: 'number', inputMode: 'numeric', min: '0', max: '99', step: '1', value: String(p.number) }),
-        input('name', '暱稱', { type: 'text', maxLength: 12, autocomplete: 'off', value: p.name }),
+        input('number', tx().setup.number, { type: 'number', inputMode: 'numeric', min: '0', max: '99', step: '1', value: String(p.number) }),
+        input('name', tx().setup.nickname, { type: 'text', maxLength: 12, autocomplete: 'off', value: p.name, placeholder: defaultName(p) }, true),
         input(
           'height',
-          '身高 cm',
+          tx().setup.height,
           { type: 'number', inputMode: 'numeric', min: '150', max: '230', step: '1', value: p.heightCm?.toString() ?? '' },
           true,
         ),
@@ -129,9 +114,9 @@ export function attachSetup(
     };
     if (blue) {
       const skills = p.skills ?? DEFAULT_SKILLS;
-      for (const key of SKILL_KEYS) card.append(ratingRow(`${p.id}-${key}`, SKILL_LABEL[key], RATING_LABEL, skills[key]));
+      for (const key of SKILL_KEYS) card.append(ratingRow(`${p.id}-${key}`, tx().skill[key], tx().rating, skills[key]));
     } else {
-      card.append(ratingRow(`${p.id}-speed`, '速度', RATING_LABEL, p.speedRating ?? 2));
+      card.append(ratingRow(`${p.id}-speed`, tx().skill.speed, tx().rating, p.speedRating ?? 2));
     }
     card.append(el('p', { class: 'pcard__speed', 'aria-live': 'polite' }));
     return card;
@@ -171,10 +156,10 @@ export function attachSetup(
       const fallback = heightOf({ ...draft, heightCm: undefined }, players);
       const blue = players.find((p) => p.id === counterpartId(v.id));
       heightInput.placeholder =
-        team === 'red' && blue?.heightCm !== undefined ? `同藍 ${fallback}` : `預設 ${fallback}`;
+        team === 'red' && blue?.heightCm !== undefined ? tx().setup.heightSameAsBlue(fallback) : tx().setup.heightDefault(fallback);
       const all = players.map((p) => (p.id === draft.id ? draft : p));
       card.querySelector('.pcard__speed')!.textContent =
-        `跑動 ${speedOf(draft, all, false).toFixed(2)} m/s ・ 運球 ${speedOf(draft, all, true).toFixed(2)} m/s`;
+        tx().setup.speedLine(speedOf(draft, all, false).toFixed(2), speedOf(draft, all, true).toFixed(2));
     }
   };
 
@@ -184,22 +169,23 @@ export function attachSetup(
     const t = tactic();
     const players = t.players;
     const red = teamPlayers(t, 'red');
-    const label = (p: Player) => `${p.number} 號 ${p.name}（${heightOf(p, players)} cm）`;
+    const m = tx().setup;
+    const label = (p: Player) => m.matchupOption(tx().common.player(p.number, displayName(p)), heightOf(p, players));
     form.replaceChildren();
 
     // 計分規則：影響每一球的分數、評分與進攻時限（存在戰術裡，分享連結才能重現）
-    form.append(el('h3', { class: 'setup__section' }, '計分規則'));
-    const scoring = el('fieldset', { class: 'choice' }, el('legend', {}, '每一球的分數與進攻時限'));
+    form.append(el('h3', { class: 'setup__section' }, m.scoringTitle));
+    const scoring = el('fieldset', { class: 'choice' }, el('legend', {}, m.scoringLegend));
     for (const rule of ['fiba3x3', 'standard'] as const) {
-      const spec = SCORING_RULES[rule];
+      const spec = tx().scoring[rule];
       const radio = el('input', { type: 'radio', name: 'scoring', value: rule, checked: draftScoring === rule });
       radio.addEventListener('change', () => (draftScoring = rule));
-      scoring.append(el('label', {}, radio, el('span', {}, rule === 'fiba3x3' ? `${spec.label}（預設）` : spec.label, el('small', {}, spec.description))));
+      scoring.append(el('label', {}, radio, el('span', {}, rule === 'fiba3x3' ? m.withDefault(spec.label) : spec.label, el('small', {}, spec.description))));
     }
     form.append(scoring);
 
     // 開局站位：小球場自由放置（紅隊依目前的對位即時站好）
-    form.append(el('h3', { class: 'setup__section' }, '開局站位'));
+    form.append(el('h3', { class: 'setup__section' }, m.lineupTitle));
     form.append(
       createLineupEditor({
         players,
@@ -211,11 +197,11 @@ export function attachSetup(
         },
       }),
     );
-    form.append(el('h3', { class: 'setup__section' }, '對位設定'));
+    form.append(el('h3', { class: 'setup__section' }, m.matchupsTitle));
 
     for (const b of teamPlayers(t, 'blue')) {
       const r = players.find((p) => p.id === draftMatchups[b.id])!;
-      const select = el('select', { 'aria-label': `${b.name} 的對位` });
+      const select = el('select', { 'aria-label': m.matchupOf(displayName(b)) });
       for (const opt of red) select.append(el('option', { value: opt.id, selected: opt.id === r.id }, label(opt)));
       select.addEventListener('change', () => {
         draftMatchups = assignMatchup(draftMatchups, b.id, select.value);
@@ -231,22 +217,22 @@ export function attachSetup(
           'div',
           { class: 'mrow' },
           el('div', { class: 'mrow__blue' }, label(b)),
-          el('span', { class: 'mrow__vs' }, '對'),
+          el('span', { class: 'mrow__vs' }, m.versus),
           select,
           el(
             'p',
             { class: 'mrow__diff' },
-            '藍隊的優勢：',
-            diff(`身高 ${dh >= 0 ? '+' : ''}${dh} cm`, dh),
+            m.blueEdge,
+            diff(m.heightDiff(`${dh >= 0 ? '+' : ''}${dh}`), dh),
             ' ・ ',
-            diff(`速度 ${dv >= 0 ? '+' : ''}${Math.round(dv * 100)}%`, Math.round(dv * 100)),
+            diff(m.speedDiff(`${dv >= 0 ? '+' : ''}${Math.round(dv * 100)}`), Math.round(dv * 100)),
           ),
         ),
       );
     }
 
     if (draftCustomized) {
-      const reset = el('button', { type: 'button', class: 'link-btn' }, '恢復預設對位');
+      const reset = el('button', { type: 'button', class: 'link-btn' }, m.resetMatchups);
       reset.addEventListener('click', () => {
         draftMatchups = defaultMatchups(players);
         draftCustomized = false;
@@ -256,11 +242,11 @@ export function attachSetup(
     }
 
     // 防守設定：紅隊的防守方式（自動防守跑位、防守距離、切入補防、掩護應對）
-    form.append(el('h3', { class: 'setup__section' }, '防守設定'));
+    form.append(el('h3', { class: 'setup__section' }, m.defenseTitle));
 
     // 自動防守跑位：關閉時紅隊不會自動移動，每個分鏡由使用者拖曳；切入補防、掩護應對用不到
     const auto = el('input', { type: 'checkbox', checked: draftAutoDefense });
-    const autoNote = el('p', { class: 'choice__note' }, '自動防守跑位關閉時，「持球者切入時」與「遇到掩護時」不適用。');
+    const autoNote = el('p', { class: 'choice__note' }, m.autoNote);
     const syncAuto = () => {
       help.disabled = !draftAutoDefense;
       choice.disabled = !draftAutoDefense;
@@ -274,7 +260,7 @@ export function attachSetup(
       el(
         'fieldset',
         { class: 'choice' },
-        el('legend', {}, '紅隊的跑位'),
+        el('legend', {}, m.autoLegend),
         el(
           'label',
           {},
@@ -282,8 +268,8 @@ export function attachSetup(
           el(
             'span',
             {},
-            '啟用自動防守跑位（預設）',
-            el('small', {}, '關閉後，紅隊開局後不會自動移動，改由你操作：用「跑位」工具畫紅隊的移動路線，在第 1 個分鏡拖曳紅隊的開局位置；不會模擬換防、協防、補防'),
+            m.autoLabel,
+            el('small', {}, m.autoDesc),
           ),
         ),
         autoNote,
@@ -291,7 +277,7 @@ export function attachSetup(
     );
 
     // 防守距離：改了之後重畫，小球場上的紅隊跟著換位置
-    const pressure = el('fieldset', { class: 'choice' }, el('legend', {}, '紅隊的防守距離'));
+    const pressure = el('fieldset', { class: 'choice' }, el('legend', {}, m.pressureLegend));
     const pressureOption = (value: Pressure, text: string, desc: string) => {
       const radio = el('input', { type: 'radio', name: 'pressure', value, checked: draftPressure === value });
       radio.addEventListener('change', () => {
@@ -301,26 +287,26 @@ export function attachSetup(
       return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
     };
     pressure.append(
-      pressureOption('normal', '一般（預設）', '貼近持球者、防無球者保持一小段距離，外圍無球者平常守在內側，對方往外跑才阻絕'),
-      pressureOption('tight', '緊貼', '貼近對位者，外圍一律阻絕傳球路線：出手和外圍接球比較難，但切入、背切比較容易甩開防守者'),
+      pressureOption('normal', m.pressureNormal, m.pressureNormalDesc),
+      pressureOption('tight', m.pressureTight, m.pressureTightDesc),
     );
     form.append(pressure);
 
-    const help = el('fieldset', { class: 'choice' }, el('legend', {}, '持球者切入時'));
+    const help = el('fieldset', { class: 'choice' }, el('legend', {}, m.helpLegend));
     const helpOption = (value: DriveHelp, text: string, desc: string) => {
       const radio = el('input', { type: 'radio', name: 'drive-help', value, checked: draftDriveHelp === value });
       radio.addEventListener('change', () => (draftDriveHelp = value));
       return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
     };
     help.append(
-      helpOption('off', '不補防（預設）', '持球者甩開防守者也不會有人補，其他人守住自己的人'),
-      helpOption('weak-side', '弱邊補防', '來得及的無球防守者會補到切入路線上；離太遠、來不及就不補。補防時他原本盯的人會空出來'),
+      helpOption('off', m.helpOff, m.helpOffDesc),
+      helpOption('weak-side', m.helpWeak, m.helpWeakDesc),
     );
     form.append(help);
 
-    const choice = el('fieldset', { class: 'choice' }, el('legend', {}, '遇到掩護時，紅隊要'));
+    const choice = el('fieldset', { class: 'choice' }, el('legend', {}, m.screenLegend));
     // 進階：擠過時，擋拆由掩護者的防守者沉退或上提（換防時用不到，隱藏）
-    const coverage = el('fieldset', { class: 'choice choice--sub' }, el('legend', {}, '擋拆時，盯掩護者的防守者要'));
+    const coverage = el('fieldset', { class: 'choice choice--sub' }, el('legend', {}, m.coverageLegend));
     const option = (value: Tactic['screenDefense'], text: string, desc: string) => {
       const radio = el('input', { type: 'radio', name: 'screen', value, checked: draftScreen === value });
       radio.addEventListener('change', () => {
@@ -335,13 +321,13 @@ export function attachSetup(
       return el('label', {}, radio, el('span', {}, text, el('small', {}, desc)));
     };
     coverage.append(
-      coverageOption('drop', '沉退 Drop（預設）', '退到罰球線下方保護籃下：切入和順下比較難，但中距離以外急停跳投、掩護者拉開會比較空'),
-      coverageOption('hedge', '上提 Hedge', '踏出去擋在持球者前面干擾投籃：持球者不好直接出手，但掩護者順下會比較空'),
+      coverageOption('drop', m.drop, m.dropDesc),
+      coverageOption('hedge', m.hedge, m.hedgeDesc),
     );
     coverage.hidden = draftScreen !== 'fight-over';
     choice.append(
-      option('switch', '換防（預設）', '兩位防守者交換對位，可能形成身高錯位'),
-      option('fight-over', '擠過', '被掩護的人繞過掩護繼續盯原本的人，會慢一步'),
+      option('switch', m.switch, m.switchDesc),
+      option('fight-over', m.fightOver, m.fightOverDesc),
       coverage,
     );
     form.append(choice);
@@ -361,12 +347,13 @@ export function attachSetup(
     progress.hidden = boardReady;
     tabList.hidden = !boardReady;
     for (const tab of tabs) tab.setAttribute('aria-selected', String(Number(tab.dataset.step) === step));
-    title.textContent = STEP_TEXT[step].title;
-    hint.textContent = STEP_TEXT[step].hint;
+    const m = tx().setup;
+    title.textContent = m.steps[step].title;
+    hint.textContent = m.steps[step].hint;
     back.hidden = boardReady;
-    back.textContent = step === 1 ? '回首頁' : '上一步';
+    back.textContent = step === 1 ? m.home : m.back;
     skip.hidden = boardReady || step === 3;
-    next.textContent = boardReady ? '完成' : step === 3 ? '開始' : '下一步';
+    next.textContent = boardReady ? m.done : step === 3 ? m.start : m.next;
 
     if (step === 3) {
       renderMatchups();
@@ -435,7 +422,7 @@ export function attachSetup(
           clearRedPaths(s.tactic);
         }
       });
-      if (lineupChanged && !applyNow) notify('目前的戰術已經有路線，新的開局站位會在清空戰術或選空白戰術時生效');
+      if (lineupChanged && !applyNow) notify(tx().setup.lineupDeferred);
       return true;
     }
     const team: Team = step === 1 ? 'blue' : 'red';

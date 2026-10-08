@@ -7,10 +7,11 @@ import { makeShot, putPath } from '../model/paths';
 import type { Tactic } from '../model/types';
 import { SWITCH_DELAY } from './config';
 import { loadPlay } from '../plays/instantiate';
-import { PLAYS } from '../plays/library';
+import { PLAYS, type PlayCategory } from '../plays/library';
 import { defendPosition, driveHelpDepth, driveHelpPosition, guardPosition, pickHelpPosition } from './defense';
 import { fightOverDelay, pickHelpOver, redAt, rollingPastDrop, simulateDefense } from './defenseSim';
 import { evaluate } from './evaluate';
+import { commentText } from '../i18n/describe';
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -336,7 +337,7 @@ describe('內建戰術：沉退與上提的差別', () => {
     const base = createDefaultTactic();
     base.screenDefense = 'fight-over';
     base.pickCoverage = coverage;
-    const t = loadPlay(base, PLAYS.find((p) => p.category === '高位擋拆' && p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
+    const t = loadPlay(base, PLAYS.find((p) => p.category === 'high-pnr' && p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
     return evaluate(t, simulate(t)).expectedPoints!;
   };
 
@@ -381,7 +382,7 @@ describe('防守距離：一般 / 緊貼', () => {
     expect(dist(t.frames[0]!.start.r2!, t.frames[0]!.start.b2!)).toBeLessThan(dist(normal.r2!, normal.b2!));
   });
 
-  const points = (category: string, name: string, pressure: 'normal' | 'tight') => {
+  const points = (category: PlayCategory, name: string, pressure: 'normal' | 'tight') => {
     const base = createDefaultTactic();
     base.pressure = pressure;
     const t = loadPlay(base, PLAYS.find((p) => p.category === category && p.name === name)!, { A: 'b1', B: 'b2', C: 'b3' });
@@ -389,11 +390,11 @@ describe('防守距離：一般 / 緊貼', () => {
   };
 
   it('緊貼的好處：擋拆外拉不容易空檔', () => {
-    expect(points('高位擋拆', 'Pick and Pop', 'tight')).toBeLessThan(points('高位擋拆', 'Pick and Pop', 'normal'));
+    expect(points('high-pnr', 'Pick and Pop', 'tight')).toBeLessThan(points('high-pnr', 'Pick and Pop', 'normal'));
   });
 
   it('緊貼的代價：假手遞手接背切，被甩開', () => {
-    expect(points('手遞手', 'Fake Hand-Off', 'tight')).toBeGreaterThan(points('手遞手', 'Fake Hand-Off', 'normal') + 0.1);
+    expect(points('dho', 'Fake Hand-Off', 'tight')).toBeGreaterThan(points('dho', 'Fake Hand-Off', 'normal') + 0.1);
   });
 });
 
@@ -463,7 +464,7 @@ describe('補防與擋拆協防（所有內建戰術 × 各種設定）', () => 
       Object.assign(base, c);
       const t = loadPlay(base, play, { A: 'b1', B: 'b2', C: 'b3' });
       const sim = simulate(t);
-      return { label: `${play.name} ${JSON.stringify(c)}`, sim, comments: evaluate(t, sim).comments };
+      return { label: `${play.name} ${JSON.stringify(c)}`, sim, comments: evaluate(t, sim).comments.map((c) => ({ ...c, text: commentText(c.message, t.players) })) };
     }),
   );
 
@@ -487,7 +488,7 @@ describe('補防與擋拆協防（所有內建戰術 × 各種設定）', () => 
     for (const pressure of ['normal', 'tight'] as const) {
       const base = createDefaultTactic();
       Object.assign(base, { screenDefense: 'switch', driveHelp: 'weak-side', pressure });
-      const t = loadPlay(base, PLAYS.find((p) => p.category === '高位擋拆' && p.name === 'Pick and Roll')!, { A: 'b1', B: 'b2', C: 'b3' });
+      const t = loadPlay(base, PLAYS.find((p) => p.category === 'high-pnr' && p.name === 'Pick and Roll')!, { A: 'b1', B: 'b2', C: 'b3' });
       for (const d of simulate(t).defense.events.filter((e) => e.type === 'drive-help')) expect(d.delay).toBeGreaterThan(0.1);
     }
   });

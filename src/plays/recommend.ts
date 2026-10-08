@@ -1,7 +1,7 @@
-import { RATING_LABEL, SKILL_LABEL, heightOf, skillsOf, speedOf } from '../model/physique';
+import { heightOf, skillsOf, speedOf } from '../model/physique';
 import { simulate } from '../anim/simulation';
 import { evaluate } from '../sim/evaluate';
-import type { Grade, Player, Skills, Tactic } from '../model/types';
+import type { Grade, Player, Rating, Skills, Tactic } from '../model/types';
 import { PLAYS, ROLES, playVariants, type Play, type Role, type RoleWeights } from './library';
 import { loadPlay, type RoleAssignment } from './instantiate';
 
@@ -9,15 +9,35 @@ import { loadPlay, type RoleAssignment } from './instantiate';
 // - 中距離投射、弧外投射、禁區終結、單打：直接用能力等級（0–4 分）
 // - 身高、速度：跟「對位的防守者」比，每差 HEIGHT_STEP_CM / SPEED_STEP 算一級，平均 = 2 分
 // - 每套戰術的分數 = Σ 權重 × 分數 ÷ Σ 權重（0–4），權重項目多的戰術不會因此佔便宜
+// 推薦理由、球隊總評只產生資料（Edge、Reason、Advice），句子由介面依語系組成（i18n/describe.ts）。
 
 export const HEIGHT_STEP_CM = 5;
 export const SPEED_STEP = 0.05;
 export const RECOMMEND_COUNT = 5;
 
-type WeightKey = keyof RoleWeights;
+export type WeightKey = keyof RoleWeights;
 
 const clamp04 = (v: number) => Math.min(4, Math.max(0, v));
-const playerLabel = (p: Player) => `${p.number} 號 ${p.name}`;
+
+/** 某位球員在某一項比較好的地方：身高高幾 cm、速度快幾 %、或能力等級 */
+export type Edge =
+  | { key: 'height'; cm: number }
+  | { key: 'speed'; pct: number }
+  | { key: Exclude<keyof Skills, 'speed'>; rating: Rating };
+
+/** 推薦理由：取「比平均好最多」的那一項；都在平均時為 average */
+export type Reason = { kind: 'average' } | { kind: 'edge'; playerId: string; role: Role; edge: Edge };
+
+/** 球隊總評的建議：以誰的哪一項為主（第二選擇可能沒有），最適合的戰術與預期評等 */
+export type Advice =
+  | { kind: 'average' }
+  | {
+      kind: 'focus';
+      first: { playerId: string; key: WeightKey };
+      second: { playerId: string; key: WeightKey } | null;
+      top: Play;
+      grade: Grade | null;
+    };
 
 function defenderOf(tactic: Tactic, blue: Player): Player {
   const redId = tactic.matchups[blue.id];
@@ -40,8 +60,16 @@ export function attributeScore(tactic: Tactic, blue: Player, key: WeightKey): nu
   return skillsOf(blue)[key];
 }
 
-/** 一句推薦理由：取「比平均好最多」的那一項 */
-function reasonFor(tactic: Tactic, play: Play, roles: RoleAssignment): string {
+/** 這位球員在這一項比較好的地方 */
+function edgeOf(tactic: Tactic, blue: Player, key: WeightKey): Edge {
+  const { players } = tactic;
+  if (key === 'height') return { key, cm: heightOf(blue, players) - heightOf(defenderOf(tactic, blue), players) };
+  if (key === 'speed') return { key, pct: Math.round((speedRatio(tactic, blue) - 1) * 100) };
+  return { key, rating: skillsOf(blue)[key] };
+}
+
+/** 推薦理由：取「比平均好最多」的那一項 */
+function reasonFor(tactic: Tactic, play: Play, roles: RoleAssignment): Reason {
   let best: { role: Role; key: WeightKey; gain: number } | null = null;
   for (const role of ROLES) {
     const blue = tactic.players.find((p) => p.id === roles[role])!;
@@ -52,20 +80,9 @@ function reasonFor(tactic: Tactic, play: Play, roles: RoleAssignment): string {
       if (gain > 0 && (!best || gain > best.gain)) best = { role, key, gain };
     }
   }
-  if (!best) return `能力都在平均水準，${play.finish}`;
+  if (!best) return { kind: 'average' };
   const blue = tactic.players.find((p) => p.id === roles[best.role])!;
-  const { players } = tactic;
-  let what: string;
-  if (best.key === 'height') {
-    const diff = heightOf(blue, players) - heightOf(defenderOf(tactic, blue), players);
-    what = ` 比對位的防守者高 ${diff} cm`;
-  } else if (best.key === 'speed') {
-    what = ` 比對位的防守者快 ${Math.round((speedRatio(tactic, blue) - 1) * 100)}%`;
-  } else {
-    const key = best.key as keyof Skills;
-    what = ` 的${SKILL_LABEL[key]}「${RATING_LABEL[skillsOf(blue)[key]]}」`;
-  }
-  return `${playerLabel(blue)}${what}，擔任 ${best.role}（${play.roles[best.role]}）`;
+  return { kind: 'edge', playerId: blue.id, role: best.role, edge: edgeOf(tactic, blue, best.key) };
 }
 
 /** 三名藍隊球員的 6 種排列（固定順序，確保結果決定性） */
@@ -92,7 +109,7 @@ export interface Recommendation {
   roles: RoleAssignment;
   /** 適合度 0–4，2 = 平均（只看能力與權重，用來決定角色分配） */
   score: number;
-  reason: string;
+  reason: Reason;
   /** 用這個角色分配實際模擬後的預期得分與評等（有跑過模擬才有） */
   expectedPoints?: number;
   /** 模擬評分的 0–100 分（和適合度 score 不同） */
@@ -137,9 +154,13 @@ export function rankBySimulation(tactic: Tactic): Recommendation[] {
   return sortBySimulation(PLAYS.map((play) => withBestShot(tactic, play)));
 }
 
-/** 推薦結果只和球員、對位、防守設定、計分規則有關（和目前畫的路線、開局站位無關），用來快取 */
+/**
+ * 推薦結果只和球員的身高與能力、對位、防守設定、計分規則有關（和目前畫的路線、開局站位、
+ * 號碼與暱稱無關：推薦理由是資料，顯示時才放進名字），用來快取。
+ */
 export function recommendationKey(tactic: Tactic): string {
-  return JSON.stringify({ players: tactic.players, matchups: tactic.matchups, screen: tactic.screenDefense, pick: tactic.pickCoverage, pressure: tactic.pressure, help: tactic.driveHelp, scoring: tactic.scoring });
+  const players = tactic.players.map((p) => ({ id: p.id, team: p.team, heightCm: p.heightCm, skills: p.skills, speedRating: p.speedRating }));
+  return JSON.stringify({ players, matchups: tactic.matchups, screen: tactic.screenDefense, pick: tactic.pickCoverage, pressure: tactic.pressure, help: tactic.driveHelp, scoring: tactic.scoring });
 }
 
 /** 這套戰術最適合的角色分配；同分時取排列順序在前的 */
@@ -174,36 +195,21 @@ export function recommend(
 /** 強項的門檻：能力「稍強」以上；身高高 5 cm 以上；速度快 5% 以上（都是分數 ≥ 3） */
 const STRENGTH_SCORE = 3;
 
-const STYLE: Record<WeightKey, string> = {
-  midRange: '中距離跳投',
-  threePoint: '弧外投籃',
-  finishing: '切入或下順到籃下終結',
-  iso: '持球單打',
-  speed: '空切、背切或持球切入',
-  height: '低位要位或擋拆下順',
-};
+// 每一項強項適合的打法（例如弧外投射 → 弧外投籃）在文字表（i18n 的 recommend.style）。
 
 export interface Strength {
   playerId: string;
   key: WeightKey;
   score: number;
-  /** 例如「弧外投射「優勢」」「比對位的防守者高 8 cm」 */
-  label: string;
-  style: string;
+  /** 比較好的地方，例如弧外投射「優勢」、比對位的防守者高 8 cm */
+  edge: Edge;
   /** 由這位球員終結、而且看重這一項的戰術，最多 2 套 */
   examples: Play[];
 }
 
 export interface TeamSummary {
   strengths: Strength[];
-  advice: string;
-}
-
-function strengthLabel(tactic: Tactic, blue: Player, key: WeightKey): string {
-  const { players } = tactic;
-  if (key === 'height') return `比對位的防守者高 ${heightOf(blue, players) - heightOf(defenderOf(tactic, blue), players)} cm`;
-  if (key === 'speed') return `比對位的防守者快 ${Math.round((speedRatio(tactic, blue) - 1) * 100)}%`;
-  return `${SKILL_LABEL[key]}「${RATING_LABEL[skillsOf(blue)[key]]}」`;
+  advice: Advice;
 }
 
 /** ranked 預設為依預期得分排序的結果，總評的「最適合的戰術」才會跟推薦清單一致 */
@@ -224,7 +230,7 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
         .filter((r): r is Recommendation => !!r)
         .slice(0, 2)
         .map((r) => r.play);
-      strengths.push({ playerId: blue.id, key, score, label: strengthLabel(tactic, blue, key), style: STYLE[key], examples });
+      strengths.push({ playerId: blue.id, key, score, edge: edgeOf(tactic, blue, key), examples });
     }
   }
   // 越強的排越前面；同分時，對應戰術在推薦裡排越前面的優先（總評才會跟推薦清單一致）
@@ -233,19 +239,19 @@ export function teamSummary(tactic: Tactic, ranked: readonly Recommendation[] = 
   strengths.sort((a, b) => b.score - a.score || rankOf(a) - rankOf(b));
 
   const top = ranked[0]!;
-  let advice: string;
+  let advice: Advice;
   if (strengths.length === 0) {
-    advice = '球隊能力都在平均水準，沒有特別突出的強項，可以從適合度最高的戰術開始，再依實際比賽調整。';
+    advice = { kind: 'average' };
   } else {
     const first = strengths[0]!;
-    const firstName = playerLabel(tactic.players.find((p) => p.id === first.playerId)!);
     const second = strengths.find((s) => s.playerId !== first.playerId);
-    advice = `建議以 ${firstName} 的${first.style}為主要攻擊點`;
-    if (second) {
-      const secondName = playerLabel(tactic.players.find((p) => p.id === second.playerId)!);
-      advice += `，${secondName} 的${second.style}當第二選擇`;
-    }
-    advice += `。最適合的戰術是「${top.play.category}-${top.play.name}」${top.grade ? `（預期 ${top.grade}）` : ''}。`;
+    advice = {
+      kind: 'focus',
+      first: { playerId: first.playerId, key: first.key },
+      second: second ? { playerId: second.playerId, key: second.key } : null,
+      top: top.play,
+      grade: top.grade ?? null,
+    };
   }
   return { strengths, advice };
 }

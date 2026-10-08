@@ -4,6 +4,7 @@ import { isBeyondArc } from '../court/fiba';
 import { loadPlay } from '../plays/instantiate';
 import { PLAYS } from '../plays/library';
 import { evaluate } from '../sim/evaluate';
+import { commentText } from '../i18n/describe';
 import { createDefaultTactic } from './defaults';
 import { insertFrameAfter, syncFrames } from './frames';
 import { putPath } from './paths';
@@ -73,7 +74,7 @@ describe('計分規則', () => {
     expect(e1.violation).toBe(true);
     expect(e1.expectedPoints).toBe(0);
     expect(e2.violation).toBe(false);
-    expect(e2.comments.some((c) => c.text.includes('24 秒進攻時限內'))).toBe(true);
+    expect(e2.comments.some((c) => commentText(c.message, std.players).includes('24 秒進攻時限內'))).toBe(true);
   });
 
   it('舊資料沒有計分規則時當作 FIBA 3x3；沒有 0–100 分時依規則換算', () => {

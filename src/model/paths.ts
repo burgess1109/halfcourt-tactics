@@ -5,6 +5,7 @@ import { BASKET_Y } from '../court/fiba';
 import { dist, normalize, perp, sub } from '../geom/vec';
 import { newId } from './id';
 import type { Frame, PathKind, Player, TacticPath, Vec2 } from './types';
+import { t } from '../i18n';
 
 // 路線規則，對應 SPEC §4：
 // - 每位球員每個分鏡最多一條路線
@@ -17,14 +18,6 @@ export const FREEHAND_TOLERANCE = 0.1;
 export const MIN_PATH_LENGTH = 0.6;
 /** 傳球放開時，離隊友多近才算傳給他 */
 export const PASS_TARGET_RADIUS = 1.5;
-
-export const PATH_KIND_LABEL: Record<PathKind, string> = {
-  cut: '跑位',
-  dribble: '運球',
-  pass: '傳球',
-  screen: '掩護',
-  shot: '投籃',
-};
 
 /** 籃框中心 */
 export const RIM: Vec2 = { x: 0, y: BASKET_Y };
@@ -90,14 +83,14 @@ export function cannotStart(
   isLastFrame: boolean,
 ): string | null {
   // 紅隊（關閉自動防守時）只能畫跑位
-  if (players.find((p) => p.id === actorId)?.team === 'red' && kind !== 'cut') return '紅隊只能畫跑位路線';
+  if (players.find((p) => p.id === actorId)?.team === 'red' && kind !== 'cut') return t().edit.redCutOnly;
   if (needsBall(kind) && frame.ballHolderId !== actorId) {
-    return `只有持球者可以${PATH_KIND_LABEL[kind]}`;
+    return t().edit.holderOnly(t().pathKind[kind]);
   }
-  if (kind === 'shot' && !isLastFrame) return '投籃只能在最後一個分鏡';
+  if (kind === 'shot' && !isLastFrame) return t().edit.shotLastFrame;
   if (kind === 'pass') {
     const team = players.find((p) => p.id === actorId)?.team;
-    if (!players.some((p) => p.team === team && p.id !== actorId)) return '沒有可以傳球的隊友';
+    if (!players.some((p) => p.team === team && p.id !== actorId)) return t().edit.noTeammate;
   }
   return null;
 }
@@ -157,7 +150,7 @@ export function finalizeDraft(
   let targetId: string | undefined;
   if (draft.kind === 'pass') {
     const target = findPassTarget(end, draft.actorId, frame, players);
-    if (!target) return { error: '傳球要拉到隊友身上' };
+    if (!target) return { error: t().edit.passToTeammate };
     targetId = target;
     points = [...points.slice(0, -1), endPosition(frame, target)!];
   }

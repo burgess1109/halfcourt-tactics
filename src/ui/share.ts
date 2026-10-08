@@ -3,6 +3,7 @@ import type { Store } from '../model/store';
 import type { Tactic } from '../model/types';
 import { downloadText } from './saved';
 import { setTip } from './tooltip';
+import { t as tx } from '../i18n';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -61,19 +62,19 @@ export function attachShare(
   copyBtn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(urlInput.value);
-      notify('已複製分享連結');
+      notify(tx().share.copied);
     } catch {
       // 沒有剪貼簿權限（例如用 http 區網 IP 測試）：選取文字讓使用者自己複製
       urlInput.focus();
       urlInput.select();
-      notify('請手動複製選取的連結');
+      notify(tx().share.copyManually);
     }
   });
 
   nativeBtn.addEventListener('click', async () => {
     const name = store.get().tactic.name;
     try {
-      await navigator.share({ title: name ? `半場戰術：${name}` : '半場戰術', url: urlInput.value });
+      await navigator.share({ title: name ? tx().app.shareTitleNamed(name) : tx().app.shareTitle, url: urlInput.value });
     } catch {
       // 使用者取消分享
     }
@@ -105,11 +106,11 @@ export function attachShare(
       for (const d of document.querySelectorAll('dialog')) if (d.open) d.close();
       store.reset(tactic, true);
       opts.show('board');
-      notify(removed > 0 ? `分享的戰術有 ${removed} 條路線不成立，已移除` : '這是分享的戰術，按「另存」可以存到你的戰術列表');
+      notify(tx().share.opened(removed));
       return true;
     } catch (e) {
       clearHash();
-      notify(e instanceof TacticFormatError ? e.message : '無法開啟分享連結');
+      notify(e instanceof TacticFormatError ? e.message : tx().share.cannotOpen);
       return false;
     }
   };
@@ -132,14 +133,14 @@ export function attachShare(
   const sync = () => {
     const s = store.get();
     bar.hidden = !s.readonly;
-    barName.textContent = s.tactic.name || '未命名戰術';
+    barName.textContent = s.tactic.name || tx().share.untitled;
     barSave.disabled = s.playing;
     barClose.disabled = s.playing;
     // 預覽中不能改球員與戰術，存檔變成「另存」
     $<HTMLButtonElement>('#library').disabled = s.readonly;
     $<HTMLButtonElement>('#team').disabled = s.readonly;
-    setTip(saveBtn, s.readonly ? '另存到我的戰術列表' : '存檔（⌘S / Ctrl+S）');
-    saveBtn.setAttribute('aria-label', s.readonly ? '另存' : '存檔');
+    setTip(saveBtn, s.readonly ? tx().board.saveAsTip : tx().board.saveTip);
+    saveBtn.setAttribute('aria-label', s.readonly ? tx().board.saveAs : tx().common.save);
   };
   store.subscribe(sync);
   sync();

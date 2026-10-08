@@ -4,7 +4,8 @@ import { TacticFormatError, fromJsonFile, jsonFileName, nameError, toJsonFile } 
 import type { Store } from '../model/store';
 import type { ShotZone, Tactic } from '../model/types';
 import { basePlay, playVariant } from '../plays/library';
-import { playTitle } from './library';
+import { t as tx } from '../i18n';
+import { playTitle } from '../i18n/describe';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -33,7 +34,7 @@ export function downloadText(filename: string, text: string): void {
 }
 
 const timeText = (ts: number) =>
-  new Date(ts).toLocaleString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(ts).toLocaleString(tx().common.dateLocale, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /** 內建戰術的名稱，有多個出手點的戰術含出手點（找不到時回傳 null） */
 const basedTitle = (playId: string | undefined, shot?: ShotZone) => {
@@ -74,7 +75,7 @@ export function attachSaved(
       fn();
       return true;
     } catch (e) {
-      notify(e instanceof SaveError ? e.message : '存檔失敗');
+      notify(e instanceof SaveError ? e.message : tx().saved.saveFailed);
       return false;
     }
   };
@@ -88,9 +89,9 @@ export function attachSaved(
     if (!name || s.readonly) {
       const suggestion = name || (t.basedOn && !t.basedOn.modified ? basedTitle(t.basedOn.playId, t.basedOn.shot) : null) || '';
       const asked = await opts.askName({
-        title: s.readonly ? '另存到我的戰術列表' : '存檔',
+        title: s.readonly ? tx().saved.saveAsTitle : tx().common.save,
         initial: suggestion,
-        confirm: '存檔',
+        confirm: tx().common.save,
       });
       if (!asked) return false;
       name = asked;
@@ -104,7 +105,7 @@ export function attachSaved(
     } else {
       store.renameTactic(copy.id, name);
     }
-    notify(`已存檔「${name}」`);
+    notify(tx().saved.savedAs(name));
     render();
     return true;
   };
@@ -129,10 +130,10 @@ export function attachSaved(
     if (!s.readonly) {
       if (t.name) {
         const dirty = saved.savedUpdatedAt(t.id) !== t.updatedAt;
-        text = dirty ? `${t.name}・未存檔` : t.name;
+        text = dirty ? tx().saved.unsaved(t.name) : t.name;
       } else if (t.basedOn) {
         const based = basedTitle(t.basedOn.playId, t.basedOn.shot);
-        if (based) text = t.basedOn.modified ? `根據「${based}」修改` : based;
+        if (based) text = t.basedOn.modified ? tx().saved.basedOnModified(based) : based;
       }
     }
     title.hidden = !text;
@@ -155,14 +156,14 @@ export function attachSaved(
     const undoable = store.load(t);
     if (wasPreview) opts.onPreviewEnded();
     opts.onOpened();
-    notify(undoable ? `已開啟「${t.name}」，按復原可以回到剛才的戰術` : `已開啟「${t.name}」`);
+    notify(tx().saved.opened(t.name, undoable));
   };
 
   const renameRow = (item: SavedSummary) => {
-    const input = el('input', { type: 'text', maxlength: '30', 'aria-label': '新名稱', enterkeyhint: 'done' });
+    const input = el('input', { type: 'text', maxlength: '30', 'aria-label': tx().saved.newName, enterkeyhint: 'done' });
     input.value = item.name;
-    const ok = el('button', { type: 'button', class: 'btn btn--primary btn--small' }, '確定');
-    const cancel = el('button', { type: 'button', class: 'btn btn--small' }, '取消');
+    const ok = el('button', { type: 'button', class: 'btn btn--primary btn--small' }, tx().common.ok);
+    const cancel = el('button', { type: 'button', class: 'btn btn--small' }, tx().common.cancel);
     const commit = () => {
       const message = nameError(input.value);
       if (message) {
@@ -197,9 +198,9 @@ export function attachSaved(
   const row = (item: SavedSummary) => {
     const current = store.get().tactic.id === item.id && !store.get().readonly;
     const based = basedTitle(item.playId, item.shot);
-    const meta = [timeText(item.updatedAt), based && `根據「${based}」`].filter(Boolean).join('・');
+    const meta = [timeText(item.updatedAt), based && tx().saved.basedOn(based)].filter(Boolean).join(tx().saved.metaSep);
     const grade = item.grade
-      ? [el('span', { class: 'play-item__grade', 'data-grade': item.grade }, `${item.grade} ${Math.round(item.score!)} 分`)]
+      ? [el('span', { class: 'play-item__grade', 'data-grade': item.grade }, tx().saved.grade(item.grade, Math.round(item.score!)))]
       : [];
 
     const head =
@@ -208,9 +209,9 @@ export function attachSaved(
         : (() => {
             const b = el(
               'button',
-              { type: 'button', class: 'saved-item__open', 'aria-label': `開啟「${item.name}」` },
+              { type: 'button', class: 'saved-item__open', 'aria-label': tx().saved.open(item.name) },
               el('span', { class: 'saved-item__name' }, item.name, ...grade),
-              el('span', { class: 'saved-item__meta' }, current ? `目前開啟中・${meta}` : meta),
+              el('span', { class: 'saved-item__meta' }, current ? tx().saved.current(meta) : meta),
             );
             b.addEventListener('click', () => openTactic(item.id));
             return b;
@@ -224,33 +225,33 @@ export function attachSaved(
     const actions = el(
       'div',
       { class: 'saved-item__actions' },
-      action('重新命名', () => {
+      action(tx().saved.rename, () => {
         renaming = item.id;
         confirmDelete = null;
         render();
       }),
-      action('複製', () => {
+      action(tx().saved.duplicate, () => {
         const names: string[] = [];
         if (write(() => names.push(saved.duplicate(item.id)?.name ?? ''))) {
-          notify(`已複製成「${names[0]}」`);
+          notify(tx().saved.duplicated(names[0]!));
           render();
         }
       }),
-      action('匯出 JSON', () => {
+      action(tx().saved.export, () => {
         const t = saved.get(item.id);
         if (t) downloadText(jsonFileName(t), toJsonFile(t));
       }),
       confirmDelete === item.id
         ? action(
-            '確定刪除？',
+            tx().saved.confirmDelete,
             () => {
               confirmDelete = null;
-              if (write(() => saved.remove(item.id))) notify(`已刪除「${item.name}」`);
+              if (write(() => saved.remove(item.id))) notify(tx().saved.deleted(item.name));
               render();
             },
             'btn--danger',
           )
-        : action('刪除', () => {
+        : action(tx().saved.delete, () => {
             confirmDelete = item.id;
             renaming = null;
             render();
@@ -264,7 +265,7 @@ export function attachSaved(
     const items = saved.list();
     if (items.length === 0) {
       body.replaceChildren(
-        el('p', { class: 'saved-empty' }, '還沒有存檔的戰術。按上方工具列的「存檔」，戰術就會出現在這裡；也可以匯入 JSON 檔。'),
+        el('p', { class: 'saved-empty' }, tx().saved.empty),
       );
       return;
     }
@@ -281,12 +282,12 @@ export function attachSaved(
       const { tactic, removed } = fromJsonFile(await f.text());
       // 不覆蓋已存的戰術：id 重複就當成新的一份
       if (saved.has(tactic.id)) tactic.id = newId();
-      if (!tactic.name) tactic.name = f.name.replace(/\.json$/i, '').slice(0, 30).trim() || '匯入的戰術';
+      if (!tactic.name) tactic.name = f.name.replace(/\.json$/i, '').slice(0, 30).trim() || tx().saved.importedName;
       if (!write(() => saved.save(tactic))) return;
-      notify(removed > 0 ? `已匯入「${tactic.name}」，移除了 ${removed} 條不成立的路線` : `已匯入「${tactic.name}」`);
+      notify(tx().saved.imported(tactic.name, removed));
       render();
     } catch (e) {
-      notify(e instanceof TacticFormatError ? e.message : '無法讀取這個檔案');
+      notify(e instanceof TacticFormatError ? e.message : tx().saved.unreadableFile);
     }
   });
 
@@ -320,7 +321,7 @@ export function attachSaved(
       if (store.get().playing) return;
       dialog.showModal();
       render();
-      if (saved.skipped > 0) notify(`有 ${saved.skipped} 筆存檔損壞，無法讀取`);
+      if (saved.skipped > 0) notify(tx().saved.corrupted(saved.skipped));
     },
   };
 }

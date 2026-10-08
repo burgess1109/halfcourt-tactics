@@ -4,7 +4,11 @@ import { Store } from '../model/store';
 import type { Rating, Skills, Tactic } from '../model/types';
 import { loadPlay } from './instantiate';
 import { PLAYS, playVariant } from './library';
-import { attributeScore, bestAssignment, rankPlays, recommend, scoreAssignment } from './recommend';
+import { attributeScore, bestAssignment, rankPlays, recommend, scoreAssignment, type Recommendation } from './recommend';
+import { adviceText, edgeText, reasonText, styleText } from '../i18n/describe';
+
+/** 推薦理由的文字（預設語系：繁體中文） */
+const reason = (r: Recommendation, t: Tactic) => reasonText(r.reason, r.play, t.players);
 
 function team(skills: Partial<Record<'b1' | 'b2' | 'b3', Partial<Skills>>>, heights?: Record<string, number>): Tactic {
   const t = createDefaultTactic();
@@ -29,10 +33,11 @@ describe('推薦演算法', () => {
   });
 
   it('全部平均時，每套都是 2 分，依戰術庫順序', () => {
-    const ranked = rankPlays(createDefaultTactic());
+    const t = createDefaultTactic();
+    const ranked = rankPlays(t);
     expect(ranked.every((r) => Math.abs(r.score - 2) < 1e-9)).toBe(true);
     expect(ranked.map((r) => r.play.id)).toEqual(PLAYS.map((p) => p.id));
-    expect(ranked[0]!.reason).toContain('能力都在平均水準');
+    expect(reason(ranked[0]!, t)).toContain('能力都在平均水準');
   });
 
   it('弧外投射優勢的球員會被排到投籃的角色，推薦投籃類戰術', () => {
@@ -42,8 +47,8 @@ describe('推薦演算法', () => {
     const first = top[0]!;
     expect(first.play.weights[first.play.finisher].threePoint).toBeGreaterThan(0);
     expect(first.roles[first.play.finisher]).toBe('b3');
-    expect(first.reason).toContain('3 號');
-    expect(first.reason).toContain('3 號 球員 3 的弧外投射「優勢」');
+    expect(reason(first, t)).toContain('3 號');
+    expect(reason(first, t)).toContain('3 號 球員 3 的弧外投射「優勢」');
   });
 
   it('速度和單打優勢、對上慢的防守者 → 推薦切入、單打類戰術', () => {
@@ -128,7 +133,7 @@ describe('推薦理由', () => {
     t.players.find((p) => p.id === 'b1')!.heightCm = 179; // 矮 1 cm → 只快約 0.3%
     for (const play of PLAYS) {
       const r = bestAssignment(t, play);
-      expect(r.reason, play.id).not.toContain('快 0%');
+      expect(reason(r, t), play.id).not.toContain('快 0%');
     }
   });
 });
@@ -136,9 +141,10 @@ describe('推薦理由', () => {
 describe('球隊總評', () => {
   it('全部平均：沒有強項，給一般性建議', async () => {
     const { teamSummary } = await import('./recommend');
-    const s = teamSummary(createDefaultTactic());
+    const t = createDefaultTactic();
+    const s = teamSummary(t);
     expect(s.strengths).toEqual([]);
-    expect(s.advice).toContain('平均水準');
+    expect(adviceText(s.advice, t)).toContain('平均水準');
   });
 
   it('列出每個人的強項、對應的戰術類型與例子，並給整體建議', async () => {
@@ -147,14 +153,14 @@ describe('球隊總評', () => {
     // 預設對位依身高：b2(198)→r2/r3(185)… 讓 b2 有身高優勢
     const s = teamSummary(t);
     const shooter = s.strengths.find((x) => x.playerId === 'b3' && x.key === 'threePoint')!;
-    expect(shooter.label).toBe('弧外投射「優勢」');
-    expect(shooter.style).toBe('弧外投籃');
+    expect(edgeText(shooter.edge)).toBe('弧外投射「優勢」');
+    expect(styleText(shooter)).toBe('弧外投籃');
     expect(shooter.examples.length).toBeGreaterThan(0);
     for (const p of shooter.examples) expect(p.weights[p.finisher].threePoint).toBeGreaterThan(0);
     expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'finishing')).toBe(true);
     expect(s.strengths.some((x) => x.playerId === 'b2' && x.key === 'height')).toBe(true);
     // 最強的是 3 號的弧外投射，第二選擇是另一個人
-    expect(s.advice).toMatch(/^建議以 3 號 球員 3 的弧外投籃為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」（預期 [SABCD]）。$/);
+    expect(adviceText(s.advice, t)).toMatch(/^建議以 3 號 球員 3 的弧外投籃為主要攻擊點，2 號 球員 2 的.+當第二選擇。最適合的戰術是「.+」（預期 [SABCD]）。$/);
   });
 });
 
@@ -200,7 +206,7 @@ describe('依實際模擬的預期得分排序', () => {
 
   it('同分時看適合度，再維持戰術庫順序', async () => {
     const { sortBySimulation } = await import('./recommend');
-    const rec = (i: number, xp: number, score: number) => ({ play: PLAYS[i]!, roles: { A: 'b1', B: 'b2', C: 'b3' }, score, reason: '', expectedPoints: xp });
+    const rec = (i: number, xp: number, score: number) => ({ play: PLAYS[i]!, roles: { A: 'b1', B: 'b2', C: 'b3' }, score, reason: { kind: 'average' as const }, expectedPoints: xp });
     const sorted = sortBySimulation([rec(3, 0.5, 2), rec(1, 0.5, 2), rec(2, 0.5, 3), rec(0, 0.7, 1)]);
     expect(sorted.map((r) => PLAYS.indexOf(r.play))).toEqual([0, 2, 1, 3]);
   });
@@ -235,6 +241,26 @@ describe('依實際模擬的預期得分排序', () => {
     t.setup.lineup = { holder: 'b2', positions: { b1: { x: -3, y: 6 }, b2: { x: 0, y: 8.6 }, b3: { x: 3, y: 6 } } };
     t.autoDefense = false;
     expect(recommendationKey(t)).toBe(key);
+  });
+
+  it('快取鍵：號碼與暱稱不影響推薦（切換語系換掉預設暱稱後不用重新模擬）', async () => {
+    const { recommendationKey } = await import('./recommend');
+    const t = createDefaultTactic();
+    const key = recommendationKey(t);
+    for (const p of t.players) {
+      p.name = `X${p.id}`;
+      p.number += 10;
+    }
+    expect(recommendationKey(t)).toBe(key);
+  });
+
+  it('快取鍵：球員的每個欄位都要分類；新增欄位時這個測試會提醒', () => {
+    const keyed = ['id', 'team', 'heightCm', 'skills', 'speedRating'];
+    const ignored = ['number', 'name'];
+    const t = createDefaultTactic();
+    t.players[0]!.heightCm = 180;
+    t.players[1]!.speedRating = 3;
+    for (const p of t.players) for (const field of Object.keys(p)) expect([...keyed, ...ignored], field).toContain(field);
   });
 
   it('快取鍵：戰術的每個欄位都要分類（放進快取鍵，或確定不影響推薦）；新增欄位時這個測試會提醒', () => {
@@ -344,7 +370,7 @@ describe('跳投戰術的出手點（中距離 / 弧外）', () => {
   });
 
   it('載入時記住出手點，戰術名稱也標示出來', async () => {
-    const { playTitle } = await import('../ui/library');
+    const { playTitle } = await import('../i18n/describe');
     const alt = playVariant(pop(), 'mid');
     const t = loadPlay(createDefaultTactic(), alt, { A: 'b1', B: 'b2', C: 'b3' });
     expect(t.basedOn).toMatchObject({ playId: 'high-pnr-pop', shot: 'mid' });
@@ -374,7 +400,7 @@ describe('Spain Pick and Roll：依防守選擇傳給外拉的 C 或下順的 B'
   });
 
   it('載入時記住禁區出手點，戰術名稱也標示出來', async () => {
-    const { playTitle } = await import('../ui/library');
+    const { playTitle } = await import('../i18n/describe');
     const alt = playVariant(spain(), 'paint');
     const t = loadPlay(createDefaultTactic(), alt, { A: 'b1', B: 'b2', C: 'b3' });
     expect(t.basedOn).toMatchObject({ playId: 'high-pnr-spain', shot: 'paint' });
@@ -385,7 +411,7 @@ describe('Spain Pick and Roll：依防守選擇傳給外拉的 C 或下順的 B'
 describe('球隊總評：跳投戰術的另一個出手點也能當例子', () => {
   it('中距離強項的人，即使五套跳投戰術都選了弧外版，也找得到中距離版的例子', async () => {
     const { teamSummary, rankBySimulation } = await import('./recommend');
-    const { playTitle } = await import('../ui/library');
+    const { playTitle } = await import('../i18n/describe');
     const t = team({ b1: { midRange: 4, threePoint: 2 }, b3: { threePoint: 4, midRange: 2 } }, { b1: 180, b2: 185, b3: 190 });
     const ranked = rankBySimulation(t);
     const s = teamSummary(t, ranked);

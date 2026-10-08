@@ -5,14 +5,21 @@ import { shotControls } from './paths';
 import { scoreOf, scoringOf } from './scoring';
 import { newId } from './id';
 import { HEIGHT_RANGE } from './physique';
+import { defaultName } from './defaults';
 import { NAME_MAX } from './playerForm';
 import { BALL_ID, type Frame, type Grade, type Player, type Rating, type Tactic, type TacticPath, type Vec2 } from './types';
+import { LOCALES, MESSAGES, t } from '../i18n';
+
+const F = () => t().format;
 
 // 存檔、JSON 匯出入、分享連結（SPEC §8）。
 // 外部來的資料（檔案、網址、localStorage）一律經過 parseTactic 檢查，不直接相信。
 
-/** 資料格式版本；格式改變時加一，並在 parseTactic 裡遷移舊版本 */
-export const SCHEMA_VERSION = 1;
+/**
+ * 資料格式版本；格式改變時加一，並在 parseTactic 裡遷移舊版本。
+ * 2：暱稱可以是空字串（= 預設暱稱，顯示時依語系組出來）；第 1 版存的預設暱稱（「球員 1」…）讀取時轉成空字串。
+ */
+export const SCHEMA_VERSION = 2;
 /** 戰術名稱長度上限（SPEC §8） */
 export const TACTIC_NAME_MAX = 30;
 /** 分享連結的 hash 前綴 */
@@ -24,8 +31,8 @@ export class TacticFormatError extends Error {}
 /** 檢查戰術名稱，回傳錯誤訊息；沒問題回傳 null */
 export function nameError(name: string): string | null {
   const n = name.trim();
-  if (n.length === 0) return '請輸入戰術名稱';
-  if (n.length > TACTIC_NAME_MAX) return `戰術名稱最多 ${TACTIC_NAME_MAX} 個字`;
+  if (n.length === 0) return t().nameDialog.required;
+  if (n.length > TACTIC_NAME_MAX) return t().nameDialog.tooLong(TACTIC_NAME_MAX);
   return null;
 }
 
@@ -40,7 +47,7 @@ const COORD_SLACK = 1;
 type Obj = Record<string, unknown>;
 
 const fail = (what: string): never => {
-  throw new TacticFormatError(`戰術資料不正確：${what}`);
+  throw new TacticFormatError(F().invalid(what));
 };
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
 const obj = (v: unknown, what: string): Obj => (isObj(v) ? v : fail(what));
@@ -61,44 +68,46 @@ function vec(v: unknown, what: string): Vec2 {
   const p = { x: x as number, y: y as number };
   const b = VIEW_BOUNDS;
   if (p.x < b.minX - COORD_SLACK || p.x > b.maxX + COORD_SLACK || p.y < b.minY - COORD_SLACK || p.y > b.maxY + COORD_SLACK) {
-    fail(`${what}超出球場`);
+    fail(F().outOfCourt(what));
   }
   return p;
 }
 
-function parsePlayer(v: unknown, id: string): Player {
-  const o = obj(v, `球員 ${id}`);
+function parsePlayer(v: unknown, id: string, version: number): Player {
+  const o = obj(v, F().player(id));
   const team = id.startsWith('b') ? 'blue' : 'red';
-  if (o.team !== team) fail(`球員 ${id} 的隊伍`);
+  if (o.team !== team) fail(F().playerTeam(id));
   const number = o.number;
-  if (!Number.isInteger(number) || (number as number) < 0 || (number as number) > 99) fail(`球員 ${id} 的號碼`);
-  const name = str(o.name, `球員 ${id} 的暱稱`).trim();
-  if (name.length === 0 || name.length > NAME_MAX) fail(`球員 ${id} 的暱稱`);
+  if (!Number.isInteger(number) || (number as number) < 0 || (number as number) > 99) fail(F().playerNumber(id));
+  let name = str(o.name, F().playerName(id)).trim();
+  if (name.length > NAME_MAX || (version < 2 && name.length === 0)) fail(F().playerName(id));
+  // 第 1 版把預設暱稱寫進資料（當時的語系）：轉成空字串，顯示時依目前語系組出來
+  if (version < 2 && LOCALES.some((l) => defaultName({ id, team }, MESSAGES[l]) === name)) name = '';
   const p: Player = { id, team, number: number as number, name };
   if (o.heightCm !== undefined) {
     const h = o.heightCm;
-    if (!Number.isInteger(h) || (h as number) < HEIGHT_RANGE.min || (h as number) > HEIGHT_RANGE.max) fail(`球員 ${id} 的身高`);
+    if (!Number.isInteger(h) || (h as number) < HEIGHT_RANGE.min || (h as number) > HEIGHT_RANGE.max) fail(F().playerHeight(id));
     p.heightCm = h as number;
   }
   if (team === 'blue') {
-    const s = obj(o.skills, `球員 ${id} 的能力`);
+    const s = obj(o.skills, F().playerSkills(id));
     p.skills = {
-      speed: rating(s.speed, `球員 ${id} 的能力`),
-      iso: rating(s.iso, `球員 ${id} 的能力`),
-      finishing: rating(s.finishing, `球員 ${id} 的能力`),
+      speed: rating(s.speed, F().playerSkills(id)),
+      iso: rating(s.iso, F().playerSkills(id)),
+      finishing: rating(s.finishing, F().playerSkills(id)),
       // 舊資料只有一項「外線投射」（shooting）：中距離與弧外都用它
-      midRange: rating(s.midRange ?? s.shooting, `球員 ${id} 的能力`),
-      threePoint: rating(s.threePoint ?? s.shooting, `球員 ${id} 的能力`),
+      midRange: rating(s.midRange ?? s.shooting, F().playerSkills(id)),
+      threePoint: rating(s.threePoint ?? s.shooting, F().playerSkills(id)),
     };
-    for (const k of Object.keys(s)) if (!SKILL_KEYS.includes(k as never) && k !== 'shooting') fail(`球員 ${id} 的能力`);
+    for (const k of Object.keys(s)) if (!SKILL_KEYS.includes(k as never) && k !== 'shooting') fail(F().playerSkills(id));
   } else if (o.speedRating !== undefined && o.speedRating !== 2) {
-    p.speedRating = rating(o.speedRating, `球員 ${id} 的速度`);
+    p.speedRating = rating(o.speedRating, F().playerSpeed(id));
   }
   return p;
 }
 
 function parsePath(v: unknown, frameNo: number): TacticPath {
-  const what = `第 ${frameNo} 個分鏡的路線`;
+  const what = F().framePaths(frameNo);
   const o = obj(v, what);
   const kind = oneOf(o.kind, PATH_KINDS, what);
   // 紅隊只有跑位（關閉自動防守時才用得到；啟用時讀進來後會移除）
@@ -123,9 +132,9 @@ function parsePath(v: unknown, frameNo: number): TacticPath {
 }
 
 function parseRedStarts(v: unknown): Record<string, Vec2> {
-  const o = obj(v, '紅隊開局位置');
+  const o = obj(v, F().redStarts);
   const out: Record<string, Vec2> = {};
-  for (const [k, p] of Object.entries(o)) out[oneOf(k, RED_IDS, '紅隊開局位置')] = vec(p, '紅隊開局位置');
+  for (const [k, p] of Object.entries(o)) out[oneOf(k, RED_IDS, F().redStarts)] = vec(p, F().redStarts);
   return out;
 }
 
@@ -140,66 +149,66 @@ export interface ParseResult {
  * 檢查完一律用 syncFrames 重新推算，所以紅隊位置不會被外部資料左右。
  */
 export function parseTactic(data: unknown): ParseResult {
-  const o = obj(data, '不是戰術檔');
+  const o = obj(data, F().notTactic);
   const version = o.version;
-  if (typeof version !== 'number') fail('缺少版本');
-  if ((version as number) > SCHEMA_VERSION) throw new TacticFormatError('這份戰術來自較新的版本，請重新整理頁面後再試');
-  if (version !== SCHEMA_VERSION) fail('版本');
+  if (typeof version !== 'number') fail(F().noVersion);
+  if ((version as number) > SCHEMA_VERSION) throw new TacticFormatError(F().newerVersion);
+  if (version !== 1 && version !== SCHEMA_VERSION) fail(F().version);
   if (o.mode !== 'offense') {
-    if (o.mode === 'defense') throw new TacticFormatError('防守模式的戰術還不支援');
-    fail('模式');
+    if (o.mode === 'defense') throw new TacticFormatError(F().defenseMode);
+    fail(F().mode);
   }
 
-  const name = o.name === undefined ? '' : str(o.name, '名稱').trim();
-  if (name.length > TACTIC_NAME_MAX) fail('名稱太長');
+  const name = o.name === undefined ? '' : str(o.name, F().name).trim();
+  if (name.length > TACTIC_NAME_MAX) fail(F().nameTooLong);
 
-  const playersIn = arr(o.players, '球員');
+  const playersIn = arr(o.players, F().players);
   // 保留原本的順序（畫圖的先後順序依陣列）
   const ids: string[] = [...BLUE_IDS, ...RED_IDS];
-  if (playersIn.length !== ids.length) fail('球員人數');
-  const players = playersIn.map((p) => parsePlayer(p, oneOf(isObj(p) ? p.id : undefined, ids, '球員')));
-  if (new Set(players.map((p) => p.id)).size !== ids.length) fail('球員重複');
+  if (playersIn.length !== ids.length) fail(F().playerCount);
+  const players = playersIn.map((p) => parsePlayer(p, oneOf(isObj(p) ? p.id : undefined, ids, F().players), version as number));
+  if (new Set(players.map((p) => p.id)).size !== ids.length) fail(F().duplicatePlayer);
   for (const team of ['blue', 'red'] as const) {
     const numbers = players.filter((p) => p.team === team).map((p) => p.number);
-    if (new Set(numbers).size !== numbers.length) fail('號碼重複');
+    if (new Set(numbers).size !== numbers.length) fail(F().duplicateNumber);
   }
 
-  const m = obj(o.matchups, '對位');
+  const m = obj(o.matchups, F().matchups);
   const matchups: Record<string, string> = {};
-  for (const b of BLUE_IDS) matchups[b] = oneOf(m[b], RED_IDS, '對位');
-  if (new Set(Object.values(matchups)).size !== 3 || Object.keys(m).length !== 3) fail('對位');
+  for (const b of BLUE_IDS) matchups[b] = oneOf(m[b], RED_IDS, F().matchups);
+  if (new Set(Object.values(matchups)).size !== 3 || Object.keys(m).length !== 3) fail(F().matchups);
 
-  const s = obj(o.setup, '設定');
+  const s = obj(o.setup, F().setup);
   const setup: Tactic['setup'] = {
-    blueSkipped: bool(s.blueSkipped, '設定'),
-    redSkipped: bool(s.redSkipped, '設定'),
-    matchupsCustomized: bool(s.matchupsCustomized, '設定'),
+    blueSkipped: bool(s.blueSkipped, F().setup),
+    redSkipped: bool(s.redSkipped, F().setup),
+    matchupsCustomized: bool(s.matchupsCustomized, F().setup),
   };
   if (s.lineup !== undefined) {
-    const l = obj(s.lineup, '開局站位');
-    const pos = obj(l.positions, '開局站位');
+    const l = obj(s.lineup, F().lineup);
+    const pos = obj(l.positions, F().lineup);
     const positions: Record<string, Vec2> = {};
-    for (const b of BLUE_IDS) positions[b] = vec(pos[b], '開局站位');
-    setup.lineup = { positions, holder: oneOf(l.holder, BLUE_IDS, '開局站位的持球者') };
+    for (const b of BLUE_IDS) positions[b] = vec(pos[b], F().lineup);
+    setup.lineup = { positions, holder: oneOf(l.holder, BLUE_IDS, F().lineupHolder) };
   }
 
   // 關閉自動防守時，每個分鏡的紅隊位置是使用者設定的，要一起讀進來（舊資料沒有這個欄位：啟用）
-  const autoDefense = o.autoDefense === undefined ? true : bool(o.autoDefense, '自動防守');
-  const framesIn = arr(o.frames, '分鏡');
-  if (framesIn.length < 1 || framesIn.length > MAX_FRAMES) fail(`分鏡數量要是 1–${MAX_FRAMES} 個`);
-  const first = obj(framesIn[0], '第 1 個分鏡');
-  const firstStart = obj(first.start, '第 1 個分鏡的站位');
+  const autoDefense = o.autoDefense === undefined ? true : bool(o.autoDefense, F().autoDefense);
+  const framesIn = arr(o.frames, F().frames);
+  if (framesIn.length < 1 || framesIn.length > MAX_FRAMES) fail(F().frameCount(MAX_FRAMES));
+  const first = obj(framesIn[0], F().frame(1));
+  const firstStart = obj(first.start, F().frameStart(1));
   const start: Frame['start'] = {};
-  for (const b of BLUE_IDS) start[b] = vec(firstStart[b], '第 1 個分鏡的站位');
-  const holder = first.ballHolderId === null ? null : oneOf(first.ballHolderId, BLUE_IDS, '持球者');
+  for (const b of BLUE_IDS) start[b] = vec(firstStart[b], F().frameStart(1));
+  const holder = first.ballHolderId === null ? null : oneOf(first.ballHolderId, BLUE_IDS, F().holder);
   // 有持球者時球跟著持球者（syncFrames 會放好）；球在地上時需要位置
-  if (firstStart[BALL_ID] !== undefined || holder === null) start[BALL_ID] = vec(firstStart[BALL_ID], '球的位置');
+  if (firstStart[BALL_ID] !== undefined || holder === null) start[BALL_ID] = vec(firstStart[BALL_ID], F().ball);
   const frames: Frame[] = framesIn.map((f, i) => {
-    const fo = obj(f, `第 ${i + 1} 個分鏡`);
-    const paths = arr(fo.paths, `第 ${i + 1} 個分鏡的路線`).map((p) => parsePath(p, i + 1));
+    const fo = obj(f, F().frame(i + 1));
+    const paths = arr(fo.paths, F().framePaths(i + 1)).map((p) => parsePath(p, i + 1));
     const actors = paths.map((p) => p.actorId);
-    if (new Set(actors).size !== actors.length) fail(`第 ${i + 1} 個分鏡同一位球員有兩條路線`);
-    if (i < framesIn.length - 1 && paths.some((p) => p.kind === 'shot')) fail('投籃只能在最後一個分鏡');
+    if (new Set(actors).size !== actors.length) fail(F().duplicateActor(i + 1));
+    if (i < framesIn.length - 1 && paths.some((p) => p.kind === 'shot')) fail(F().shotLastFrame);
     const frame: Frame = i === 0 ? { start, ballHolderId: holder, paths } : { start: {}, ballHolderId: null, paths };
     return frame;
   });
@@ -215,14 +224,14 @@ export function parseTactic(data: unknown): ParseResult {
     mode: 'offense',
     setup,
     matchups,
-    screenDefense: oneOf(o.screenDefense, ['switch', 'fight-over'] as const, '掩護應對'),
+    screenDefense: oneOf(o.screenDefense, ['switch', 'fight-over'] as const, F().screenDefense),
     // 舊資料沒有這個欄位：預設沉退
-    pickCoverage: o.pickCoverage === undefined ? 'drop' : oneOf(o.pickCoverage, ['drop', 'hedge'] as const, '擋拆協防'),
-    pressure: o.pressure === undefined ? 'normal' : oneOf(o.pressure, ['normal', 'tight'] as const, '防守距離'),
-    driveHelp: o.driveHelp === undefined ? 'off' : oneOf(o.driveHelp, ['off', 'weak-side'] as const, '補防'),
+    pickCoverage: o.pickCoverage === undefined ? 'drop' : oneOf(o.pickCoverage, ['drop', 'hedge'] as const, F().pickCoverage),
+    pressure: o.pressure === undefined ? 'normal' : oneOf(o.pressure, ['normal', 'tight'] as const, F().pressure),
+    driveHelp: o.driveHelp === undefined ? 'off' : oneOf(o.driveHelp, ['off', 'weak-side'] as const, F().driveHelp),
     autoDefense,
     // 舊資料沒有這個欄位：FIBA 3x3
-    scoring: o.scoring === undefined ? 'fiba3x3' : oneOf(o.scoring, ['fiba3x3', 'standard'] as const, '計分規則'),
+    scoring: o.scoring === undefined ? 'fiba3x3' : oneOf(o.scoring, ['fiba3x3', 'standard'] as const, F().scoring),
     // 關閉自動防守時，使用者拖過的紅隊開局位置（之後的分鏡由紅隊跑位推算）
     ...(o.redStarts !== undefined && !autoDefense && { redStarts: parseRedStarts(o.redStarts) }),
     players,
@@ -231,26 +240,26 @@ export function parseTactic(data: unknown): ParseResult {
   };
 
   if (o.basedOn !== undefined) {
-    const b = obj(o.basedOn, '戰術來源');
-    const r = obj(b.roles, '戰術來源');
-    const roles = { A: oneOf(r.A, BLUE_IDS, '角色'), B: oneOf(r.B, BLUE_IDS, '角色'), C: oneOf(r.C, BLUE_IDS, '角色') };
-    if (new Set(Object.values(roles)).size !== 3) fail('角色');
+    const b = obj(o.basedOn, F().basedOn);
+    const r = obj(b.roles, F().basedOn);
+    const roles = { A: oneOf(r.A, BLUE_IDS, F().roles), B: oneOf(r.B, BLUE_IDS, F().roles), C: oneOf(r.C, BLUE_IDS, F().roles) };
+    if (new Set(Object.values(roles)).size !== 3) fail(F().roles);
     tactic.basedOn = {
-      playId: str(b.playId, '戰術來源'),
+      playId: str(b.playId, F().basedOn),
       roles,
-      modified: bool(b.modified, '戰術來源'),
-      ...(b.shot !== undefined && { shot: oneOf(b.shot, ['paint', 'mid', 'three'] as const, '戰術來源') }),
+      modified: bool(b.modified, F().basedOn),
+      ...(b.shot !== undefined && { shot: oneOf(b.shot, ['paint', 'mid', 'three'] as const, F().basedOn) }),
     };
   }
   if (o.lastResult !== undefined) {
-    const r = obj(o.lastResult, '評分');
+    const r = obj(o.lastResult, F().result);
     const ep = r.expectedPoints;
     // 一球最多 3 分（一般規則的弧外）
-    if (typeof ep !== 'number' || !Number.isFinite(ep) || ep < 0 || ep > 3) fail('評分');
+    if (typeof ep !== 'number' || !Number.isFinite(ep) || ep < 0 || ep > 3) fail(F().result);
     // 舊資料沒有 0–100 分：依計分規則換算
     const score = r.score === undefined ? scoreOf(ep as number, scoringOf(tactic)) : r.score;
-    if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 100) fail('評分');
-    tactic.lastResult = { grade: oneOf(r.grade, GRADES, '評分'), expectedPoints: ep as number, score: score as number };
+    if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 100) fail(F().result);
+    tactic.lastResult = { grade: oneOf(r.grade, GRADES, F().result), expectedPoints: ep as number, score: score as number };
   }
 
   // 啟用自動防守時紅隊路線用不到，移除並算進不成立的路線
@@ -282,14 +291,14 @@ export function fromJsonFile(text: string): ParseResult {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new TacticFormatError('這不是 JSON 檔');
+    throw new TacticFormatError(F().notJson);
   }
   return parseTactic(data);
 }
 
 /** 檔名：去掉檔名不能用的字元 */
 export function jsonFileName(tactic: Tactic): string {
-  const base = tactic.name.trim().replace(/[\\/:*?"<>|\s]+/g, '_') || '戰術';
+  const base = tactic.name.trim().replace(/[\\/:*?"<>|\s]+/g, '_') || F().fileName;
   return `${base}.json`;
 }
 
@@ -351,7 +360,7 @@ function toBase64Url(bytes: Uint8Array): string {
 }
 
 function fromBase64Url(s: string): Uint8Array {
-  if (!/^[A-Za-z0-9_-]*$/.test(s)) throw new TacticFormatError('分享連結不完整或已損壞');
+  if (!/^[A-Za-z0-9_-]*$/.test(s)) throw new TacticFormatError(F().shareBroken);
   const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4));
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }
@@ -369,13 +378,13 @@ export async function encodeShare(tactic: Tactic): Promise<string> {
 
 /** 從分享連結的 hash 還原戰術（新的 id，不會覆蓋使用者已存的戰術） */
 export async function decodeShare(hash: string): Promise<ParseResult> {
-  if (!hash.startsWith(SHARE_PREFIX)) throw new TacticFormatError('不是分享連結');
+  if (!hash.startsWith(SHARE_PREFIX)) throw new TacticFormatError(F().notShare);
   let text: string;
   try {
     text = new TextDecoder().decode(await pipe(fromBase64Url(hash.slice(SHARE_PREFIX.length)), new DecompressionStream('deflate-raw')));
   } catch (e) {
     if (e instanceof TacticFormatError) throw e;
-    throw new TacticFormatError('分享連結不完整或已損壞');
+    throw new TacticFormatError(F().shareBroken);
   }
   const result = fromJsonFile(text);
   result.tactic.id = newId();

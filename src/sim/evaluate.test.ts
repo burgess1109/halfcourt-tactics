@@ -7,8 +7,12 @@ import { loadPlay } from '../plays/instantiate';
 import { PLAYS } from '../plays/library';
 import type { Tactic, Vec2 } from '../model/types';
 import { CONTESTED_FACTOR, PAINT_RATE, THREE_RATE } from './config';
-import { evaluate, gradeOf, shotValue, zoneOf } from './evaluate';
+import { evaluate, gradeOf, shotValue, zoneOf, type Comment } from './evaluate';
+import { commentText } from '../i18n/describe';
 import type { ScreenEvent } from './defenseSim';
+/** 評價的文字（預設語系：繁體中文；測試用的球員都是預設暱稱） */
+const text = (c: Comment) => commentText(c.message, createDefaultTactic().players);
+
 
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
 
@@ -107,7 +111,7 @@ describe('整套戰術的評分', () => {
     expect(e.hasShot).toBe(true);
     expect(e.shot.playerId).toBe('b3');
     expect(e.shot.zone).toBe('three');
-    expect(e.comments[0]!.text).toContain('3 號 球員 3 在弧外出手（2 分）');
+    expect(text(e.comments[0]!)).toContain('3 號 球員 3 在弧外出手（2 分）');
     expect(e.comments.length).toBeLessThanOrEqual(5);
   });
 
@@ -116,9 +120,9 @@ describe('整套戰術的評分', () => {
     expect(e.hasShot).toBe(false);
     expect(e.grade).toBeNull();
     expect(e.expectedPoints).toBeNull();
-    expect(e.comments[0]!.text).toContain('沒有投籃，所以不評分');
-    expect(e.comments[1]!.text).toMatch(/^提示：最後一刻最有機會的是/);
-    expect(e.comments.slice(1).some((c) => /預期得分|命中率/.test(c.text))).toBe(false);
+    expect(text(e.comments[0]!)).toContain('沒有投籃，所以不評分');
+    expect(text(e.comments[1]!)).toMatch(/^提示：最後一刻最有機會的是/);
+    expect(e.comments.slice(1).some((c) => /預期得分|命中率/.test(text(c)))).toBe(false);
   });
 
   it('出手超過 12 秒（FIBA 3x3 的進攻時限）：違例，預期得分 0、評等 D', () => {
@@ -134,7 +138,7 @@ describe('整套戰術的評分', () => {
     expect(e.violation).toBe(true);
     expect(e.expectedPoints).toBe(0);
     expect(e.grade).toBe('D');
-    expect(e.comments.some((c) => c.text.includes('違例'))).toBe(true);
+    expect(e.comments.some((c) => text(c).includes('違例'))).toBe(true);
   });
 
   it('擠過時列出掩護擋住多久；換防時列出換防', () => {
@@ -142,7 +146,7 @@ describe('整套戰術的評分', () => {
       const base = createDefaultTactic();
       base.screenDefense = scheme;
       const t = loadPlay(base, PLAYS.find((p) => p.id === 'high-pnr-roll')!, roles);
-      const texts = run(t).comments.map((c) => c.text).join('\n');
+      const texts = run(t).comments.map((c) => text(c)).join('\n');
       expect(texts).toContain(scheme === 'fight-over' ? '的掩護擋住' : '的掩護逼對方換防');
     }
   });
@@ -156,7 +160,7 @@ describe('整套戰術的評分', () => {
     const sim = simulate(t);
     sim.defense.red.r3 = sim.defense.red.r3!.map(() => ({ x: -7, y: 14 }));
     const e = evaluate(t, sim);
-    expect(e.comments.some((c) => c.text.startsWith('其實 3 號'))).toBe(true);
+    expect(e.comments.some((c) => text(c).startsWith('其實 3 號'))).toBe(true);
   });
 
   it('完全決定性', () => {
@@ -172,7 +176,7 @@ describe('評價數量與內容', () => {
       const e = evaluate(t, simulate(t));
       expect(e.comments.length, play.id).toBeGreaterThanOrEqual(3);
       expect(e.comments.length, play.id).toBeLessThanOrEqual(5);
-      expect(e.comments.some((c) => c.text.includes('空檔命中率')), play.id).toBe(true);
+      expect(e.comments.some((c) => text(c).includes('空檔命中率')), play.id).toBe(true);
     }
   });
 });
@@ -213,7 +217,7 @@ describe('身高錯位', () => {
     const e0 = evaluate(even, simulate(even));
     const e1 = evaluate(tall, simulate(tall));
     expect(e1.expectedPoints!).toBeGreaterThan(e0.expectedPoints! + 0.1);
-    expect(e1.comments.map((c) => c.text).join('\n')).toContain('高 20 cm，干擾減少 80%');
+    expect(e1.comments.map((c) => text(c)).join('\n')).toContain('高 20 cm，干擾減少 80%');
   });
 });
 
@@ -222,7 +226,7 @@ describe('review 修正', () => {
 
   it('1. 掩護者留在原地繼續擋人，不算空間太擠（Paint Shot）', () => {
     const t = loadPlay(createDefaultTactic(), PLAYS.find((p) => p.id === 'low-pnr-paint')!, roles);
-    expect(run(t).comments.some((c) => c.text.includes('空間太擠'))).toBe(false);
+    expect(run(t).comments.some((c) => text(c).includes('空間太擠'))).toBe(false);
   });
 
   it('2. 換防的錯位說明用「那次換防之後」的對位', () => {
@@ -241,22 +245,20 @@ describe('review 修正', () => {
     const sim = simulate(t);
     const late = sim.timeline.shotReleaseAt! + 0.3;
     sim.defense.events.push({ t: late, type: 'fight-over', defenderId: 'r1', screenerId: 'b1', delay: 0.5 });
-    expect(evaluate(t, sim).comments.some((c) => c.text.includes('1 號 球員 1 的掩護'))).toBe(false);
+    expect(evaluate(t, sim).comments.some((c) => text(c).includes('1 號 球員 1 的掩護'))).toBe(false);
   });
 
   it('5. 評價超過 5 條時，命中率說明一定保留，顯示順序不變', async () => {
     const { pickComments } = await import('./evaluate');
-    const make = (text: string, priority: number) => ({ text, frameIndex: 0, playerIds: [], priority });
-    const picked = pickComments([
-      make('出手', 0),
-      make('掩護 1', 4),
-      make('掩護 2', 4),
-      make('掩護 3', 4),
-      make('空間', 5),
-      make('命中率', 2),
-      make('時間', 6),
-    ]);
-    expect(picked.map((c) => c.text)).toEqual(['出手', '掩護 1', '掩護 2', '掩護 3', '命中率']);
+    // 用 frame 編號分辨每一條：1 出手、2–4 掩護、5 空間、6 命中率、7 時間
+    const make = (frame: number, priority: number): Comment => ({
+      message: { kind: 'fight-over', frame, screenerId: 'b1', defenderId: 'r1', delay: 0.5 },
+      frameIndex: 0,
+      playerIds: [],
+      priority,
+    });
+    const picked = pickComments([make(1, 0), make(2, 4), make(3, 4), make(4, 4), make(5, 5), make(6, 2), make(7, 6)]);
+    expect(picked.map((c) => (c.message.kind === 'fight-over' ? c.message.frame : 0))).toEqual([1, 2, 3, 4, 6]);
     expect(picked[0]).not.toHaveProperty('priority');
   });
 });

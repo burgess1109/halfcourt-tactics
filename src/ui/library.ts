@@ -1,8 +1,7 @@
 import { isBlueComplete } from '../model/playerForm';
 import type { Store } from '../model/store';
-import type { Player } from '../model/types';
 import { loadPlay, type RoleAssignment } from '../plays/instantiate';
-import { PLAYS, ROLES, SHOT_LABEL, basePlay, type Play } from '../plays/library';
+import { PLAYS, ROLES, basePlay, type Play } from '../plays/library';
 import { createBlankTactic } from '../model/defaults';
 import {
   bestAssignment,
@@ -15,6 +14,8 @@ import {
 } from '../plays/recommend';
 import { videosOf } from '../plays/videos';
 import { videoLinks } from './videos';
+import { t as tx, tr } from '../i18n';
+import { adviceText, edgeText, playTitle, playerName, reasonText, styleText } from '../i18n/describe';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -32,9 +33,6 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-/** 戰術名稱；有多個出手點的戰術加上出手點，例如「高位擋拆-Pick and Pop（中距離）」 */
-export const playTitle = (play: Play) => `${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}`;
-
 /**
  * 戰術庫面板（SPEC §6.3）：資料完整時先列出 5 套推薦，下面是全部戰術。
  * 點擊後依最佳角色分配載入成複本，並自動播放一次。
@@ -46,17 +44,13 @@ export function attachLibrary(
   const dialog = $<HTMLDialogElement>('#library-dialog');
   const body = $<HTMLElement>('#library-body');
 
-  const nameOf = (players: readonly Player[], id: string) => {
-    const p = players.find((x) => x.id === id)!;
-    return `${p.number} 號 ${p.name}`;
-  };
   const rolesText = (play: Play, roles: RoleAssignment) =>
-    ROLES.map((r) => `${r} ${play.roles[r]}：${nameOf(store.get().tactic.players, roles[r])}`).join('　');
+    ROLES.map((r) => tx().library.role(r, tr(play.roles[r]), playerName(store.get().tactic.players, roles[r]))).join(tx().library.roleSep);
 
   const choose = (play: Play, roles: RoleAssignment) => {
     dialog.close();
     store.load(loadPlay(store.get().tactic, play, roles));
-    opts.notify(`已載入「${playTitle(play)}」，按復原可以回到原本的戰術`);
+    opts.notify(tx().library.loaded(playTitle(play)));
     opts.onLoaded();
   };
 
@@ -73,7 +67,7 @@ export function attachLibrary(
     // 卡片代表整套戰術：同一套就是目前的戰術（不管顯示的是哪個出手點）
     const current = store.get().tactic.basedOn?.playId === play.id;
     const expected = rec.grade
-      ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, `預期 ${rec.grade} ${Math.round(rec.gradeScore!)} 分`)]
+      ? [el('span', { class: 'play-item__grade', 'data-grade': rec.grade }, tx().library.expected(rec.grade, Math.round(rec.gradeScore!)))]
       : [];
     const button = el(
       'button',
@@ -82,9 +76,9 @@ export function attachLibrary(
       el(
         'span',
         { class: 'play-item__name' },
-        el('span', { class: 'play-item__cat' }, play.category),
+        el('span', { class: 'play-item__cat' }, tx().library.category[play.category]),
         play.name,
-        ...(play.shot ? [el('span', { class: 'play-item__shot' }, `（${SHOT_LABEL[play.shot]}）`)] : []),
+        ...(play.shot ? [el('span', { class: 'play-item__shot' }, tx().library.shotSuffix(tx().shot[play.shot]))] : []),
         ...expected,
       ),
       el('span', { class: 'play-item__text' }, text),
@@ -95,12 +89,12 @@ export function attachLibrary(
     const li = el('li', { class: 'play-card' }, button);
     // 有多個出手點的戰術：切換出手點（預設是模擬分數比較高的那一個）
     if (rec.alternatives) {
-      const shots = el('div', { class: 'play-item__shots', role: 'group', 'aria-label': '出手點' });
+      const shots = el('div', { class: 'play-item__shots', role: 'group', 'aria-label': tx().library.shots });
       for (const alt of rec.alternatives) {
         const b = el(
           'button',
           { type: 'button', class: 'play-item__shot-btn', 'aria-pressed': String(alt.play.shot === play.shot) },
-          `${SHOT_LABEL[alt.play.shot!]}${alt.grade ? ` ${alt.grade} ${Math.round(alt.gradeScore!)} 分` : ''}`,
+          tx().library.shotOption(tx().shot[alt.play.shot!], alt.grade ?? null, Math.round(alt.gradeScore ?? 0)),
         );
         b.addEventListener('click', () => li.replaceWith(item({ ...alt, alternatives: rec.alternatives }, textOf, rank)));
         shots.append(b);
@@ -128,66 +122,67 @@ export function attachLibrary(
     const blank = el(
       'button',
       { type: 'button', class: 'play-item play-item--plain' },
-      el('span', { class: 'play-item__name' }, '空白戰術'),
-      el('span', { class: 'play-item__text' }, '清掉目前的跑位，回到預設站位自己畫（球員資料和對位會保留）。'),
+      el('span', { class: 'play-item__name' }, tx().library.blank),
+      el('span', { class: 'play-item__text' }, tx().library.blankDesc),
     );
     blank.addEventListener('click', () => {
       dialog.close();
       store.load(createBlankTactic(store.get().tactic));
-      opts.notify('已換成空白戰術，按復原可以回到剛才的戰術');
+      opts.notify(tx().library.blankLoaded);
     });
     body.append(el('ul', { class: 'lib-list lib-list--top' }, el('li', { class: 'play-card' }, blank)));
 
     if (!t.autoDefense) {
       body.append(
-        el('p', { class: 'lib-note' }, '自動防守跑位已關閉：推薦與預期評等仍依自動防守模擬；載入後，紅隊跑位路線以模擬結果為起點，可以自己修改。'),
+        el('p', { class: 'lib-note' }, tx().library.manualDefense),
       );
     }
 
     if (isBlueComplete(t.players, t.setup.blueSkipped)) {
       const summary = teamSummary(t, ranked);
-      const box = el('section', { class: 'lib-summary', 'aria-label': '球隊總評' }, el('h3', { class: 'lib-summary__title' }, '球隊總評'));
+      const box = el('section', { class: 'lib-summary', 'aria-label': tx().library.summary }, el('h3', { class: 'lib-summary__title' }, tx().library.summary));
       if (summary.strengths.length > 0) {
         // 每人一行：合併同一個人的強項、戰術類型與例子（例子去掉重複，最多 3 套）
         const list = el('ul', { class: 'lib-summary__list' });
         const order = [...new Set(summary.strengths.map((st) => st.playerId))];
         for (const id of order) {
           const mine = summary.strengths.filter((st) => st.playerId === id);
-          const labels = mine.map((st) => st.label).join('、');
-          const styles = [...new Set(mine.map((st) => st.style))].join('、');
+          const sep = tx().common.listSep;
+          const labels = mine.map((st) => edgeText(st.edge)).join(sep);
+          const styles = [...new Set(mine.map(styleText))].join(sep);
           // 例子去掉重複：同一套戰術只列一次（不同強項可能各自用到同一套的不同出手點）
           const examples = mine
             .flatMap((st) => st.examples)
             .filter((p, i, all) => all.findIndex((q) => q.id === p.id) === i)
             .slice(0, 3)
-            .map(playTitle);
-          const tail = examples.length ? `，例如 ${examples.join('、')}` : '';
-          list.append(el('li', {}, el('strong', {}, nameOf(t.players, id)), `：${labels} → 適合${styles}的戰術${tail}`));
+            .map((p) => playTitle(p));
+          const line = tx().library.summaryLine(labels, styles, examples.length ? examples.join(sep) : null);
+          list.append(el('li', {}, el('strong', {}, playerName(t.players, id)), line));
         }
         box.append(list);
       }
-      box.append(el('p', { class: 'lib-summary__advice' }, summary.advice));
+      box.append(el('p', { class: 'lib-summary__advice' }, adviceText(summary.advice, t)));
       body.append(box);
 
-      body.append(el('h3', { class: 'lib-section' }, '推薦給你的球隊'));
+      body.append(el('h3', { class: 'lib-section' }, tx().library.recommended));
       const list = el('ol', { class: 'lib-list' });
-      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(showLoaded(rec), (r) => r.reason, i + 1)));
+      recommend(t, undefined, ranked).forEach((rec, i) => list.append(item(showLoaded(rec), (r) => reasonText(r.reason, r.play, t.players), i + 1)));
       body.append(list);
     } else {
-      const go = el('button', { type: 'button', class: 'btn' }, '去填身高');
+      const go = el('button', { type: 'button', class: 'btn' }, tx().library.goHeights);
       go.addEventListener('click', () => {
         dialog.close();
         opts.openSetup();
       });
-      body.append(el('p', { class: 'lib-note' }, el('span', {}, '藍隊三人都填了身高，就會依能力和對位推薦最適合的 5 套戰術。'), go));
+      body.append(el('p', { class: 'lib-note' }, el('span', {}, tx().library.needHeights), go));
     }
 
     // 全部戰術，依類別分組；點選時也自動找最佳的角色分配
     for (const category of [...new Set(PLAYS.map((p) => p.category))]) {
-      body.append(el('h3', { class: 'lib-section' }, category));
+      body.append(el('h3', { class: 'lib-section' }, tx().library.category[category]));
       const list = el('ul', { class: 'lib-list' });
       for (const play of PLAYS.filter((p) => p.category === category)) {
-        list.append(item(showLoaded(byPlay.get(play.id) ?? bestAssignment(t, play)), (r) => r.play.summary));
+        list.append(item(showLoaded(byPlay.get(play.id) ?? bestAssignment(t, play)), (r) => tr(r.play.summary)));
       }
       body.append(list);
     }
@@ -204,7 +199,7 @@ export function attachLibrary(
         'div',
         { class: 'lib-loading', role: 'status', 'aria-live': 'polite' },
         el('span', { class: 'spinner', 'aria-hidden': 'true' }),
-        el('span', {}, `正在模擬戰術 ${done} / ${PLAYS.length}…`),
+        el('span', {}, tx().library.loading(done, PLAYS.length)),
       ),
     );
   };

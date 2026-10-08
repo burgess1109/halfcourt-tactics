@@ -26,9 +26,13 @@ describe('設定頁表單', () => {
     expect(parseTeamForm([row('b1', '7'), row('b2', '7'), row('b3', '3')])).toMatchObject({ id: 'b2', field: 'number' });
   });
 
+  it('暱稱選填：空白（或只有空格）= 預設暱稱，存成空字串', () => {
+    const r = parseTeamForm([row('b1', '1', { name: '  ' }), row('b2', '2'), row('b3', '3')]);
+    expect('ok' in r && r.ok[0]!.name).toBe('');
+  });
+
   it('不合法的輸入指出欄位', () => {
     expect(parseTeamForm([row('b1', '100'), row('b2', '2'), row('b3', '3')])).toMatchObject({ field: 'number' });
-    expect(parseTeamForm([row('b1', '1', { name: '  ' }), row('b2', '2'), row('b3', '3')])).toMatchObject({ field: 'name' });
     expect(parseTeamForm([row('b1', '1', { name: '一二三四五六七八九十一二三' }), row('b2', '2'), row('b3', '3')])).toMatchObject({ field: 'name' });
     expect(parseTeamForm([row('b1', '1', { height: '149' }), row('b2', '2'), row('b3', '3')])).toMatchObject({ field: 'height' });
     expect(parseTeamForm([row('b1', '1', { height: '190.5' }), row('b2', '2'), row('b3', '3')])).toMatchObject({ field: 'height' });

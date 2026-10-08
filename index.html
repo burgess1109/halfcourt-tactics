@@ -8,25 +8,30 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <meta name="apple-mobile-web-app-title" content="半場戰術板" />
+    <!-- 加到 iOS 主畫面時的名稱：和 manifest 的 short_name 一致（只能一種語言，名稱太長會被截斷） -->
+    <meta name="apple-mobile-web-app-title" content="Halfcourt" />
     <title>半場戰術板</title>
   </head>
   <body data-screen="home">
     <!-- 首頁：選模式 -->
     <section id="home" class="screen home" aria-labelledby="home-title">
       <div class="home__inner">
-        <h1 id="home-title" class="home__title">半場戰術板</h1>
-        <p class="home__sub">3 對 3 半場籃球戰術</p>
+        <h1 id="home-title" class="home__title" data-i18n="app.title">半場戰術板</h1>
+        <p class="home__sub" data-i18n="home.sub">3 對 3 半場籃球戰術</p>
         <button id="mode-offense" class="mode-card" type="button">
-          <span class="mode-card__title">進攻模式</span>
-          <span class="mode-card__desc">設定你的球隊，選擇或設計進攻戰術，系統負責防守</span>
+          <span class="mode-card__title" data-i18n="home.offense">進攻模式</span>
+          <span class="mode-card__desc" data-i18n="home.offenseDesc">設定你的球隊，選擇或設計進攻戰術，系統負責防守</span>
         </button>
         <button class="mode-card" type="button" disabled>
-          <span class="mode-card__title">防守模式</span>
-          <span class="mode-card__desc">即將推出</span>
+          <span class="mode-card__title" data-i18n="home.defense">防守模式</span>
+          <span class="mode-card__desc" data-i18n="home.comingSoon">即將推出</span>
         </button>
-        <button id="home-saved" class="btn home__link" type="button">開啟已存的戰術</button>
-        <a class="btn home__link" href="https://github.com/burgess1109/halfcourt-tactics/discussions" target="_blank" rel="noopener">問題回報</a>
+        <button id="home-saved" class="btn home__link" type="button" data-i18n="home.openSaved">開啟已存的戰術</button>
+        <a class="btn home__link" href="https://github.com/burgess1109/halfcourt-tactics/discussions" target="_blank" rel="noopener" data-i18n="common.report">問題回報</a>
+        <!-- 語系：兩種語言並列，看不懂目前語言的人也找得到 -->
+        <button id="home-lang" class="btn home__link home__lang" type="button" aria-haspopup="menu" aria-expanded="false">
+          <svg aria-hidden="true"><use href="#icon-globe"/></svg><span>語系 / Language</span>
+        </button>
       </div>
     </section>
 
@@ -35,10 +40,10 @@
       <header class="setup__head">
         <p id="setup-progress" class="setup__progress">1 / 3</p>
         <!-- 從戰術面板進來時，改用分頁直接切換 -->
-        <div id="setup-tabs" class="tabs" role="tablist" aria-label="球隊設定">
-          <button class="tabs__tab" type="button" role="tab" data-step="1">藍隊</button>
-          <button class="tabs__tab" type="button" role="tab" data-step="2">紅隊</button>
-          <button class="tabs__tab" type="button" role="tab" data-step="3">比賽設定</button>
+        <div id="setup-tabs" class="tabs" role="tablist" aria-label="球隊設定" data-i18n-aria="setup.tabsLabel">
+          <button class="tabs__tab" type="button" role="tab" data-step="1" data-i18n="setup.tabBlue">藍隊</button>
+          <button class="tabs__tab" type="button" role="tab" data-step="2" data-i18n="setup.tabRed">紅隊</button>
+          <button class="tabs__tab" type="button" role="tab" data-step="3" data-i18n="setup.tabGame">比賽設定</button>
         </div>
         <h2 id="setup-title" class="setup__title"></h2>
         <p id="setup-hint" class="setup__hint"></p>
@@ -49,7 +54,7 @@
         <div class="setup__actions">
           <button id="setup-back" class="btn" type="button">上一步</button>
           <span class="toolbar__spacer"></span>
-          <button id="setup-skip" class="btn" type="button">略過</button>
+          <button id="setup-skip" class="btn" type="button" data-i18n="setup.skip">略過</button>
           <button id="setup-next" class="btn btn--primary" type="button">下一步</button>
         </div>
       </footer>
@@ -57,54 +62,54 @@
 
     <div class="app screen">
       <!-- 直式在上方，橫式在左側 -->
-      <nav class="toolbar toolbar--primary" aria-label="主要工具">
-        <button id="saved" class="tool" type="button" data-tip="戰術列表：開啟、重新命名、複製、刪除、匯入匯出" aria-label="戰術列表">
+      <nav class="toolbar toolbar--primary" aria-label="主要工具" data-i18n-aria="board.primaryTools">
+        <button id="saved" class="tool" type="button" data-tip="戰術列表：開啟、重新命名、複製、刪除、匯入匯出" aria-label="戰術列表" data-i18n-tip="board.savedTip" data-i18n-aria="board.saved">
           <svg aria-hidden="true"><use href="#icon-folder"/></svg>
         </button>
-        <button id="library" class="tool" type="button" data-tip="戰術庫：推薦戰術、內建戰術、空白戰術" aria-label="戰術庫">
+        <button id="library" class="tool" type="button" data-tip="戰術庫：推薦戰術、內建戰術、空白戰術" aria-label="戰術庫" data-i18n-tip="board.libraryTip" data-i18n-aria="board.library">
           <svg aria-hidden="true"><use href="#icon-library"/></svg>
         </button>
         <button id="play" class="tool" type="button" data-tip="播放（空白鍵）" aria-label="播放">
           <svg aria-hidden="true"><use href="#icon-play"/></svg>
         </button>
-        <button id="team" class="tool" type="button" data-tip="球隊設定：藍隊、紅隊、對位" aria-label="球隊設定">
+        <button id="team" class="tool" type="button" data-tip="球隊設定：藍隊、紅隊、對位" aria-label="球隊設定" data-i18n-tip="board.teamTip" data-i18n-aria="board.team">
           <svg aria-hidden="true"><use href="#icon-team"/></svg>
         </button>
         <span class="toolbar__spacer"></span>
-        <button id="share" class="tool" type="button" data-tip="分享：產生連結、下載 JSON 檔" aria-label="分享">
+        <button id="share" class="tool" type="button" data-tip="分享：產生連結、下載 JSON 檔" aria-label="分享" data-i18n-tip="board.shareTip" data-i18n-aria="board.share">
           <svg aria-hidden="true"><use href="#icon-share"/></svg>
         </button>
         <button id="save" class="tool" type="button" data-tip="存檔（⌘S / Ctrl+S）" aria-label="存檔">
           <svg aria-hidden="true"><use href="#icon-save"/></svg>
         </button>
-        <button class="tool" type="button" data-tip="設定（即將推出）" aria-label="設定" disabled>
+        <button id="settings" class="tool" type="button" data-tip="設定：語系" aria-label="設定" aria-haspopup="menu" aria-expanded="false" data-i18n-tip="board.settingsTip" data-i18n-aria="common.settings">
           <svg aria-hidden="true"><use href="#icon-settings"/></svg>
         </button>
       </nav>
 
       <main id="stage" class="stage">
-        <canvas id="court" aria-label="半場球場，可以拖曳藍隊球員與球"></canvas>
+        <canvas id="court" aria-label="半場球場，可以拖曳藍隊球員與球" data-i18n-aria="board.court"></canvas>
         <div id="board-title" class="board-title" hidden></div>
         <!-- 分享連結的唯讀預覽 -->
-        <div id="preview-bar" class="preview-bar" role="region" aria-label="唯讀預覽" hidden>
+        <div id="preview-bar" class="preview-bar" role="region" aria-label="唯讀預覽" data-i18n-aria="share.previewRegion" hidden>
           <span class="preview-bar__text">
-            <span class="preview-bar__label">分享的戰術・唯讀</span>
+            <span class="preview-bar__label" data-i18n="share.previewLabel">分享的戰術・唯讀</span>
             <span id="preview-name" class="preview-bar__name"></span>
           </span>
-          <button id="preview-save" class="btn btn--primary btn--small" type="button">另存</button>
-          <button id="preview-close" class="btn btn--small" type="button">關閉</button>
+          <button id="preview-save" class="btn btn--primary btn--small" type="button" data-i18n="board.saveAs">另存</button>
+          <button id="preview-close" class="btn btn--small" type="button" data-i18n="common.close">關閉</button>
         </div>
         <div id="hud" class="hud" aria-live="polite"></div>
-        <a class="report-link" href="https://github.com/burgess1109/halfcourt-tactics/discussions" target="_blank" rel="noopener">問題回報</a>
+        <a class="report-link" href="https://github.com/burgess1109/halfcourt-tactics/discussions" target="_blank" rel="noopener" data-i18n="common.report">問題回報</a>
         <section id="result" class="result" aria-labelledby="result-grade" hidden>
           <div class="result__head">
             <div id="result-grade" class="result__grade">A</div>
             <div class="result__summary">
               <div id="result-score" class="result__score"></div>
               <div id="result-points" class="result__points"></div>
-              <div class="result__hint">點評價可以跳到該分鏡</div>
+              <div class="result__hint" data-i18n="result.hint">點評價可以跳到該分鏡</div>
             </div>
-            <button id="result-close" class="result__close" type="button" data-tip="關閉評分" aria-label="關閉評分">✕</button>
+            <button id="result-close" class="result__close" type="button" data-tip="關閉評分" aria-label="關閉評分" data-i18n-tip="result.close" data-i18n-aria="result.close">✕</button>
           </div>
           <ol id="result-comments" class="result__comments"></ol>
           <div id="result-videos" class="result__videos" hidden></div>
@@ -112,22 +117,22 @@
       </main>
 
       <!-- 直式在下方，橫式在右側 -->
-      <nav class="toolbar toolbar--edit" aria-label="編輯工具">
-        <button id="undo" class="tool tool--boxed" type="button" data-tip="復原（⌘Z / Ctrl+Z）" aria-label="復原" disabled>
+      <nav class="toolbar toolbar--edit" aria-label="編輯工具" data-i18n-aria="board.editTools">
+        <button id="undo" class="tool tool--boxed" type="button" data-tip="復原（⌘Z / Ctrl+Z）" aria-label="復原" data-i18n-tip="board.undoTip" data-i18n-aria="board.undo" disabled>
           <svg aria-hidden="true"><use href="#icon-undo"/></svg>
         </button>
-        <button id="redo" class="tool tool--boxed" type="button" data-tip="重做（⇧⌘Z / Ctrl+Y）" aria-label="重做" disabled>
+        <button id="redo" class="tool tool--boxed" type="button" data-tip="重做（⇧⌘Z / Ctrl+Y）" aria-label="重做" data-i18n-tip="board.redoTip" data-i18n-aria="board.redo" disabled>
           <svg aria-hidden="true"><use href="#icon-redo"/></svg>
         </button>
-        <button id="clear" class="tool tool--boxed" type="button" data-tip="清空戰術：回到開局站位（保留球員與對位，可以復原）" aria-label="清空戰術">
+        <button id="clear" class="tool tool--boxed" type="button" data-tip="清空戰術：回到開局站位（保留球員與對位，可以復原）" aria-label="清空戰術" data-i18n-tip="board.clearTip" data-i18n-aria="board.clear">
           <svg aria-hidden="true"><use href="#icon-clear"/></svg>
         </button>
         <span class="toolbar__spacer"></span>
-        <div class="frames" role="group" aria-label="分鏡">
-          <button id="frame-prev" class="frames__btn" type="button" data-tip="上一個分鏡（←）" aria-label="上一個分鏡">‹</button>
-          <button id="frame-label" class="frames__label" type="button" aria-haspopup="menu" aria-expanded="false" data-tip="分鏡選單：刪除這個分鏡">1 / 1</button>
-          <button id="frame-next" class="frames__btn" type="button" data-tip="下一個分鏡（→）" aria-label="下一個分鏡">›</button>
-          <button id="frame-add" class="frames__btn" type="button" data-tip="在後面新增分鏡" aria-label="在後面新增分鏡">＋</button>
+        <div class="frames" role="group" aria-label="分鏡" data-i18n-aria="board.frames">
+          <button id="frame-prev" class="frames__btn" type="button" data-tip="上一個分鏡（←）" aria-label="上一個分鏡" data-i18n-tip="board.framePrevTip" data-i18n-aria="board.framePrev">‹</button>
+          <button id="frame-label" class="frames__label" type="button" aria-haspopup="menu" aria-expanded="false" data-tip="分鏡選單：刪除這個分鏡" data-i18n-tip="board.frameMenuTip">1 / 1</button>
+          <button id="frame-next" class="frames__btn" type="button" data-tip="下一個分鏡（→）" aria-label="下一個分鏡" data-i18n-tip="board.frameNextTip" data-i18n-aria="board.frameNext">›</button>
+          <button id="frame-add" class="frames__btn" type="button" data-tip="在後面新增分鏡" aria-label="在後面新增分鏡" data-i18n-tip="board.frameAdd" data-i18n-aria="board.frameAdd">＋</button>
         </div>
         <span class="toolbar__spacer"></span>
         <button id="tool" class="tool tool--boxed" type="button" data-tip="工具：移動" aria-label="工具：移動" aria-haspopup="menu" aria-expanded="false">
@@ -136,56 +141,63 @@
             <svg aria-hidden="true"><use href="#icon-freehand"/></svg>
           </span>
         </button>
-        <button id="delete" class="tool tool--boxed" type="button" data-tip="刪除選取的路線（Delete）" aria-label="刪除路線" disabled>
+        <button id="delete" class="tool tool--boxed" type="button" data-tip="刪除選取的路線（Delete）" aria-label="刪除路線" data-i18n-tip="board.deletePathTip" data-i18n-aria="board.deletePath" disabled>
           <svg aria-hidden="true"><use href="#icon-trash"/></svg>
         </button>
       </nav>
     </div>
-    <div id="tool-menu" class="menu" role="menu" aria-label="工具" hidden>
+    <div id="tool-menu" class="menu" role="menu" aria-label="工具" data-i18n-aria="board.tools" hidden>
       <button class="menu__item" type="button" role="menuitemradio" data-tool="move">
-        <svg aria-hidden="true"><use href="#icon-move"/></svg>移動
+        <svg aria-hidden="true"><use href="#icon-move"/></svg><span data-i18n="board.move">移動</span>
       </button>
       <button class="menu__item" type="button" role="menuitemradio" data-tool="cut">
-        <svg aria-hidden="true"><use href="#icon-cut"/></svg>跑位
+        <svg aria-hidden="true"><use href="#icon-cut"/></svg><span data-i18n="pathKind.cut">跑位</span>
       </button>
       <button class="menu__item" type="button" role="menuitemradio" data-tool="dribble">
-        <svg aria-hidden="true"><use href="#icon-dribble"/></svg>運球
+        <svg aria-hidden="true"><use href="#icon-dribble"/></svg><span data-i18n="pathKind.dribble">運球</span>
       </button>
       <button class="menu__item" type="button" role="menuitemradio" data-tool="pass">
-        <svg aria-hidden="true"><use href="#icon-pass"/></svg>傳球
+        <svg aria-hidden="true"><use href="#icon-pass"/></svg><span data-i18n="pathKind.pass">傳球</span>
       </button>
       <button class="menu__item" type="button" role="menuitemradio" data-tool="screen">
-        <svg aria-hidden="true"><use href="#icon-screen"/></svg>掩護
+        <svg aria-hidden="true"><use href="#icon-screen"/></svg><span data-i18n="pathKind.screen">掩護</span>
       </button>
       <button class="menu__item" type="button" role="menuitemradio" data-tool="shot">
-        <svg aria-hidden="true"><use href="#icon-shot"/></svg>投籃
+        <svg aria-hidden="true"><use href="#icon-shot"/></svg><span data-i18n="pathKind.shot">投籃</span>
       </button>
       <hr class="menu__sep" />
       <button class="menu__item" type="button" role="menuitemcheckbox" data-freehand>
-        <svg aria-hidden="true"><use href="#icon-freehand"/></svg>手繪
+        <svg aria-hidden="true"><use href="#icon-freehand"/></svg><span data-i18n="board.freehand">手繪</span>
       </button>
     </div>
 
-    <div id="frame-menu" class="menu" role="menu" aria-label="分鏡" hidden>
+    <div id="frame-menu" class="menu" role="menu" aria-label="分鏡" data-i18n-aria="board.frames" hidden>
       <button id="frame-delete" class="menu__item" type="button" role="menuitem">
-        <svg aria-hidden="true"><use href="#icon-trash"/></svg>刪除這個分鏡
+        <svg aria-hidden="true"><use href="#icon-trash"/></svg><span data-i18n="board.frameDelete">刪除這個分鏡</span>
       </button>
+    </div>
+
+    <!-- 語系選單：首頁的「語系 / Language」與戰術面板的「設定」共用 -->
+    <div id="lang-menu" class="menu" role="menu" aria-label="語系 / Language" hidden>
+      <p class="menu__title">語系 / Language</p>
+      <button class="menu__item" type="button" role="menuitemradio" data-locale="zh" lang="zh-Hant">繁體中文</button>
+      <button class="menu__item" type="button" role="menuitemradio" data-locale="en" lang="en">English</button>
     </div>
 
     <dialog id="library-dialog" class="panel" aria-labelledby="library-title">
       <div class="panel__head">
-        <h2 id="library-title" class="panel__title">戰術庫</h2>
-        <button id="library-close" class="btn" type="button">關閉</button>
+        <h2 id="library-title" class="panel__title" data-i18n="library.title">戰術庫</h2>
+        <button id="library-close" class="btn" type="button" data-i18n="common.close">關閉</button>
       </div>
       <div id="library-body" class="panel__body"></div>
     </dialog>
 
     <dialog id="saved-dialog" class="panel" aria-labelledby="saved-title">
       <div class="panel__head">
-        <h2 id="saved-title" class="panel__title">戰術列表</h2>
+        <h2 id="saved-title" class="panel__title" data-i18n="saved.title">戰術列表</h2>
         <div class="panel__actions">
-          <button id="saved-import" class="btn" type="button">匯入 JSON</button>
-          <button id="saved-close" class="btn" type="button">關閉</button>
+          <button id="saved-import" class="btn" type="button" data-i18n="saved.import">匯入 JSON</button>
+          <button id="saved-close" class="btn" type="button" data-i18n="common.close">關閉</button>
         </div>
       </div>
       <input id="saved-file" type="file" accept=".json,application/json" hidden />
@@ -194,31 +206,31 @@
 
     <dialog id="name-dialog" class="panel panel--small" aria-labelledby="name-title">
       <form id="name-form" class="name-form" novalidate>
-        <h2 id="name-title" class="panel__title">存檔</h2>
+        <h2 id="name-title" class="panel__title" data-i18n="common.save">存檔</h2>
         <label class="name-form__field">
-          <span>戰術名稱</span>
+          <span data-i18n="nameDialog.label">戰術名稱</span>
           <input id="name-input" type="text" maxlength="30" autocomplete="off" enterkeyhint="done" />
         </label>
         <p id="name-error" class="setup__error" role="alert" hidden></p>
         <div class="name-form__actions">
-          <button id="name-cancel" class="btn" type="button">取消</button>
-          <button id="name-ok" class="btn btn--primary" type="submit">存檔</button>
+          <button id="name-cancel" class="btn" type="button" data-i18n="common.cancel">取消</button>
+          <button id="name-ok" class="btn btn--primary" type="submit" data-i18n="common.save">存檔</button>
         </div>
       </form>
     </dialog>
 
     <dialog id="share-dialog" class="panel panel--small" aria-labelledby="share-title">
       <div class="panel__head">
-        <h2 id="share-title" class="panel__title">分享</h2>
-        <button id="share-close" class="btn" type="button">關閉</button>
+        <h2 id="share-title" class="panel__title" data-i18n="share.title">分享</h2>
+        <button id="share-close" class="btn" type="button" data-i18n="common.close">關閉</button>
       </div>
       <div class="panel__body share">
-        <p class="share__hint">對方打開連結後是唯讀預覽，按「另存」才會存到他的戰術列表。</p>
-        <input id="share-url" class="share__url" type="text" readonly aria-label="分享連結" />
+        <p class="share__hint" data-i18n="share.hint">對方打開連結後是唯讀預覽，按「另存」才會存到他的戰術列表。</p>
+        <input id="share-url" class="share__url" type="text" readonly aria-label="分享連結" data-i18n-aria="share.url" />
         <div class="share__actions">
-          <button id="share-copy" class="btn btn--primary" type="button">複製連結</button>
-          <button id="share-native" class="btn" type="button" hidden>傳送到其他 App</button>
-          <button id="share-json" class="btn" type="button">下載 JSON 檔</button>
+          <button id="share-copy" class="btn btn--primary" type="button" data-i18n="share.copy">複製連結</button>
+          <button id="share-native" class="btn" type="button" data-i18n="share.native" hidden>傳送到其他 App</button>
+          <button id="share-json" class="btn" type="button" data-i18n="share.json">下載 JSON 檔</button>
         </div>
       </div>
     </dialog>
@@ -238,6 +250,7 @@
       <symbol id="icon-share" viewBox="0 0 256 256"><path d="M220,112v96a20,20,0,0,1-20,20H56a20,20,0,0,1-20-20V112A20,20,0,0,1,56,92H76a12,12,0,0,1,0,24H60v88H196V116H180a12,12,0,0,1,0-24h20A20,20,0,0,1,220,112ZM96.49,72.49,116,53v83a12,12,0,0,0,24,0V53l19.51,19.52a12,12,0,1,0,17-17l-40-40a12,12,0,0,0-17,0l-40,40a12,12,0,1,0,17,17Z"/></symbol>
       <symbol id="icon-save" viewBox="0 0 256 256"><path d="M222.14,69.17,186.83,33.86A19.86,19.86,0,0,0,172.69,28H48A20,20,0,0,0,28,48V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V83.31A19.86,19.86,0,0,0,222.14,69.17ZM164,204H92V160h72Zm40,0H188V156a20,20,0,0,0-20-20H88a20,20,0,0,0-20,20v48H52V52H171l33,33ZM164,84a12,12,0,0,1-12,12H96a12,12,0,0,1,0-24h56A12,12,0,0,1,164,84Z"/></symbol>
       <symbol id="icon-settings" viewBox="0 0 256 256"><path d="M128,76a52,52,0,1,0,52,52A52.06,52.06,0,0,0,128,76Zm0,80a28,28,0,1,1,28-28A28,28,0,0,1,128,156Zm92-27.21v-1.58l14-17.51a12,12,0,0,0,2.23-10.59A111.75,111.75,0,0,0,225,71.89,12,12,0,0,0,215.89,66L193.61,63.5l-1.11-1.11L190,40.1A12,12,0,0,0,184.11,31a111.67,111.67,0,0,0-27.23-11.27A12,12,0,0,0,146.3,22L128.79,36h-1.58L109.7,22a12,12,0,0,0-10.59-2.23A111.75,111.75,0,0,0,71.89,31.05,12,12,0,0,0,66,40.11L63.5,62.39,62.39,63.5,40.1,66A12,12,0,0,0,31,71.89,111.67,111.67,0,0,0,19.77,99.12,12,12,0,0,0,22,109.7l14,17.51v1.58L22,146.3a12,12,0,0,0-2.23,10.59,111.75,111.75,0,0,0,11.29,27.22A12,12,0,0,0,40.11,190l22.28,2.48,1.11,1.11L66,215.9A12,12,0,0,0,71.89,225a111.67,111.67,0,0,0,27.23,11.27A12,12,0,0,0,109.7,234l17.51-14h1.58l17.51,14a12,12,0,0,0,10.59,2.23A111.75,111.75,0,0,0,184.11,225a12,12,0,0,0,5.91-9.06l2.48-22.28,1.11-1.11L215.9,190a12,12,0,0,0,9.06-5.91,111.67,111.67,0,0,0,11.27-27.23A12,12,0,0,0,234,146.3Zm-24.12-4.89a70.1,70.1,0,0,1,0,8.2,12,12,0,0,0,2.61,8.22l12.84,16.05A86.47,86.47,0,0,1,207,166.86l-20.43,2.27a12,12,0,0,0-7.65,4,69,69,0,0,1-5.8,5.8,12,12,0,0,0-4,7.65L166.86,207a86.47,86.47,0,0,1-10.49,4.35l-16.05-12.85a12,12,0,0,0-7.5-2.62c-.24,0-.48,0-.72,0a70.1,70.1,0,0,1-8.2,0,12.06,12.06,0,0,0-8.22,2.6L99.63,211.33A86.47,86.47,0,0,1,89.14,207l-2.27-20.43a12,12,0,0,0-4-7.65,69,69,0,0,1-5.8-5.8,12,12,0,0,0-7.65-4L49,166.86a86.47,86.47,0,0,1-4.35-10.49l12.84-16.05a12,12,0,0,0,2.61-8.22,70.1,70.1,0,0,1,0-8.2,12,12,0,0,0-2.61-8.22L44.67,99.63A86.47,86.47,0,0,1,49,89.14l20.43-2.27a12,12,0,0,0,7.65-4,69,69,0,0,1,5.8-5.8,12,12,0,0,0,4-7.65L89.14,49a86.47,86.47,0,0,1,10.49-4.35l16.05,12.85a12.06,12.06,0,0,0,8.22,2.6,70.1,70.1,0,0,1,8.2,0,12,12,0,0,0,8.22-2.6l16.05-12.85A86.47,86.47,0,0,1,166.86,49l2.27,20.43a12,12,0,0,0,4,7.65,69,69,0,0,1,5.8,5.8,12,12,0,0,0,7.65,4L207,89.14a86.47,86.47,0,0,1,4.35,10.49l-12.84,16.05A12,12,0,0,0,195.88,123.9Z"/></symbol>
+      <symbol id="icon-globe" viewBox="0 0 256 256"><path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,187a113.4,113.4,0,0,1-20.39-35h40.82a116.94,116.94,0,0,1-10,20.77A108.61,108.61,0,0,1,128,207Zm-26.49-59a135.42,135.42,0,0,1,0-40h53a135.42,135.42,0,0,1,0,40ZM44,128a83.49,83.49,0,0,1,2.43-20H77.25a160.63,160.63,0,0,0,0,40H46.43A83.49,83.49,0,0,1,44,128Zm84-79a113.4,113.4,0,0,1,20.39,35H107.59a116.94,116.94,0,0,1,10-20.77A108.61,108.61,0,0,1,128,49Zm50.73,59h30.82a83.52,83.52,0,0,1,0,40H178.75a160.63,160.63,0,0,0,0-40Zm20.77-24H173.71a140.82,140.82,0,0,0-15.5-34.36A84.51,84.51,0,0,1,199.52,84ZM97.79,49.64A140.82,140.82,0,0,0,82.29,84H56.48A84.51,84.51,0,0,1,97.79,49.64ZM56.48,172H82.29a140.82,140.82,0,0,0,15.5,34.36A84.51,84.51,0,0,1,56.48,172Zm101.73,34.36A140.82,140.82,0,0,0,173.71,172h25.81A84.51,84.51,0,0,1,158.21,206.36Z"/></symbol>
       <symbol id="icon-undo" viewBox="0 0 256 256"><path d="M236,144a68.07,68.07,0,0,1-68,68H80a12,12,0,0,1,0-24h88a44,44,0,0,0,0-88H61l27.52,27.51a12,12,0,0,1-17,17l-48-48a12,12,0,0,1,0-17l48-48a12,12,0,1,1,17,17L61,76H168A68.08,68.08,0,0,1,236,144Z"/></symbol>
       <symbol id="icon-redo" viewBox="0 0 256 256"><path d="M167.51,127.51,195,100H88a44,44,0,0,0,0,88h88a12,12,0,0,1,0,24H88A68,68,0,0,1,88,76H195L167.51,48.49a12,12,0,1,1,17-17l48,48a12,12,0,0,1,0,17l-48,48a12,12,0,0,1-17-17Z"/></symbol>
       <symbol id="icon-clear" viewBox="0 0 256 256"><path d="M216,204H141l86.84-86.84a28,28,0,0,0,0-39.6L186.43,36.19a28,28,0,0,0-39.6,0L28.19,154.82a28,28,0,0,0,0,39.6l30.06,30.07A12,12,0,0,0,66.74,228H216a12,12,0,0,0,0-24ZM163.8,53.16a4,4,0,0,1,5.66,0l41.38,41.38a4,4,0,0,1,0,5.65L160,151l-47-47ZM71.71,204,45.16,177.45a4,4,0,0,1,0-5.65L96,121l47,47-36,36Z"/></symbol>

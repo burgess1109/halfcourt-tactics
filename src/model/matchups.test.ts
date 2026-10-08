@@ -100,7 +100,7 @@ describe('關閉自動防守時改對位：紅隊路線跟著對位走', () => {
     const { simulate } = await import('../anim/simulation');
     const base = createDefaultTactic();
     base.autoDefense = false;
-    const t = loadPlay(base, PLAYS.find((p) => p.category === '高位擋拆' && p.name === 'Pick and Roll')!, { A: 'b1', B: 'b2', C: 'b3' });
+    const t = loadPlay(base, PLAYS.find((p) => p.category === 'high-pnr' && p.name === 'Pick and Roll')!, { A: 'b1', B: 'b2', C: 'b3' });
     // 每個分鏡：紅隊在分鏡結束時離自己盯的人多遠
     const gaps = () =>
       t.frames.slice(1).flatMap((f) => Object.entries(t.matchups).map(([b, r]) => Math.hypot(f.start[r]!.x - f.start[b]!.x, f.start[r]!.y - f.start[b]!.y)));

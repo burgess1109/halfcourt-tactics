@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { PlayVideo } from '../plays/videos';
 
 /**
@@ -8,7 +9,7 @@ export function videoLinks(videos: readonly PlayVideo[], className: string): HTM
   const row = document.createElement('div');
   row.className = `videos ${className}`;
   row.setAttribute('role', 'group');
-  row.setAttribute('aria-label', '參考影片');
+  row.setAttribute('aria-label', t().library.videos);
   for (const v of videos) {
     const a = document.createElement('a');
     a.className = 'videos__link';
@@ -16,7 +17,7 @@ export function videoLinks(videos: readonly PlayVideo[], className: string): HTM
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     // 標題太長會被截斷，提示顯示完整標題
-    a.dataset.tip = `${v.title}（開新分頁）`;
+    a.dataset.tip = t().library.videoTip(v.title);
     a.innerHTML = '<svg aria-hidden="true"><use href="#icon-play"/></svg>';
     const text = document.createElement('span');
     text.textContent = v.title;

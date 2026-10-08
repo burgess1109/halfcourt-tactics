@@ -27,7 +27,7 @@ export interface Player {
   id: string; // 'b1'..'b3', 'r1'..'r3'
   team: Team;
   number: number;
-  /** 暱稱 */
+  /** 暱稱；空字串 = 預設暱稱（顯示時依語系組出「球員 1」「Player 1」，見 model/defaults.ts 的 displayName） */
   name: string;
   heightCm?: number;
   /** 只有藍隊 */
@@ -75,7 +75,7 @@ export type DriveHelp = 'off' | 'weak-side';
 export type PickCoverage = 'drop' | 'hedge';
 
 export interface Tactic {
-  version: 1;
+  version: 2;
   id: string;
   name: string;
   mode: Mode;

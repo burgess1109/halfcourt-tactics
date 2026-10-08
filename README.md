@@ -1,30 +1,32 @@
-# 半場戰術板（Halfcourt Tactics）
+# Halfcourt Tactics（半場戰術板）
+
+English | [繁體中文](README.zh-TW.md)
 
 [![CI](https://github.com/burgess1109/halfcourt-tactics/actions/workflows/ci.yml/badge.svg)](https://github.com/burgess1109/halfcourt-tactics/actions/workflows/ci.yml)
 
-**線上試玩：<https://burgess1109.github.io/halfcourt-tactics/>**
+**Play online: <https://burgess1109.github.io/halfcourt-tactics/>**
 
-3 對 3 半場籃球戰術 Web 小遊戲。設定你的球隊、選擇或自己畫進攻戰術，系統依對位即時模擬防守，播完後告訴你這一球的評分（0–100）、評等，以及哪裡可以更好。
+A 3-on-3 half-court basketball tactics web game. Set up your team, pick or draw an offensive play, and the system simulates the defense live based on the matchups. When the play ends, you get a score (0–100), a grade, and tips on what could be better.
 
-- 純前端靜態網頁，沒有後端、不需要帳號
-- 可以安裝到手機主畫面、離線使用（PWA）
-- 介面：繁體中文
+- Pure front-end static site: no back end, no account
+- Install it to your home screen and use it offline (PWA)
+- Interface: Traditional Chinese and English (follows your browser language; switch it on the home screen or under Settings)
 
-## 功能
+## Features
 
-- **球隊設定**：藍隊（你）三名球員的號碼、暱稱、身高與五項能力（速度、單打、禁區終結、中距離投射、弧外投射）；紅隊（系統）的身高與速度
-- **比賽設定**：選擇計分規則（FIBA 3x3 或一般規則）；在小球場上擺開局站位、指定持球者，或套用常用陣型；設定誰盯誰
-- **紅隊的防守方式**（比賽設定的防守設定）：防守距離（一般 / 緊貼）、持球者切入時（不補防 / 弱邊補防）、遇到掩護時（換防 / 擠過，擠過時再選沉退 / 上提）
-- **戰術庫**：21 套內建戰術（擋拆、空切、無球掩護、手遞手、單打），依你的球隊能力與對位模擬後推薦前 5 名；8 套外線跳投戰術會依球員能力自動選中距離或弧外出手（Spain Pick and Roll 還會依防守改傳給下順的掩護者）
-- **自己畫戰術**：跑位、運球、傳球、掩護、投籃，最多 12 個分鏡，支援手繪路線與 5 步復原
-- **播放與評分**：紅隊由防守模擬即時反應（人盯人、阻絕、換防、擠過、補防），播完後顯示評等、0–100 分（有效命中率）、預期得分與 3–5 條評價，點評價可以跳到對應的分鏡
-- **存檔與分享**：存到瀏覽器的戰術列表、匯入匯出 JSON、產生分享連結（對方打開是唯讀預覽，可以另存）
+- **Team setup**: number, name, height and five ratings (speed, isolation, finishing, mid-range, outside shot) for your three Blue players; height and speed for the three Red players (the system)
+- **Game settings**: choose the scoring rules (FIBA 3x3 or standard); place the starting lineup on a mini court, pick the ball handler, or apply a common formation; set who guards whom
+- **Red’s defense** (defense settings under Game settings): defensive distance (normal / tight), on a drive (no help / weak-side help), on a screen (switch / fight over, and drop / hedge when fighting over)
+- **Play library**: 21 built-in plays (pick and roll, cutting, off-ball screens, hand-offs, isolation). The top 5 are recommended after simulating every play with your team’s ratings and matchups. 8 jump-shot plays automatically choose a mid-range or outside shot based on the shooter’s ratings (Spain Pick and Roll can also hit the rolling screener depending on the defense)
+- **Draw your own plays**: cuts, dribbles, passes, screens and shots, up to 12 frames, freehand paths and 5-step undo
+- **Playback and rating**: Red reacts live through the defense simulation (man-to-man, denial, switches, fighting over, help defense). Afterwards you get a grade, a 0–100 score (effective field goal percentage), expected points and 3–5 comments; tap a comment to jump to its frame
+- **Save and share**: save to your browser’s play list, import/export JSON, or create a share link (it opens as a read-only preview the other person can save)
 
-模擬完全**決定性**：同樣的戰術一定得到同樣的結果，不判定投籃進或不進，只計算期望值。計分規則可選 FIBA 3x3（弧內 1 分、弧外 2 分、12 秒進攻時限，預設）或一般規則（弧內 2 分、弧外 3 分、24 秒）。
+The simulation is fully **deterministic**: the same play always gets the same result. Shots are never “made” or “missed”; only the expected value is computed. Scoring rules are FIBA 3x3 (1 point inside the arc, 2 beyond it, 12-second shot clock; the default) or standard (2 / 3 points, 24 seconds).
 
-## 快速開始
+## Quick start
 
-需要 [Node.js](https://nodejs.org/) **22.12 以上**（Vitest 5 的要求）。
+Requires [Node.js](https://nodejs.org/) **22.12 or later** (required by Vitest 5).
 
 ```bash
 git clone https://github.com/burgess1109/halfcourt-tactics.git
@@ -33,76 +35,79 @@ npm install
 npm run dev
 ```
 
-打開終端機顯示的網址（預設 <http://localhost:5173/>）。
+Open the URL shown in the terminal (by default <http://localhost:5173/>).
 
-## 指令
+## Commands
 
-| 指令 | 說明 |
+| Command | Description |
 |---|---|
-| `npm run dev` | 開發伺服器（修改後自動重新載入） |
-| `npm test` | 單元測試（Vitest） |
-| `npm run typecheck` | 型別檢查 |
-| `npm run build` | 型別檢查 + 打包到 `dist/` |
-| `npm run preview` | 在本機預覽打包結果（測試 PWA、離線功能用這個） |
-| `npm run plays-doc` | 由戰術資料重新產生 `docs/PLAYS.md` 與分鏡圖 |
+| `npm run dev` | Development server (reloads on changes) |
+| `npm test` | Unit tests (Vitest) |
+| `npm run typecheck` | Type check |
+| `npm run build` | Type check + bundle into `dist/` |
+| `npm run preview` | Preview the build locally (use this to test the PWA and offline mode) |
+| `npm run plays-doc` | Regenerate `docs/PLAYS.md` and its diagrams from the play data |
 
-## 部署
+## Deployment
 
-推到 `main` 後，GitHub Actions（`.github/workflows/ci.yml`）會自動執行型別檢查、測試、打包，並部署到 GitHub Pages。
+After a push to `main`, GitHub Actions (`.github/workflows/ci.yml`) type-checks, tests, builds and deploys to GitHub Pages.
 
-`npm run build` 產生的 `dist/` 是純靜態檔案，可以放到任何靜態主機（GitHub Pages、Netlify、Cloudflare Pages 等），放在子目錄也可以。
+The `dist/` folder produced by `npm run build` is plain static files and can be hosted anywhere (GitHub Pages, Netlify, Cloudflare Pages, …), including in a subdirectory.
 
-- 要用 **HTTPS**（或 `localhost`），PWA 的離線功能與安裝到主畫面才會啟用。
-- 存檔只在使用者自己的瀏覽器（localStorage），換裝置要用 JSON 匯出匯入或分享連結。
+- Serve it over **HTTPS** (or `localhost`) so that offline mode and installing to the home screen work.
+- Saved plays live only in the user’s own browser (localStorage); use JSON export/import or share links to move them to another device.
 
-## 技術
+## Tech
 
-- TypeScript + Vite + 原生 Canvas 2D，**沒有執行期相依套件**（不用 React 等框架）
-- 測試：Vitest
-- PWA：vite-plugin-pwa（只在打包時使用）
-- 分享連結：瀏覽器內建的 CompressionStream（deflate-raw）+ base64url
+- TypeScript + Vite + native Canvas 2D, **no runtime dependencies** (no React or other framework)
+- Tests: Vitest
+- PWA: vite-plugin-pwa (build time only)
+- Share links: the browser’s built-in CompressionStream (deflate-raw) + base64url
 
-## 專案結構
+## Project structure
 
 ```
 src/
-  court/   FIBA 半場尺寸、弧內外判斷
-  geom/    向量、樣條、路線簡化
-  model/   資料模型與規則：戰術、分鏡、路線、對位、存檔與分享格式
-  sim/     防守模擬與評分（純函式、完全決定性，係數集中在 sim/config.ts）
-  anim/    時間軸與播放
-  plays/   內建戰術庫與推薦演算法
-  render/  Canvas 繪圖
-  input/   指標事件（拖曳、畫線）
-  ui/      DOM 介面
-docs/      規格、規劃、戰術說明
+  court/   FIBA half-court dimensions, inside/beyond the arc
+  geom/    vectors, splines, path simplification
+  model/   data model and rules: plays, frames, paths, matchups, save and share formats
+  sim/     defense simulation and rating (pure functions, fully deterministic; coefficients in sim/config.ts)
+  anim/    timeline and playback
+  plays/   built-in play library and recommendations
+  render/  Canvas drawing
+  input/   pointer events (dragging, drawing)
+  ui/      DOM interface
+  i18n/    interface text tables (Traditional Chinese, English) and sentence building
+docs/      spec, planning, play guide
 ```
 
-## 文件
+## Documents
 
-| 文件 | 內容 |
+The documents are written in Traditional Chinese.
+
+| Document | Contents |
 |---|---|
-| [`docs/SPEC.md`](docs/SPEC.md) | 產品規格：目前實作的流程、模擬、評分、資料模型 |
-| [`docs/PLANNING.md`](docs/PLANNING.md) | 專案規劃：里程碑、決策紀錄、待確認清單 |
-| [`docs/PLAYS.md`](docs/PLAYS.md) | 21 套內建戰術的說明與分鏡圖（由程式產生） |
-| [`CLAUDE.md`](CLAUDE.md) | 開發慣例與架構說明（給開發者與 AI 協作工具） |
+| [`docs/SPEC.md`](docs/SPEC.md) | Product spec: the flow, simulation, rating and data model as implemented |
+| [`docs/PLANNING.md`](docs/PLANNING.md) | Planning: milestones, decision log, open questions |
+| [`docs/PLAYS.md`](docs/PLAYS.md) | Guide and diagrams for the 21 built-in plays (generated) |
+| [`CLAUDE.md`](CLAUDE.md) | Development conventions and architecture (for developers and AI coding tools) |
 
-## 參與開發
+## Contributing
 
-有問題、建議或想討論戰術，歡迎到 [GitHub Discussions](https://github.com/burgess1109/halfcourt-tactics/discussions) 回報（遊戲首頁與戰術面板左下角的「問題回報」也會開到這裡）。
+Questions, suggestions or play ideas are welcome in [GitHub Discussions](https://github.com/burgess1109/halfcourt-tactics/discussions) (the Feedback links on the home screen and the bottom-left of the court open it too).
 
-也歡迎送 pull request，送出前請確認：
+Pull requests are welcome as well. Before sending one, please make sure that:
 
-1. `npm run typecheck` 與 `npm test` 都通過；邏輯變更請補單元測試
-2. 模擬與評分維持完全決定性（不要使用 `Math.random`），新的係數放在 `src/sim/config.ts`
-3. 行為改變時同步更新 `docs/SPEC.md`，並在 `docs/PLANNING.md` 的決策紀錄加一列
-4. 改了內建戰術（`src/plays/library.ts`）、防守模擬（`src/sim/`）或配色後，要執行 `npm run plays-doc` 重新產生分鏡圖（測試會檢查是否一致）
-5. 介面文字用繁體中文；註解、文件、commit message 用繁體中文或英文皆可
+1. `npm run typecheck` and `npm test` pass; add unit tests for logic changes
+2. The simulation and rating stay fully deterministic (no `Math.random`) and new coefficients go into `src/sim/config.ts`
+3. Behavior changes are reflected in `docs/SPEC.md`, with a new row in the decision log of `docs/PLANNING.md`
+4. After changing the built-in plays (`src/plays/library.ts`), the defense simulation (`src/sim/`) or the colors, you run `npm run plays-doc` to regenerate the diagrams (a test checks that they match)
+5. Interface text goes into the text tables in `src/i18n/`, in both Traditional Chinese and English (a test checks that they match); comments, documents and commit messages may be in Traditional Chinese or English
 
-更多慣例見 [`CLAUDE.md`](CLAUDE.md)。
+See [`CLAUDE.md`](CLAUDE.md) for more conventions.
 
-## 授權
+## License
 
 [MIT](LICENSE)
 
-第三方元件：工具列與選單圖示使用 [Phosphor Icons](https://phosphoricons.com/)（MIT），PWA 的 service worker 由 [Workbox](https://github.com/GoogleChrome/workbox)（MIT）產生。授權全文見 [`public/THIRD_PARTY_NOTICES.txt`](public/THIRD_PARTY_NOTICES.txt)，部署後也會一起發佈。
+Third-party components: toolbar and menu icons are from [Phosphor Icons](https://phosphoricons.com/) (MIT), and the PWA service worker is generated by [Workbox](https://github.com/GoogleChrome/workbox) (MIT). The full license texts are in [`public/THIRD_PARTY_NOTICES.txt`](public/THIRD_PARTY_NOTICES.txt), which is also published with the site.

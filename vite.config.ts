@@ -12,8 +12,9 @@ export default defineConfig({
       injectRegister: 'script-defer',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: '半場戰術板',
-        short_name: '半場戰術板',
+        // 只能有一種語言（打包時產生）：名稱用雙語，主畫面圖示下的短名稱用英文（太長會被截斷）
+        name: '半場戰術板 Halfcourt Tactics',
+        short_name: 'Halfcourt',
         description: '3 對 3 半場籃球戰術：設定球隊、設計跑位，系統模擬防守並評分',
         lang: 'zh-Hant-TW',
         start_url: './',

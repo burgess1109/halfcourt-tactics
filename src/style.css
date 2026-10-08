@@ -286,6 +286,13 @@ body {
   color: #1b1b1f;
 }
 
+/* 選單標題（例如語系選單的「語系 / Language」） */
+.menu__title {
+  margin: 4px 12px 6px;
+  color: #9aa0aa;
+  font-size: 13px;
+}
+
 .menu__sep {
   width: 100%;
   margin: 4px 0;
@@ -1487,6 +1494,17 @@ body[data-screen='board'] .app {
 
 .home__link + .home__link {
   margin-top: 0;
+}
+
+/* 首頁的「語系 / Language」：地球圖示＋雙語文字 */
+.home__lang {
+  gap: 8px;
+}
+
+.home__lang svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 /* 戰術面板左下的「問題回報」：疊在球場上，評分卡片在下方時跟著往上讓位 */

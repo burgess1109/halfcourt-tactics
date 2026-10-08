@@ -14,7 +14,7 @@ import { authoredSignature } from './store';
 import type { Tactic } from './types';
 
 const roles = { A: 'b1', B: 'b2', C: 'b3' } as const;
-const play = PLAYS.find((p) => p.category === '高位擋拆' && p.name === 'Pick and Roll')!;
+const play = PLAYS.find((p) => p.category === 'high-pnr' && p.name === 'Pick and Roll')!;
 const REDS = ['r1', 'r2', 'r3'];
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 

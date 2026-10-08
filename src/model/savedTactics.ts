@@ -1,6 +1,7 @@
 import { newId } from './id';
 import { TACTIC_NAME_MAX, parseTactic } from './serialize';
 import type { Grade, Mode, ShotZone, Tactic } from './types';
+import { t } from '../i18n';
 
 // 存在 localStorage 的戰術列表（SPEC §8）：開啟、重新命名、複製、刪除。
 
@@ -39,7 +40,7 @@ const summaryOf = (t: Tactic): SavedSummary => ({
 
 /** 「X 複本」，超過長度上限時截短名稱 */
 export function copyName(name: string): string {
-  const suffix = ' 複本';
+  const suffix = t().saved.copySuffix;
   return name.slice(0, TACTIC_NAME_MAX - suffix.length) + suffix;
 }
 
@@ -104,7 +105,7 @@ export class SavedTactics {
 
   /** 新增或覆蓋同一個 id 的戰術；名稱必須已經填好 */
   save(tactic: Tactic): void {
-    if (!tactic.name.trim()) throw new SaveError('戰術沒有名稱');
+    if (!tactic.name.trim()) throw new SaveError(t().saved.noName);
     const copy = structuredClone(tactic);
     const next = [...this.items.filter((t) => t.id !== copy.id), copy];
     this.write(next);
@@ -133,7 +134,7 @@ export class SavedTactics {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
-      throw new SaveError('存檔失敗：瀏覽器的儲存空間不足或被停用');
+      throw new SaveError(t().saved.storageFull);
     }
     this.items = next;
   }

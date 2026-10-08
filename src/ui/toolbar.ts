@@ -1,11 +1,11 @@
 import type { Store, Tool } from '../model/store';
-import { PATH_KIND_LABEL } from '../model/paths';
 import { createBlankTactic } from '../model/defaults';
 import { isBlankTactic } from '../model/lineup';
 import { bindMenu } from './menu';
 import { setTip } from './tooltip';
+import { t } from '../i18n';
 
-const TOOL_LABEL: Record<Tool, string> = { move: '移動', ...PATH_KIND_LABEL };
+const toolLabel = (tool: Tool) => (tool === 'move' ? t().board.move : t().pathKind[tool]);
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -35,7 +35,7 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
   // 清空戰術：跟戰術庫的「空白戰術」相同，回到開局站位，球員資料與對位保留
   clear.addEventListener('click', () => {
     store.load(createBlankTactic(store.get().tactic));
-    notify('已清空戰術，按復原可以回到剛才的戰術');
+    notify(t().board.cleared);
   });
 
   undo.addEventListener('click', () => store.undo());
@@ -48,7 +48,6 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
   );
   const closeMenu = menuCtl.close;
 
-  const MOVE_LOCKED = '只有第 1 個分鏡可以移動站位；之後的站位由上一個分鏡的路線決定';
   for (const item of toolItems) {
     item.addEventListener('click', () => {
       if (item.disabled) return;
@@ -99,7 +98,7 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
     } else if (!mod && shortcuts[key]) {
       const tool = shortcuts[key]!;
       if (tool === 'move' && store.get().frameIndex > 0) {
-        notify(MOVE_LOCKED);
+        notify(t().board.moveLocked);
         return;
       }
       store.update((s) => {
@@ -120,15 +119,15 @@ export function attachToolbar(store: Store, notify: (message: string) => void): 
     toolBtn.disabled = locked;
     if (locked) closeMenu();
     toolIcon.setAttribute('href', `#icon-${s.tool}`);
-    toolBtn.setAttribute('aria-label', `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}`);
-    setTip(toolBtn, `工具：${TOOL_LABEL[s.tool]}${s.freehand ? '（手繪）' : ''}，點開切換（V、1–5、F）`);
+    toolBtn.setAttribute('aria-label', t().board.toolLabel(toolLabel(s.tool), s.freehand));
+    setTip(toolBtn, t().board.toolTip(toolLabel(s.tool), s.freehand));
     badge.hidden = !s.freehand;
     for (const item of toolItems) {
       item.setAttribute('aria-checked', String(item.dataset.tool === s.tool));
       // 「移動」只在第 1 個分鏡可以用
       if (item.dataset.tool === 'move') {
         item.disabled = s.frameIndex > 0;
-        if (item.disabled) item.dataset.tip = MOVE_LOCKED;
+        if (item.disabled) item.dataset.tip = t().board.moveLocked;
         else delete item.dataset.tip;
       }
     }

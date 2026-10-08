@@ -5,7 +5,8 @@ import { createDefaultTactic } from '../model/defaults';
 import { MAX_FRAMES } from '../model/frames';
 import { simulateDefense } from '../sim/defenseSim';
 import { isBeyondArc } from '../court/fiba';
-import { PLAYS, SHOT_LABEL, playVariant, playVariants } from './library';
+import { PLAYS, playVariant, playVariants } from './library';
+import { playTitle } from '../i18n/describe';
 import { zoneOf } from '../sim/evaluate';
 import { loadPlay } from './instantiate';
 import { MAX_VIDEOS, PLAY_VIDEOS } from './videos';
@@ -20,7 +21,7 @@ describe('內建戰術庫', () => {
 
   // 每個出手點版本都要檢查
   for (const play of PLAYS.flatMap(playVariants)) {
-    describe(`${play.category}-${play.name}${play.shot ? `（${SHOT_LABEL[play.shot]}）` : ''}`, () => {
+    describe(playTitle(play), () => {
       it('可以載入，最後一個分鏡由終結者投籃，12 秒內出手', () => {
         const t = loadPlay(createDefaultTactic(), play, roles);
         expect(t.frames.length).toBe(play.frames.length);
@@ -48,9 +49,9 @@ describe('內建戰術庫', () => {
     });
   }
 
-  it('參考影片設定：戰術 id 存在、每套 1–3 個、有標題、網址是 https', () => {
+  it('參考影片設定（每種語系）：戰術 id 存在、每套 1–3 個、有標題、網址是 https', () => {
     const ids = new Set(PLAYS.map((p) => p.id));
-    for (const [id, videos] of Object.entries(PLAY_VIDEOS)) {
+    for (const [id, videos] of Object.values(PLAY_VIDEOS).flatMap((list) => Object.entries(list))) {
       expect(ids.has(id), `不存在的戰術 id：${id}`).toBe(true);
       expect(videos.length, id).toBeGreaterThanOrEqual(1);
       expect(videos.length, id).toBeLessThanOrEqual(MAX_VIDEOS);

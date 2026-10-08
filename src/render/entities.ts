@@ -1,3 +1,4 @@
+import { displayName } from '../model/defaults';
 import { BALL_RADIUS, PLAYER_RADIUS } from '../model/entities';
 import type { Player, Vec2 } from '../model/types';
 import { theme } from './theme';
@@ -66,7 +67,7 @@ export function drawPlayerLabel(
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 3;
   ctx.fillStyle = theme.label;
-  ctx.fillText(player.name, c.x, above ? c.y - r - labelSize * 0.15 : c.y + r + labelSize * 0.2);
+  ctx.fillText(displayName(player), c.x, above ? c.y - r - labelSize * 0.15 : c.y + r + labelSize * 0.2);
   ctx.shadowColor = 'transparent';
 }
 

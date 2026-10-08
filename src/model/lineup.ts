@@ -12,9 +12,11 @@ export interface Lineup {
   holder: string;
 }
 
+/** 陣型名稱在文字表（i18n 的 formation） */
+export type FormationId = 'top-wings' | 'top-corners' | 'wings-post' | 'top-wing-corner' | 'top-elbows';
+
 export interface Formation {
-  id: string;
-  label: string;
+  id: FormationId;
   /** spots[0] 是持球的位置，另外兩個依左右順序 */
   spots: readonly [Vec2, Vec2, Vec2];
 }
@@ -25,11 +27,11 @@ const RIGHT_WING: Vec2 = { x: 5.4, y: 6.0 };
 
 /** 常用陣型 */
 export const FORMATIONS: readonly Formation[] = [
-  { id: 'top-wings', label: '弧頂＋兩翼', spots: [TOP, LEFT_WING, RIGHT_WING] },
-  { id: 'top-corners', label: '弧頂＋兩底角', spots: [TOP, { x: -6.6, y: 1.2 }, { x: 6.6, y: 1.2 }] },
-  { id: 'wings-post', label: '兩翼＋低位', spots: [LEFT_WING, { x: 2.3, y: 2.6 }, RIGHT_WING] },
-  { id: 'top-wing-corner', label: '弧頂＋翼＋底角', spots: [TOP, { x: -6.6, y: 1.2 }, RIGHT_WING] },
-  { id: 'top-elbows', label: '弧頂＋兩肘', spots: [TOP, { x: -2.4, y: 5.8 }, { x: 2.4, y: 5.8 }] },
+  { id: 'top-wings', spots: [TOP, LEFT_WING, RIGHT_WING] },
+  { id: 'top-corners', spots: [TOP, { x: -6.6, y: 1.2 }, { x: 6.6, y: 1.2 }] },
+  { id: 'wings-post', spots: [LEFT_WING, { x: 2.3, y: 2.6 }, RIGHT_WING] },
+  { id: 'top-wing-corner', spots: [TOP, { x: -6.6, y: 1.2 }, RIGHT_WING] },
+  { id: 'top-elbows', spots: [TOP, { x: -2.4, y: 5.8 }, { x: 2.4, y: 5.8 }] },
 ];
 
 export const DEFAULT_LINEUP: Lineup = {

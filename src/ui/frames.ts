@@ -1,6 +1,7 @@
 import { MAX_FRAMES, cannotInsertAfter, insertFrameAfter, removeFrame } from '../model/frames';
 import type { Store } from '../model/store';
 import { bindMenu } from './menu';
+import { t } from '../i18n';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -64,7 +65,7 @@ export function attachFrames(store: Store, notify: (message: string) => void): v
     const s = store.get();
     const n = s.tactic.frames.length;
     label.textContent = `${s.frameIndex + 1} / ${n}`;
-    label.setAttribute('aria-label', `第 ${s.frameIndex + 1} 個分鏡，共 ${n} 個`);
+    label.setAttribute('aria-label', t().board.frameOf(s.frameIndex + 1, n));
     prev.disabled = s.playing || s.frameIndex === 0;
     next.disabled = s.playing || s.frameIndex === n - 1;
     add.disabled = s.playing || s.readonly || n >= MAX_FRAMES;

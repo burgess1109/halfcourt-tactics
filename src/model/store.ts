@@ -5,6 +5,7 @@ import { History } from './history';
 import { defenderAssignments } from './matchups';
 import type { Draft } from './paths';
 import { BALL_ID, type Frame, type PathKind, type Tactic } from './types';
+import { t } from '../i18n';
 
 /** 'move' = 拖曳球員與球；其他 = 畫該種路線 */
 export type Tool = 'move' | PathKind;
@@ -104,7 +105,7 @@ export class Store {
     const p = this.pending;
     this.pending = null;
     const removed = syncFrames(this.state.tactic, true);
-    if (removed > 0) this.notify(`球換人持有，移除了 ${removed} 條運球 / 傳球 / 投籃路線`);
+    if (removed > 0) this.notify(t().edit.ballChanged(removed));
     if (p && JSON.stringify(this.state.tactic) !== p.json) {
       const t = this.state.tactic;
       // 從內建戰術載入後，動到使用者畫的部分才算「已修改」（SPEC §6.3：不會改寫內建戰術）
@@ -155,6 +156,11 @@ export class Store {
     };
     this.history.forEach(rename);
     rename(this.state.tactic);
+    this.emit();
+  }
+
+  /** 重新通知所有訂閱者（狀態沒變，但顯示方式變了，例如切換語系） */
+  refresh(): void {
     this.emit();
   }
 
