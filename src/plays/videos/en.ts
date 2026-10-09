@@ -5,9 +5,20 @@
 
 import type { PlayVideo } from '.';
 
+const PNR_BASICS: PlayVideo[] = [
+  { title: 'Setting and Using a Screen', url: 'https://www.youtube.com/watch?v=CTnSABsyzIE' },
+];
 const DHO_BASICS: PlayVideo[] = [{ title: 'DHO: Dribble Pitch/Dribble Screen', url: 'https://www.youtube.com/watch?v=Oqzx1JElX5g' }];
 
 export const EN_VIDEOS: Readonly<Record<string, readonly PlayVideo[]>> = {
+  // High pick and roll: Pull-up Jumper
+  'high-pnr-pullup': PNR_BASICS,
+  // High pick and roll: Floater
+  'high-pnr-floater': PNR_BASICS,
+  // High pick and roll: Drive to Rim
+  'high-pnr-drive': PNR_BASICS,
+  // High pick and roll: Pick and Pop
+  'high-pnr-pop': [{ title: 'Pick And Pop', url: 'https://www.youtube.com/watch?v=ZqBxDaTbOns' }],
   // High pick and roll: Pick and Roll
   'high-pnr-roll': [
     { title: 'How Pick And Roll In Basketball', url: 'https://www.youtube.com/watch?v=bwT15tI3H70' },
@@ -36,4 +47,8 @@ export const EN_VIDEOS: Readonly<Record<string, readonly PlayVideo[]>> = {
   'dho-shoot': DHO_BASICS,
   // Hand-off: Fake Hand-Off
   'dho-fake': [{ title: 'Fake Handoff Breakdown', url: 'https://www.youtube.com/watch?v=41sDICfHVlo' }],
+  // Isolation: Hunting the Mismatch
+  'iso-mismatch': [
+    { title: 'Chris Paul: Attack The Mismatch Situation In Basketball', url: 'https://www.youtube.com/watch?v=N8ii82OR9z4' },
+  ],
 };

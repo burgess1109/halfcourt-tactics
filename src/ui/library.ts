@@ -15,7 +15,7 @@ import {
 import { videosOf } from '../plays/videos';
 import { videoLinks } from './videos';
 import { t as tx, tr } from '../i18n';
-import { adviceText, edgeText, playTitle, playerName, reasonText, styleText } from '../i18n/describe';
+import { adviceText, edgeText, playTitle, playerName, reasonText, shotSuffix, styleText } from '../i18n/describe';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -78,7 +78,7 @@ export function attachLibrary(
         { class: 'play-item__name' },
         el('span', { class: 'play-item__cat' }, tx().library.category[play.category]),
         play.name,
-        ...(play.shot ? [el('span', { class: 'play-item__shot' }, tx().library.shotSuffix(tx().shot[play.shot]))] : []),
+        ...(play.shot ? [el('span', { class: 'play-item__shot' }, shotSuffix(play))] : []),
         ...expected,
       ),
       el('span', { class: 'play-item__text' }, text),

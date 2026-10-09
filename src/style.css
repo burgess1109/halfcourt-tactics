@@ -254,6 +254,11 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 140px;
+  /* 大小上限由 ui/menu.ts 依所選那一側的空間設定；超過時上下捲動，寬度不夠時文字換行、不左右捲 */
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* 先預留捲軸的位置：寬度是在出現捲軸之前量的，捲軸會占寬度的系統上才不會切掉右側的文字 */
+  scrollbar-gutter: stable;
   padding: 6px;
   border-radius: 14px;
   background: #1f2126;
@@ -272,10 +277,13 @@ body {
   font: inherit;
   font-size: 16px;
   text-align: left;
+  /* 選單變窄時，很長的英文單字也要換行，不要被切掉 */
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
 .menu__item svg {
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
   fill: currentColor;

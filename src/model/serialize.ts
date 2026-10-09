@@ -8,7 +8,7 @@ import { HEIGHT_RANGE } from './physique';
 import { defaultName } from './defaults';
 import { NAME_MAX } from './playerForm';
 import { BALL_ID, type Frame, type Grade, type Player, type Rating, type Tactic, type TacticPath, type Vec2 } from './types';
-import { LOCALES, MESSAGES, t } from '../i18n';
+import { MESSAGES, t } from '../i18n';
 
 const F = () => t().format;
 
@@ -81,8 +81,9 @@ function parsePlayer(v: unknown, id: string, version: number): Player {
   if (!Number.isInteger(number) || (number as number) < 0 || (number as number) > 99) fail(F().playerNumber(id));
   let name = str(o.name, F().playerName(id)).trim();
   if (name.length > NAME_MAX || (version < 2 && name.length === 0)) fail(F().playerName(id));
-  // 第 1 版把預設暱稱寫進資料（當時的語系）：轉成空字串，顯示時依目前語系組出來
-  if (version < 2 && LOCALES.some((l) => defaultName({ id, team }, MESSAGES[l]) === name)) name = '';
+  // 第 1 版把預設暱稱寫進資料（當時只有繁體中文）：轉成空字串，顯示時依目前語系組出來。
+  // 其他名字（例如自己取的「Player 1」）都是使用者取的，不動
+  if (version < 2 && defaultName({ id, team }, MESSAGES.zh) === name) name = '';
   const p: Player = { id, team, number: number as number, name };
   if (o.heightCm !== undefined) {
     const h = o.heightCm;

@@ -1,10 +1,10 @@
 import { displayName } from '../model/defaults';
 import type { Player, Tactic } from '../model/types';
-import type { Messages } from '.';
-import type { Play } from '../plays/library';
+import { PLAYS, playVariants, type Play } from '../plays/library';
+import { truncateText } from '../model/text';
 import type { Advice, Edge, Reason, Strength } from '../plays/recommend';
 import { edgeGap, type CommentMessage, type Space } from '../sim/evaluate';
-import { t, tr } from '.';
+import { getLocale, t, tr, type Locale, type Messages } from '.';
 
 // 依目前語系，把模擬與推薦的結果（評價、推薦理由、球隊總評）組成句子。純函式，不碰 DOM。
 
@@ -20,8 +20,50 @@ export function playerName(players: readonly Player[], id: string): string {
  */
 export function playTitle(play: Play, withShot = true, messages: Messages = t()): string {
   const m = messages.library;
-  const title = m.playTitle(m.category[play.category], play.name);
-  return withShot && play.shot ? title + m.shotSuffix(messages.shot[play.shot]) : title;
+  return m.playTitle(m.category[play.category], play.name) + (withShot ? shotSuffix(play, messages) : '');
+}
+
+/** 出手點後綴，例如「（中距離）」；只有一個出手點的戰術是空字串 */
+export function shotSuffix(play: Play, messages: Messages = t()): string {
+  return play.shot ? messages.library.shotSuffix(messages.shot[play.shot]) : '';
+}
+
+/** 預填名稱的候選寫法，依偏好順序：完整名稱、類別簡稱＋名稱＋出手點、名稱＋出手點、類別簡稱＋名稱、名稱 */
+function nameCandidates(play: Play): string[] {
+  const m = t().library;
+  const short = m.playTitle(m.categoryShort[play.category], play.name);
+  return [playTitle(play), short + shotSuffix(play), play.name + shotSuffix(play), short, play.name];
+}
+
+/** 每套戰術的候選寫法（所有出手點），依語系快取；預填名稱不能用其他戰術的候選寫法 */
+const candidatesByLocale = new Map<Locale, Map<string, Set<string>>>();
+function candidatesOfPlays(): Map<string, Set<string>> {
+  let byPlay = candidatesByLocale.get(getLocale());
+  if (!byPlay) {
+    byPlay = new Map(PLAYS.map((p) => [p.id, new Set(playVariants(p).flatMap(nameCandidates))]));
+    candidatesByLocale.set(getLocale(), byPlay);
+  }
+  return byPlay;
+}
+
+/**
+ * 存檔時預填的戰術名稱：取第一個放得下 max 個字、不是其他戰術候選寫法的寫法
+ * （英文的類別比較長，完整名稱常超過上限；高位、低位都有 Pick and Roll，只寫名稱會分不出來）。
+ * 同一套戰術的出手點依固定順序一起決定，後面的出手點跳過前面已經用掉的寫法，所以彼此不會重複。
+ * 都不行時才截斷完整名稱。
+ */
+export function playNameSuggestion(play: Play, max: number): string {
+  const byPlay = candidatesOfPlays();
+  const others = new Set([...byPlay].filter(([id]) => id !== play.id).flatMap(([, set]) => [...set]));
+  const used = new Set<string>();
+  const base = PLAYS.find((p) => p.id === play.id);
+  for (const variant of base ? playVariants(base) : [play]) {
+    const name =
+      nameCandidates(variant).find((c) => c.length <= max && !others.has(c) && !used.has(c)) ?? truncateText(playTitle(variant), max);
+    if (variant.shot === play.shot) return name;
+    used.add(name);
+  }
+  return truncateText(playTitle(play), max);
 }
 
 // ---- 評分卡片的評價 ----

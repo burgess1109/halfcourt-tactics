@@ -89,7 +89,7 @@ scripts/           plays-doc：透過 Vite ssrLoadModule 產生戰術說明
 - **能力等級**：優勢 / 稍強 / 平均 / 稍弱 / 劣勢（分數 4 → 0），以場上六個人的平均為基準。藍隊有 5 項（速度、單打、禁區終結、中距離投射、弧外投射），紅隊只有速度。
 - **計分**：依戰術的計分規則（`model/scoring.ts`：FIBA 3x3 弧內 1、弧外 2 分、12 秒，預設；一般規則 2／3 分、24 秒）。分數、進攻時限一律從 `scoringOf` / `shotClockOf` 取，不要寫死 1、2、12。評等用 0–100 分（`scoreOf`，有效命中率）。判斷弧內外一律用 `isBeyondArc`，不要只算離籃框的距離（底角是直線）。
 - **係數**：模擬、速度相關的數字放在 `sim/config.ts` 或 `model/physique.ts`，不要散落在邏輯裡。
-- **介面文字**：從 `t()` 取（`src/i18n`），不要把字串寫死在程式或 `index.html`；`index.html` 的固定文字用 `data-i18n` / `data-i18n-tip` / `data-i18n-aria` 標示文字表的位置（「區塊.名稱」）。數字、名稱要放進句子時，文字表裡寫成函式（兩種語言語序不同）。`sim/` 與推薦只產生資料（例如評價的 `CommentMessage`），句子由 `i18n/describe.ts` 組。會隨狀態改變的文字要在切換語系時重新顯示（`store.refresh()` 會通知所有訂閱者；不靠 store 的用 `onLocaleChange`）。測試與 `plays-doc` 用預設的繁體中文。
+- **介面文字**：從 `t()` 取（`src/i18n`），不要把字串寫死在程式或 `index.html`（唯一的例外是語系選單的「語系 / Language」「繁體中文」「English」：不管哪種語系都顯示同樣的文字，看不懂目前語言的人才找得到，所以直接寫在 `index.html`，不放進文字表）；`index.html` 的固定文字用 `data-i18n` / `data-i18n-tip` / `data-i18n-aria` 標示文字表的位置（「區塊.名稱」）。數字、名稱要放進句子時，文字表裡寫成函式（兩種語言語序不同）。`sim/` 與推薦只產生資料（例如評價的 `CommentMessage`），句子由 `i18n/describe.ts` 組。會隨狀態改變的文字要在切換語系時重新顯示（`store.refresh()` 會通知所有訂閱者；不靠 store 的用 `onLocaleChange`）。測試與 `plays-doc` 用預設的繁體中文。
 - **狀態**：狀態變更走 `Store`，需要復原的操作用 `commit` 或 `begin`/`end`，整份換掉（載入戰術、空白戰術）用 `load`；要清空復原紀錄（分享連結預覽、結束預覽）用 `reset`。
 - **外部資料不直接相信**：localStorage、JSON 檔、分享連結一律經過 `parseTactic` 驗證，紅隊位置與後面分鏡一律重新推算。資料格式改變時，`SCHEMA_VERSION` 加一並在 `parseTactic` 裡遷移舊版本。
 - **唯讀預覽**（`EditorState.readonly`）：新增任何編輯操作時，記得在預覽中停用（和 `playing` 一起檢查）。

@@ -26,10 +26,9 @@ function storeLocale(locale: Locale): void {
 export function attachLanguageMenu(anchors: readonly HTMLElement[]): void {
   const menu = document.querySelector<HTMLElement>('#lang-menu')!;
   const items = [...menu.querySelectorAll<HTMLButtonElement>('[data-locale]')];
-  const controls = anchors.map((anchor) =>
-    bindMenu(anchor, menu, () => items.find((i) => i.dataset.locale === getLocale())?.focus()),
-  );
-  const close = () => controls.forEach((c) => c.close());
+  // 兩個按鈕共用一個選單：綁在同一個 bindMenu，再點同一個按鈕才關得掉
+  const control = bindMenu(anchors, menu, () => items.find((i) => i.dataset.locale === getLocale())?.focus());
+  const close = control.close;
 
   for (const item of items) {
     item.addEventListener('click', () => {
@@ -42,9 +41,8 @@ export function attachLanguageMenu(anchors: readonly HTMLElement[]): void {
   }
   menu.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    const anchor = anchors.find((a) => a.getAttribute('aria-expanded') === 'true');
     close();
-    anchor?.focus();
+    control.anchor.focus();
   });
 
   const sync = () => {

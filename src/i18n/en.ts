@@ -267,6 +267,14 @@ export const en: Messages = {
       dho: 'Hand-off',
       iso: 'Isolation',
     },
+    categoryShort: {
+      'high-pnr': 'High PnR',
+      'low-pnr': 'Post PnR',
+      cut: 'Cut',
+      'off-ball': 'Off-ball',
+      dho: 'DHO',
+      iso: 'Iso',
+    },
     expected: (grade, score) => `Expected ${grade} ${score}`,
     shotOption: (shot, grade, score) => (grade === null ? shot : `${shot} ${grade} ${score}`),
     shots: 'Shot options',
@@ -288,7 +296,7 @@ export const en: Messages = {
     videoTip: (title) => `${title} (opens in a new tab)`,
   },
   recommend: {
-    average: (finish) => `All ratings are average. ${finish}`,
+    average: (finish) => `All ratings are average: ${finish}`,
     taller: (cm) => `${cm} cm taller than their defender`,
     faster: (pct) => `${pct}% faster than their defender`,
     skill: (skill, rating) => `${skill} “${rating}”`,

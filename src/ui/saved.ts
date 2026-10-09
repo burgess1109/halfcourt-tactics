@@ -1,11 +1,12 @@
 import { newId } from '../model/id';
 import { SaveError, type SavedSummary, type SavedTactics } from '../model/savedTactics';
-import { TacticFormatError, fromJsonFile, jsonFileName, nameError, toJsonFile } from '../model/serialize';
+import { TACTIC_NAME_MAX, TacticFormatError, fromJsonFile, jsonFileName, nameError, toJsonFile } from '../model/serialize';
 import type { Store } from '../model/store';
 import type { ShotZone, Tactic } from '../model/types';
-import { basePlay, playVariant } from '../plays/library';
+import { basePlay, playVariant, type Play } from '../plays/library';
 import { t as tx } from '../i18n';
-import { playTitle } from '../i18n/describe';
+import { playNameSuggestion, playTitle } from '../i18n/describe';
+import { truncateText } from '../model/text';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -36,11 +37,12 @@ export function downloadText(filename: string, text: string): void {
 const timeText = (ts: number) =>
   new Date(ts).toLocaleString(tx().common.dateLocale, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-/** 內建戰術的名稱，有多個出手點的戰術含出手點（找不到時回傳 null） */
-const basedTitle = (playId: string | undefined, shot?: ShotZone) => {
+/** 戰術來源（basedOn 或存檔摘要的 playId、shot）對應的內建戰術版本；找不到時回傳 null */
+const basedPlay = (playId: string | undefined, shot?: ShotZone): Play | null => {
   const play = playId ? basePlay(playId) : undefined;
-  return play ? playTitle(playVariant(play, shot)) : null;
+  return play ? playVariant(play, shot) : null;
 };
+
 
 export interface SavedUi {
   /** 存檔；沒有名稱（或唯讀預覽的另存）時先要求輸入名稱。存好回傳 true */
@@ -87,7 +89,9 @@ export function attachSaved(
     const t = s.tactic;
     let name = t.name;
     if (!name || s.readonly) {
-      const suggestion = name || (t.basedOn && !t.basedOn.modified ? basedTitle(t.basedOn.playId, t.basedOn.shot) : null) || '';
+      // 從內建戰術載入、沒有修改過時，預填戰術名稱（放得下名稱上限的寫法）
+      const based = t.basedOn && !t.basedOn.modified ? basedPlay(t.basedOn.playId, t.basedOn.shot) : null;
+      const suggestion = name || (based ? playNameSuggestion(based, TACTIC_NAME_MAX) : '');
       const asked = await opts.askName({
         title: s.readonly ? tx().saved.saveAsTitle : tx().common.save,
         initial: suggestion,
@@ -132,7 +136,8 @@ export function attachSaved(
         const dirty = saved.savedUpdatedAt(t.id) !== t.updatedAt;
         text = dirty ? tx().saved.unsaved(t.name) : t.name;
       } else if (t.basedOn) {
-        const based = basedTitle(t.basedOn.playId, t.basedOn.shot);
+        const play = basedPlay(t.basedOn.playId, t.basedOn.shot);
+        const based = play && playTitle(play);
         if (based) text = t.basedOn.modified ? tx().saved.basedOnModified(based) : based;
       }
     }
@@ -160,7 +165,7 @@ export function attachSaved(
   };
 
   const renameRow = (item: SavedSummary) => {
-    const input = el('input', { type: 'text', maxlength: '30', 'aria-label': tx().saved.newName, enterkeyhint: 'done' });
+    const input = el('input', { type: 'text', maxlength: String(TACTIC_NAME_MAX), 'aria-label': tx().saved.newName, enterkeyhint: 'done' });
     input.value = item.name;
     const ok = el('button', { type: 'button', class: 'btn btn--primary btn--small' }, tx().common.ok);
     const cancel = el('button', { type: 'button', class: 'btn btn--small' }, tx().common.cancel);
@@ -197,7 +202,8 @@ export function attachSaved(
 
   const row = (item: SavedSummary) => {
     const current = store.get().tactic.id === item.id && !store.get().readonly;
-    const based = basedTitle(item.playId, item.shot);
+    const play = basedPlay(item.playId, item.shot);
+    const based = play && playTitle(play);
     const meta = [timeText(item.updatedAt), based && tx().saved.basedOn(based)].filter(Boolean).join(tx().saved.metaSep);
     const grade = item.grade
       ? [el('span', { class: 'play-item__grade', 'data-grade': item.grade }, tx().saved.grade(item.grade, Math.round(item.score!)))]
@@ -282,7 +288,7 @@ export function attachSaved(
       const { tactic, removed } = fromJsonFile(await f.text());
       // 不覆蓋已存的戰術：id 重複就當成新的一份
       if (saved.has(tactic.id)) tactic.id = newId();
-      if (!tactic.name) tactic.name = f.name.replace(/\.json$/i, '').slice(0, 30).trim() || tx().saved.importedName;
+      if (!tactic.name) tactic.name = truncateText(f.name.replace(/\.json$/i, '').trim(), TACTIC_NAME_MAX) || tx().saved.importedName;
       if (!write(() => saved.save(tactic))) return;
       notify(tx().saved.imported(tactic.name, removed));
       render();

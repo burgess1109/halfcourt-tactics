@@ -265,6 +265,15 @@ export const zh = {
       dho: '手遞手',
       iso: '單打',
     },
+    /** 類別簡稱：存檔預填名稱放不下完整名稱時用（繁中的類別本來就短） */
+    categoryShort: {
+      'high-pnr': '高位擋拆',
+      'low-pnr': '低位擋拆',
+      cut: '空切',
+      'off-ball': '無球掩護',
+      dho: '手遞手',
+      iso: '單打',
+    },
     expected: (grade: string, score: number) => `預期 ${grade} ${score} 分`,
     shotOption: (shot: string, grade: string | null, score: number) => (grade === null ? shot : `${shot} ${grade} ${score} 分`),
     shots: '出手點',

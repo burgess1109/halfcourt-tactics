@@ -1,3 +1,4 @@
+import { truncateText } from '../model/text';
 import { TACTIC_NAME_MAX, nameError } from '../model/serialize';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -17,7 +18,7 @@ export function askName(opts: { title: string; initial: string; confirm: string 
   $('#name-title').textContent = opts.title;
   ok.textContent = opts.confirm;
   input.maxLength = TACTIC_NAME_MAX;
-  input.value = opts.initial.slice(0, TACTIC_NAME_MAX);
+  input.value = truncateText(opts.initial, TACTIC_NAME_MAX);
   error.hidden = true;
 
   return new Promise((resolve) => {
